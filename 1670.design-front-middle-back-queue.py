@@ -10,11 +10,12 @@ from collections import deque
 class FrontMiddleBackQueue:
 
     def __init__(self):
+        # Maintain two deques such that len(left) == len(right) or len(right) == len(left) + 1
         self.left = deque()
         self.right = deque()
 
     def _balance(self):
-        # Invariant: len(self.left) <= len(self.right) <= len(self.left) + 1
+        # Helper to maintain the size invariant
         if len(self.left) > len(self.right):
             self.right.appendleft(self.left.pop())
         elif len(self.right) > len(self.left) + 1:
@@ -29,37 +30,39 @@ class FrontMiddleBackQueue:
             self.right.appendleft(val)
         else:
             self.left.append(val)
+        # pushMiddle logic naturally maintains the invariant, but _balance() could be called safely
 
     def pushBack(self, val: int) -> None:
         self.right.append(val)
         self._balance()
 
     def popFront(self) -> int:
-        if not self.left and not self.right:
+        if not self.right:
             return -1
         if not self.left:
-            val = self.right.popleft()
+            res = self.right.popleft()
         else:
-            val = self.left.popleft()
+            res = self.left.popleft()
         self._balance()
-        return val
+        return res
 
     def popMiddle(self) -> int:
         if not self.right:
             return -1
         if len(self.left) == len(self.right):
-            val = self.left.pop()
+            res = self.left.pop()
         else:
-            val = self.right.popleft()
+            # If len(right) > len(left), the middle is the first element of right
+            res = self.right.popleft()
         self._balance()
-        return val
+        return res
 
     def popBack(self) -> int:
         if not self.right:
             return -1
-        val = self.right.pop()
+        res = self.right.pop()
         self._balance()
-        return val
+        return res
 
 
 # Your FrontMiddleBackQueue object will be instantiated and called as such:
