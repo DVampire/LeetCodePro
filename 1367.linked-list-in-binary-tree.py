@@ -18,35 +18,30 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        def check(lnode, tnode):
-            # If we've reached the end of the linked list, the path is found
-            if not lnode:
+        def check(h, r):
+            if not h:
                 return True
-            # If we've reached a null tree node before finishing the list, no match
-            if not tnode:
+            if not r:
                 return False
-            # If the current values don't match, this is not the path
-            if lnode.val != tnode.val:
+            if h.val != r.val:
                 return False
-            # Continue checking the next list node in both children of the tree node
-            return check(lnode.next, tnode.left) or check(lnode.next, tnode.right)
-
+            return check(h.next, r.left) or check(h.next, r.right)
+        
         if not root:
             return False
-
-        # Use an iterative DFS to traverse every node in the binary tree
-        # This avoids potential RecursionError on skewed trees with up to 2500 nodes
+            
+        # Iterative DFS to visit every node in the tree
         stack = [root]
         while stack:
-            curr = stack.pop()
-            # Check if the linked list sequence starts at the current tree node
-            if check(head, curr):
+            node = stack.pop()
+            # Check if linked list starts at the current tree node
+            if check(head, node):
                 return True
-            # Add children to the stack to continue tree traversal
-            if curr.left:
-                stack.append(curr.left)
-            if curr.right:
-                stack.append(curr.right)
+            # Push children to stack to continue searching
+            if node.right:
+                stack.append(node.right)
+            if node.left:
+                stack.append(node.left)
         
         return False
 # @lc code=end
