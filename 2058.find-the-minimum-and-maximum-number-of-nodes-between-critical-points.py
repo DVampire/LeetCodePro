@@ -15,36 +15,37 @@ class Solution:
         if not head or not head.next or not head.next.next:
             return [-1, -1]
         
+        first_idx = -1
+        last_idx = -1
         min_dist = float('inf')
-        first_cp = -1
-        prev_cp = -1
         
-        curr_idx = 1
-        prev_node = head
-        curr_node = head.next
+        prev = head
+        curr = head.next
+        idx = 1
         
-        while curr_node.next:
+        while curr.next:
+            # Check if current node is a local maxima or local minima
             is_critical = False
-            # Local Maxima
-            if curr_node.val > prev_node.val and curr_node.val > curr_node.next.val:
+            if curr.val > prev.val and curr.val > curr.next.val:
                 is_critical = True
-            # Local Minima
-            elif curr_node.val < prev_node.val and curr_node.val < curr_node.next.val:
+            elif curr.val < prev.val and curr.val < curr.next.val:
                 is_critical = True
             
             if is_critical:
-                if first_cp == -1:
-                    first_cp = curr_idx
+                if first_idx == -1:
+                    first_idx = idx
                 else:
-                    min_dist = min(min_dist, curr_idx - prev_cp)
-                prev_cp = curr_idx
+                    min_dist = min(min_dist, idx - last_idx)
+                last_idx = idx
             
-            prev_node = curr_node
-            curr_node = curr_node.next
-            curr_idx += 1
+            # Move pointers forward
+            prev = curr
+            curr = curr.next
+            idx += 1
             
         if min_dist == float('inf'):
             return [-1, -1]
-        
-        return [min_dist, prev_cp - first_cp]
+            
+        return [min_dist, last_idx - first_idx]
+
 # @lc code=end
