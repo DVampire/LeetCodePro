@@ -18,27 +18,35 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
+        def check(lnode, tnode):
+            # If we've reached the end of the linked list, the path is found
+            if not lnode:
+                return True
+            # If we've reached a null tree node before finishing the list, no match
+            if not tnode:
+                return False
+            # If the current values don't match, this is not the path
+            if lnode.val != tnode.val:
+                return False
+            # Continue checking the next list node in both children of the tree node
+            return check(lnode.next, tnode.left) or check(lnode.next, tnode.right)
+
         if not root:
             return False
-        
-        # Check if the path starts at the current root, or in the left/right subtrees
-        return self.checkPath(head, root) or \
-               self.isSubPath(head, root.left) or \
-               self.isSubPath(head, root.right)
 
-    def checkPath(self, head: Optional[ListNode], node: Optional[TreeNode]) -> bool:
-        # If we reached the end of the linked list, we found the path
-        if not head:
-            return True
-        # If we reached a leaf in the tree but the list isn't finished, no match
-        if not node:
-            return False
-        
-        # Current values must match
-        if head.val == node.val:
-            # Continue matching the next list node with either tree child
-            return self.checkPath(head.next, node.left) or \
-                   self.checkPath(head.next, node.right)
+        # Use an iterative DFS to traverse every node in the binary tree
+        # This avoids potential RecursionError on skewed trees with up to 2500 nodes
+        stack = [root]
+        while stack:
+            curr = stack.pop()
+            # Check if the linked list sequence starts at the current tree node
+            if check(head, curr):
+                return True
+            # Add children to the stack to continue tree traversal
+            if curr.left:
+                stack.append(curr.left)
+            if curr.right:
+                stack.append(curr.right)
         
         return False
 # @lc code=end
