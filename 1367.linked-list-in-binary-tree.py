@@ -18,39 +18,26 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        def check(h: Optional[ListNode], n: Optional[TreeNode]) -> bool:
-            # If we've matched all nodes in the linked list
-            if not h:
-                return True
-            # If we reached the end of a tree path but list isn't finished
-            if not n:
-                return False
-            # If values don't match, this path is not valid
-            if h.val != n.val:
-                return False
-            # Recursively check the next list node in both children
-            return check(h.next, n.left) or check(h.next, n.right)
-        
         if not root:
             return False
         
-        # Standard iterative DFS to visit every node in the tree as a potential start
-        stack = [root]
-        while stack:
-            curr = stack.pop()
-            if not curr:
-                continue
-            
-            # If the current tree node matches the head of the list, try matching the rest
-            if curr.val == head.val:
-                if check(head, curr):
-                    return True
-            
-            # Add children to stack to continue outer search
-            if curr.left:
-                stack.append(curr.left)
-            if curr.right:
-                stack.append(curr.right)
-                
-        return False
+        # Check if the path starts at the current root, or in the left/right subtrees.
+        if self.dfs(head, root):
+            return True
+        
+        return self.isSubPath(head, root.left) or self.isSubPath(head, root.right)
+
+    def dfs(self, head: Optional[ListNode], node: Optional[TreeNode]) -> bool:
+        # If we reached the end of the linked list, we found a match.
+        if not head:
+            return True
+        # If we reached a leaf in the tree but the list isn't finished, no match.
+        if not node:
+            return False
+        # If values don't match, this path is not valid.
+        if head.val != node.val:
+            return False
+        
+        # Continue checking the next node in the list with the left and right children.
+        return self.dfs(head.next, node.left) or self.dfs(head.next, node.right)
 # @lc code=end
