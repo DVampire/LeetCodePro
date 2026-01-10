@@ -18,40 +18,39 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
+        def check(h: Optional[ListNode], n: Optional[TreeNode]) -> bool:
+            # If we've matched all nodes in the linked list
+            if not h:
+                return True
+            # If we reached the end of a tree path but list isn't finished
+            if not n:
+                return False
+            # If values don't match, this path is not valid
+            if h.val != n.val:
+                return False
+            # Recursively check the next list node in both children
+            return check(h.next, n.left) or check(h.next, n.right)
+        
         if not root:
             return False
         
-        # Use iterative DFS to traverse the tree and find potential starting nodes.
-        # This prevents reaching the recursion limit for trees with many nodes (up to 2500).
+        # Standard iterative DFS to visit every node in the tree as a potential start
         stack = [root]
         while stack:
-            node = stack.pop()
-            if not node:
+            curr = stack.pop()
+            if not curr:
                 continue
             
-            # If current node could be the start of the path, check it.
-            if self.checkPath(head, node):
-                return True
+            # If the current tree node matches the head of the list, try matching the rest
+            if curr.val == head.val:
+                if check(head, curr):
+                    return True
             
-            # Add children to stack to continue searching for the start of the list.
-            if node.left:
-                stack.append(node.left)
-            if node.right:
-                stack.append(node.right)
+            # Add children to stack to continue outer search
+            if curr.left:
+                stack.append(curr.left)
+            if curr.right:
+                stack.append(curr.right)
                 
         return False
-
-    def checkPath(self, head: Optional[ListNode], node: Optional[TreeNode]) -> bool:
-        # If we reached the end of the linked list, the path exists.
-        if not head:
-            return True
-        # If the tree ends before the list, the path doesn't exist.
-        if not node:
-            return False
-        # If values don't match, this path is invalid.
-        if head.val != node.val:
-            return False
-        
-        # Recursively check the left and right subtrees for the next list node.
-        return self.checkPath(head.next, node.left) or self.checkPath(head.next, node.right)
 # @lc code=end
