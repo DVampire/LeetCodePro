@@ -18,27 +18,39 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
+        if not head:
+            return True
         if not root:
             return False
         
-        # Check if the path starts at the current root node
-        # or if it exists in the left or right subtrees.
-        return self.checkPath(head, root) or \
-               self.isSubPath(head, root.left) or \
-               self.isSubPath(head, root.right)
-
-    def checkPath(self, head: Optional[ListNode], node: Optional[TreeNode]) -> bool:
-        # If we reached the end of the list, we found the path.
-        if not head:
-            return True
-        # If we reached the end of the tree path before the list, no match.
-        if not node:
-            return False
-        # If values do not match, this specific path is not a subpath.
-        if head.val != node.val:
-            return False
+        # Helper function to check if the linked list matches a path starting from tree_node
+        def check(list_node, tree_node):
+            # If we reached the end of the list, we found a match
+            if not list_node:
+                return True
+            # If we reached the end of the tree path before matching the list
+            if not tree_node:
+                return False
+            # If values don't match, this path is invalid
+            if list_node.val != tree_node.val:
+                return False
+            # Continue checking the rest of the list in both children
+            return check(list_node.next, tree_node.left) or check(list_node.next, tree_node.right)
         
-        # Continue checking the next node in the list in either the left or right child.
-        return self.checkPath(head.next, node.left) or self.checkPath(head.next, node.right)
-
+        # Iterative DFS to find the start node of the path in the tree
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            
+            # If current node value matches head, try to match the whole list
+            if node.val == head.val and check(head, node):
+                return True
+            
+            # Continue searching for the start of the list in children
+            if node.right:
+                stack.append(node.right)
+            if node.left:
+                stack.append(node.left)
+                
+        return False
 # @lc code=end
