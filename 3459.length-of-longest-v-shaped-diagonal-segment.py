@@ -9,57 +9,54 @@ class Solution:
     def lenOfVDiagonal(self, grid: List[List[int]]) -> int:
         n = len(grid)
         m = len(grid[0])
-        # Directions: Down-Right, Down-Left, Up-Left, Up-Right
-        directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
         
-        # dp1[dir_idx][r][c]: Longest straight segment starting at (r, c)
+        # Directions: 0: DR, 1: DL, 2: UL, 3: UR
+        dr = [1, 1, -1, -1]
+        dc = [1, -1, -1, 1]
+        
+        # dp1[d][r][c]: max length starting at (r, c) in direction d (already turned)
+        # dp0[d][r][c]: max length starting at (r, c) in direction d (can still turn)
         dp1 = [[[0] * m for _ in range(n)] for _ in range(4)]
-        # dp0[dir_idx][r][c]: Longest segment starting at (r, c) with 1 turn available
         dp0 = [[[0] * m for _ in range(n)] for _ in range(4)]
         
-        # Precompute dp1 (straight paths)
+        # Precompute dp1
         for d in range(4):
-            dr, dc = directions[d]
-            rows = range(n)[::-1] if dr == 1 else range(n)
-            cols = range(m)[::-1] if dc == 1 else range(m)
+            rows = range(n - 1, -1, -1) if dr[d] == 1 else range(n)
+            cols = range(m - 1, -1, -1) if dc[d] == 1 else range(m)
             for r in rows:
                 for c in cols:
-                    dp1[d][r][c] = 1
-                    nr, nc = r + dr, c + dc
-                    if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] == 2 - grid[r][c]:
-                        dp1[d][r][c] = 1 + dp1[d][nr][nc]
-        
-        # Precompute dp0 (paths with at most one turn)
-        for d in range(4):
-            dr, dc = directions[d]
-            nd = (d + 1) % 4
-            ndr, ndc = directions[nd]
-            rows = range(n)[::-1] if dr == 1 else range(n)
-            cols = range(m)[::-1] if dc == 1 else range(m)
-            for r in rows:
-                for c in cols:
-                    res = 1
+                    if grid[r][c] == 1: continue
                     target = 2 - grid[r][c]
-                    # Option 1: Continue straight
-                    nr, nc = r + dr, c + dc
+                    nr, nc = r + dr[d], c + dc[d]
+                    if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] == target:
+                        dp1[d][r][c] = 1 + dp1[d][nr][nc]
+                    else:
+                        dp1[d][r][c] = 1
+                        
+        # Precompute dp0
+        for d in range(4):
+            nd = (d + 1) % 4
+            rows = range(n - 1, -1, -1) if dr[d] == 1 else range(n)
+            cols = range(m - 1, -1, -1) if dc[d] == 1 else range(m)
+            for r in rows:
+                for c in cols:
+                    if grid[r][c] == 1: continue
+                    target = 2 - grid[r][c]
+                    res = dp1[nd][r][c]
+                    nr, nc = r + dr[d], c + dc[d]
                     if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] == target:
                         res = max(res, 1 + dp0[d][nr][nc])
-                    # Option 2: Turn clockwise
-                    tr, tc = r + ndr, c + ndc
-                    if 0 <= tr < n and 0 <= tc < m and grid[tr][tc] == target:
-                        res = max(res, 1 + dp1[nd][tr][tc])
                     dp0[d][r][c] = res
                     
-        max_len = 0
+        ans = 0
         for r in range(n):
             for c in range(m):
                 if grid[r][c] == 1:
-                    max_len = max(max_len, 1)
+                    ans = max(ans, 1)
                     for d in range(4):
-                        dr, dc = directions[d]
-                        nr, nc = r + dr, c + dc
+                        nr, nc = r + dr[d], c + dc[d]
                         if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] == 2:
-                            max_len = max(max_len, 1 + dp0[d][nr][nc])
+                            ans = max(ans, 1 + dp0[d][nr][nc])
                             
-        return max_len
+        return ans
 # @lc code=end
