@@ -5,63 +5,59 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def findSubtreeSizes(self, parent: List[int], s: str) -> List[int]:
         n = len(parent)
-
-        # Build original tree children lists
-        children = [[] for _ in range(n)]
+        
+        # Build the original tree
+        original_children = [[] for _ in range(n)]
         for i in range(1, n):
-            children[parent[i]].append(i)
-
-        # Step 1: compute newParent using DFS on original tree
-        newParent = parent[:]  # default: unchanged
-        char_stacks = [[] for _ in range(26)]  # nodes on current path per character
-
-        # iterative DFS with enter/exit states
-        stack = [(0, 0)]  # (node, state) state: 0=enter, 1=exit
-        while stack:
-            u, state = stack.pop()
-            c = ord(s[u]) - 97
-            if state == 0:
-                if u == 0:
-                    newParent[u] = -1
+            original_children[parent[i]].append(i)
+        
+        new_parent = [-1] * n
+        new_parent[0] = -1
+        
+        # DFS to find new parents using character stack
+        def find_new_parents(node, char_stack):
+            for child in original_children[node]:
+                child_char = s[child]
+                
+                # Find closest ancestor with same character
+                if child_char in char_stack and char_stack[child_char]:
+                    new_parent[child] = char_stack[child_char][-1]
                 else:
-                    if char_stacks[c]:
-                        newParent[u] = char_stacks[c][-1]
-                    else:
-                        newParent[u] = parent[u]
-
-                stack.append((u, 1))
-                char_stacks[c].append(u)
-
-                # push children in reverse so original order is preserved (not required)
-                for v in reversed(children[u]):
-                    stack.append((v, 0))
-            else:
-                char_stacks[c].pop()
-
-        # Step 2: build final tree adjacency
-        newChildren = [[] for _ in range(n)]
+                    new_parent[child] = parent[child]
+                
+                # Add child to character stack
+                if child_char not in char_stack:
+                    char_stack[child_char] = []
+                char_stack[child_char].append(child)
+                
+                # Recursively process children
+                find_new_parents(child, char_stack)
+                
+                # Remove child from character stack
+                char_stack[child_char].pop()
+        
+        # Start DFS from root
+        char_stack = {s[0]: [0]}
+        find_new_parents(0, char_stack)
+        
+        # Build the new tree
+        new_children = [[] for _ in range(n)]
         for i in range(1, n):
-            newChildren[newParent[i]].append(i)
-
-        # Step 3: subtree sizes via postorder DFS
-        size = [1] * n
-        stack = [(0, 0)]  # (node, state) state: 0=enter, 1=exit
-        while stack:
-            u, state = stack.pop()
-            if state == 0:
-                stack.append((u, 1))
-                for v in newChildren[u]:
-                    stack.append((v, 0))
-            else:
-                total = 1
-                for v in newChildren[u]:
-                    total += size[v]
-                size[u] = total
-
-        return size
+            new_children[new_parent[i]].append(i)
+        
+        # Calculate subtree sizes
+        answer = [0] * n
+        
+        def calculate_sizes(node):
+            size = 1
+            for child in new_children[node]:
+                size += calculate_sizes(child)
+            answer[node] = size
+            return size
+        
+        calculate_sizes(0)
+        return answer
 # @lc code=end
