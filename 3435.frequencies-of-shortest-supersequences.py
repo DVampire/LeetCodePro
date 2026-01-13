@@ -9,65 +9,119 @@ from typing import List
 
 class Solution:
     def supersequences(self, words: List[str]) -> List[List[int]]:
-        nodes = sorted(list(set("".join(words))))
-        n = len(nodes)
-        idx = {char: i for i, char in enumerate(nodes)}
-        
-        adj = [0] * n
+        # Collect distinct letters and forced duplicates from "xx".
+        letters_set = set()
+        forced_chars = set()
         for w in words:
-            u, v = idx[w[0]], idx[w[1]]
-            if u != v:
-                adj[u] |= (1 << v)
+            a, b = w[0], w[1]
+            letters_set.add(a)
+            letters_set.add(b)
+            if a == b:
+                forced_chars.add(a)
 
-        def has_cycle(mask):
-            # mask represents nodes allowed to be in the DAG (frequency 1)
-            # Nodes not in mask are 'doubled' and effectively break cycles
-            in_degree = [0] * n
-            for i in range(n):
-                if not (mask & (1 << i)): continue
-                for j in range(n):
-                    if (mask & (1 << j)) and (adj[i] & (1 << j)):
-                        in_degree[j] += 1
-            
-            queue = [i for i in range(n) if (mask & (1 << i)) and in_degree[i] == 0]
-            count = 0
-            while queue:
-                u = queue.pop(0)
-                count += 1
-                for v in range(n):
-                    if (mask & (1 << v)) and (adj[u] & (1 << v)):
-                        in_degree[v] -= 1
-                        if in_degree[v] == 0:
-                            queue.append(v)
-            
-            return count != bin(mask).count('1')
+        letters = sorted(letters_set)
+        m = len(letters)  # <= 16
+        idx = {ch: i for i, ch in enumerate(letters)}
+        alpha_idx = [ord(ch) - 97 for ch in letters]
 
-        min_extra = n + 1
-        best_masks = []
+        forcedmask = 0
+        for ch in forced_chars:
+            forcedmask |= 1 << idx[ch]
 
-        # Iterate through all subsets of nodes. 
-        # A bit set to 1 means the character appears ONCE.
-        # A bit set to 0 means the character appears TWICE.
-        # We want to maximize the number of 1s (minimize 0s) such that 1s form a DAG.
-        for mask in range(1 << n):
-            extra = n - bin(mask).count('1')
-            if extra > min_extra:
+        self_idx = []
+        edges = []  # (a_idx, b_idx) with a!=b
+        for w in words:
+            a, b = w[0], w[1]
+            ai, bi = idx[a], idx[b]
+            if ai == bi:
+                self_idx.append(ai)
+            else:
+                edges.append((ai, bi))
+
+        V = 2 * m  # nodes 0..2m-1
+
+        def feasible(dupmask: int) -> bool:
+            # Self constraints require duplication.
+            for i in self_idx:
+                if ((dupmask >> i) & 1) == 0:
+                    return False
+
+            adj = [0] * V
+
+            # Internal edges for duplicated letters: first -> last
+            for i in range(m):
+                if (dupmask >> i) & 1:
+                    u = 2 * i
+                    v = 2 * i + 1
+                    adj[u] |= 1 << v
+
+            # Edges for constraints a -> b: first(a) -> last(b)
+            for ai, bi in edges:
+                u = 2 * ai
+                v = 2 * bi + (1 if ((dupmask >> bi) & 1) else 0)
+                adj[u] |= 1 << v
+
+            # Kahn topological sort to detect cycle
+            indeg = [0] * V
+            for u in range(V):
+                bits = adj[u]
+                while bits:
+                    lsb = bits & -bits
+                    v = lsb.bit_length() - 1
+                    indeg[v] += 1
+                    bits -= lsb
+
+            q = [i for i in range(V) if indeg[i] == 0]
+            head = 0
+            processed = 0
+            while head < len(q):
+                u = q[head]
+                head += 1
+                processed += 1
+                bits = adj[u]
+                while bits:
+                    lsb = bits & -bits
+                    v = lsb.bit_length() - 1
+                    bits -= lsb
+                    indeg[v] -= 1
+                    if indeg[v] == 0:
+                        q.append(v)
+
+            return processed == V
+
+        optional = [i for i in range(m) if ((forcedmask >> i) & 1) == 0]
+        optn = len(optional)
+
+        best = 10**9
+        best_masks: List[int] = []
+
+        for s in range(1 << optn):
+            k = s.bit_count()
+            if k > best:
                 continue
-            
-            if not has_cycle(mask):
-                if extra < min_extra:
-                    min_extra = extra
-                    best_masks = [mask]
-                else:
-                    best_masks.append(mask)
 
-        results = []
-        for mask in best_masks:
+            dupmask = forcedmask
+            tmp = s
+            while tmp:
+                lsb = tmp & -tmp
+                j = lsb.bit_length() - 1
+                dupmask |= 1 << optional[j]
+                tmp -= lsb
+
+            if feasible(dupmask):
+                if k < best:
+                    best = k
+                    best_masks = [dupmask]
+                elif k == best:
+                    best_masks.append(dupmask)
+
+        ans = []
+        for dupmask in best_masks:
             freq = [0] * 26
-            for i in range(n):
-                char_idx = ord(nodes[i]) - ord('a')
-                freq[char_idx] = 1 if (mask & (1 << i)) else 2
-            results.append(freq)
-            
-        return results
+            for i in range(m):
+                freq[alpha_idx[i]] = 2 if ((dupmask >> i) & 1) else 1
+            ans.append(freq)
+
+        return ans
+
 # @lc code=end
