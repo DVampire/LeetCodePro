@@ -5,6 +5,7 @@
 #
 
 # @lc code=start
+from typing import List
 import heapq
 
 class Solution:
@@ -12,61 +13,81 @@ class Solution:
         n = len(nums)
         if n <= 1:
             return 0
-        
-        # Use arrays to simulate a doubly linked list of nodes
-        val = list(nums)
-        prev = [i - 1 for i in range(n)]
-        nxt = [i + 1 for i in range(n)]
-        nxt[n-1] = -1
-        valid = [True] * n
-        
-        def is_bad(idx):
-            if idx == -1 or not valid[idx] or nxt[idx] == -1:
-                return False
-            return val[idx] > val[nxt[idx]]
-        
-        # Initial PQ and bad_pairs_count
-        pq = []
-        bad_pairs_count = 0
+
+        val = nums[:]  # current values per node id
+        left = [i - 1 for i in range(n)]
+        right = [i + 1 for i in range(n)]
+        right[-1] = -1
+        ver = [0] * n
+        alive = [True] * n
+
+        def violation(i: int, j: int) -> int:
+            return 1 if val[i] > val[j] else 0
+
+        # count initial adjacent inversions
+        inv = 0
         for i in range(n - 1):
-            heapq.heappush(pq, (val[i] + val[i+1], i, i+1))
-            if val[i] > val[i+1]:
-                bad_pairs_count += 1
-        
+            if val[i] > val[i + 1]:
+                inv += 1
+
+        # heap of (sum, left_id, right_id, ver_left, ver_right)
+        heap = []
+
+        def push_pair(i: int) -> None:
+            j = right[i]
+            if j != -1 and alive[i] and alive[j]:
+                heapq.heappush(heap, (val[i] + val[j], i, j, ver[i], ver[j]))
+
+        for i in range(n - 1):
+            push_pair(i)
+
         ops = 0
-        while bad_pairs_count > 0 and pq:
-            s, L_id, R_id = heapq.heappop(pq)
-            
-            # Validate the pair from the heap
-            if not valid[L_id] or not valid[R_id] or nxt[L_id] != R_id or val[L_id] + val[R_id] != s:
-                continue
-            
-            # Identify neighbors
-            P_id = prev[L_id]
-            N_id = nxt[R_id]
-            
-            # Remove impact of old pairs from bad_pairs_count
-            if is_bad(P_id): bad_pairs_count -= 1
-            if is_bad(L_id): bad_pairs_count -= 1
-            if is_bad(R_id): bad_pairs_count -= 1
-            
-            # Merge L_id and R_id into L_id
-            val[L_id] = s
-            nxt[L_id] = N_id
-            if N_id != -1:
-                prev[N_id] = L_id
-            valid[R_id] = False
+        while inv > 0:
+            # get the valid minimum-sum adjacent pair
+            while True:
+                s, i, j, vi, vj = heap[0]
+                if (not alive[i]) or (not alive[j]) or right[i] != j or ver[i] != vi or ver[j] != vj:
+                    heapq.heappop(heap)
+                    continue
+                break
+
+            heapq.heappop(heap)
+            # merge i and j (j = right[i])
+            a, b = i, j
+            la = left[a]
+            rb = right[b]
+
+            # remove old violations on affected boundaries
+            if la != -1:
+                inv -= violation(la, a)
+            inv -= violation(a, b)
+            if rb != -1:
+                inv -= violation(b, rb)
+
+            # perform merge: keep node a, delete node b
+            val[a] += val[b]
+            ver[a] += 1
+
+            alive[b] = False
+            ver[b] += 1
+
+            right[a] = rb
+            if rb != -1:
+                left[rb] = a
+
+            # add new violations after merge
+            if la != -1:
+                inv += violation(la, a)
+            if rb != -1:
+                inv += violation(a, rb)
+
+            # push updated adjacent pairs
+            if la != -1:
+                push_pair(la)  # (la, a) sum changed because a changed
+            if rb != -1:
+                push_pair(a)   # (a, rb) newly formed
+
             ops += 1
-            
-            # Add impact of new pairs to bad_pairs_count
-            if is_bad(P_id): bad_pairs_count += 1
-            if is_bad(L_id): bad_pairs_count += 1
-            
-            # Push new potential pairs into PQ
-            if P_id != -1:
-                heapq.heappush(pq, (val[P_id] + val[L_id], P_id, L_id))
-            if N_id != -1:
-                heapq.heappush(pq, (val[L_id] + val[N_id], L_id, N_id))
-                
+
         return ops
 # @lc code=end
