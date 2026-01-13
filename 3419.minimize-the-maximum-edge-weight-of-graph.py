@@ -4,49 +4,34 @@
 # [3419] Minimize the Maximum Edge Weight of Graph
 #
 
-# @lc code=start
 from typing import List
-import collections
+import heapq
+import math
 
+# @lc code=start
 class Solution:
     def minMaxWeight(self, n: int, edges: List[List[int]], threshold: int) -> int:
-        # Build reversed adjacency list: actual edge u -> v becomes v -> u
-        # This allows us to check if node 0 can reach all other nodes.
-        adj = collections.defaultdict(list)
-        max_w = 0
-        for u, v, w in edges:
-            adj[v].append((u, w))
-            if w > max_w:
-                max_w = w
-        
-        def can_reach_all(limit):
-            visited = [False] * n
-            visited[0] = True
-            queue = collections.deque([0])
-            count = 1
-            
-            while queue:
-                curr = queue.popleft()
-                for neighbor, weight in adj[curr]:
-                    if not visited[neighbor] and weight <= limit:
-                        visited[neighbor] = True
-                        count += 1
-                        queue.append(neighbor)
-            
-            return count == n
+        # Build reversed graph: b -> a with weight w (original a -> b)
+        rev = [[] for _ in range(n)]
+        for a, b, w in edges:
+            rev[b].append((a, w))
 
-        # Binary search for the minimum possible maximum weight
-        low = 1
-        high = max_w
-        ans = -1
-        
-        while low <= high:
-            mid = (low + high) // 2
-            if can_reach_all(mid):
-                ans = mid
-                high = mid - 1
-            else:
-                low = mid + 1
-        
-        return ans
+        INF = math.inf
+        dist = [INF] * n
+        dist[0] = 0
+        pq = [(0, 0)]  # (bottleneck value to reach 0, node)
+
+        while pq:
+            d, v = heapq.heappop(pq)
+            if d != dist[v]:
+                continue
+            for u, w in rev[v]:
+                nd = max(d, w)
+                if nd < dist[u]:
+                    dist[u] = nd
+                    heapq.heappush(pq, (nd, u))
+
+        if any(x is INF for x in dist):
+            return -1
+        return max(dist)
 # @lc code=end
