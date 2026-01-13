@@ -9,51 +9,62 @@ class Solution:
     def generateString(self, str1: str, str2: str) -> str:
         n, m = len(str1), len(str2)
         L = n + m - 1
-        res = [None] * L
-        fixed = [False] * L
-        
-        for i in range(n):
-            if str1[i] == 'T':
-                for j in range(m):
-                    if res[i + j] is not None and res[i + j] != str2[j]:
+
+        w = ['?'] * L
+        forced = [False] * L
+
+        # Step 1: apply all 'T' constraints
+        for i, tf in enumerate(str1):
+            if tf == 'T':
+                base = i
+                for j, c in enumerate(str2):
+                    idx = base + j
+                    if w[idx] == '?' or w[idx] == c:
+                        w[idx] = c
+                        forced[idx] = True
+                    else:
                         return ""
-                    res[i + j] = str2[j]
-                    fixed[i + j] = True
-        
-        for i in range(L):
-            if res[i] is None:
-                res[i] = 'a'
-        
-        for i in range(n - 1, -1, -1):
-            if str1[i] == 'F':
-                match = True
-                for j in range(m):
-                    if res[i + j] != str2[j]:
-                        match = False
+
+        # Step 2: fill remaining with 'a'
+        for k in range(L):
+            if w[k] == '?':
+                w[k] = 'a'
+
+        # Step 3: enforce 'F' constraints greedily (change rightmost free position to 'b')
+        for i, tf in enumerate(str1):
+            if tf == 'F':
+                base = i
+                equal = True
+                for j, c in enumerate(str2):
+                    if w[base + j] != c:
+                        equal = False
                         break
-                if match:
-                    changed = False
+                if equal:
+                    pos = -1
                     for j in range(m - 1, -1, -1):
-                        if not fixed[i + j]:
-                            original = res[i + j]
-                            for char_code in range(ord(original) + 1, ord('z') + 1):
-                                res[i + j] = chr(char_code)
-                                # Since we only need to break the match for str1[i] == 'F',
-                                # and we are moving right to left, 'a' is usually best,
-                                # but here we just need ANY char that isn't str2[j].
-                                if res[i + j] != str2[j]:
-                                    changed = True
-                                    break
-                            if changed: break
-                    if not changed:
+                        idx = base + j
+                        if not forced[idx]:
+                            pos = idx
+                            break
+                    if pos == -1:
                         return ""
-        
-        # Final validation pass to ensure lexicographical changes didn't break previous F constraints
-        # Actually, the greedy approach from right to left for F constraints should be checked
-        for i in range(n):
-            sub = "".join(res[i:i+m])
-            if str1[i] == 'T' and sub != str2: return ""
-            if str1[i] == 'F' and sub == str2: return ""
-            
-        return "".join(res)
+                    w[pos] = 'b'
+
+        # Step 4: final verification (optional but safe)
+        for i, tf in enumerate(str1):
+            base = i
+            if tf == 'T':
+                for j, c in enumerate(str2):
+                    if w[base + j] != c:
+                        return ""
+            else:  # 'F'
+                eq = True
+                for j, c in enumerate(str2):
+                    if w[base + j] != c:
+                        eq = False
+                        break
+                if eq:
+                    return ""
+
+        return "".join(w)
 # @lc code=end
