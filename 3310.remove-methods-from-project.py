@@ -3,34 +3,34 @@
 #
 # [3310] Remove Methods From Project
 #
-
-from typing import List
-from collections import deque
-
 # @lc code=start
 class Solution:
     def remainingMethods(self, n: int, k: int, invocations: List[List[int]]) -> List[int]:
+        from collections import deque
+        
         # Build adjacency list
-        g = [[] for _ in range(n)]
+        graph = [[] for _ in range(n)]
         for a, b in invocations:
-            g[a].append(b)
-
-        # Step 1: find all suspicious methods reachable from k
-        suspicious = [False] * n
-        dq = deque([k])
-        suspicious[k] = True
-        while dq:
-            u = dq.pop()
-            for v in g[u]:
-                if not suspicious[v]:
-                    suspicious[v] = True
-                    dq.append(v)
-
-        # Step 2: check if any edge enters suspicious set from outside
+            graph[a].append(b)
+        
+        # Find all suspicious methods (reachable from k) using BFS
+        suspicious = set()
+        queue = deque([k])
+        suspicious.add(k)
+        
+        while queue:
+            node = queue.popleft()
+            for neighbor in graph[node]:
+                if neighbor not in suspicious:
+                    suspicious.add(neighbor)
+                    queue.append(neighbor)
+        
+        # Check if any non-suspicious method invokes a suspicious method
         for a, b in invocations:
-            if (not suspicious[a]) and suspicious[b]:
+            if a not in suspicious and b in suspicious:
+                # Cannot remove suspicious methods
                 return list(range(n))
-
-        # Step 3: remove all suspicious methods
-        return [i for i in range(n) if not suspicious[i]]
+        
+        # Can remove suspicious methods
+        return [i for i in range(n) if i not in suspicious]
 # @lc code=end
