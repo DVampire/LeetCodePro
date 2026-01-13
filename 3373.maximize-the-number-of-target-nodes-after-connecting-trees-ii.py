@@ -5,41 +5,52 @@
 #
 
 # @lc code=start
+from collections import deque
 from typing import List
 
 class Solution:
     def maxTargetNodes(self, edges1: List[List[int]], edges2: List[List[int]]) -> List[int]:
-        def color_and_sizes(n: int, edges: List[List[int]]):
-            adj = [[] for _ in range(n)]
+        # Build adjacency list
+        def build_graph(edges):
+            n = len(edges) + 1
+            graph = [[] for _ in range(n)]
             for u, v in edges:
-                adj[u].append(v)
-                adj[v].append(u)
-
-            color = [-1] * n
-            stack = [0]
-            color[0] = 0
-            while stack:
-                u = stack.pop()
-                for v in adj[u]:
-                    if color[v] == -1:
-                        color[v] = color[u] ^ 1
-                        stack.append(v)
-
-            cnt0 = sum(1 for c in color if c == 0)
-            cnt1 = n - cnt0
-            return color, (cnt0, cnt1)
-
-        n = len(edges1) + 1
-        m = len(edges2) + 1
-
-        c1, (a0, a1) = color_and_sizes(n, edges1)
-        _, (b0, b1) = color_and_sizes(m, edges2)
-
-        best_tree2 = max(b0, b1)
-        sizes1 = (a0, a1)
-
-        ans = [0] * n
+                graph[u].append(v)
+                graph[v].append(u)
+            return graph, n
+        
+        # Color the tree using BFS (bipartite coloring)
+        def color_tree(graph, n):
+            colors = [-1] * n
+            colors[0] = 0
+            queue = deque([0])
+            while queue:
+                u = queue.popleft()
+                for v in graph[u]:
+                    if colors[v] == -1:
+                        colors[v] = 1 - colors[u]
+                        queue.append(v)
+            return colors
+        
+        # Tree 1
+        graph1, n = build_graph(edges1)
+        colors1 = color_tree(graph1, n)
+        count1 = [0, 0]
+        for c in colors1:
+            count1[c] += 1
+        
+        # Tree 2
+        graph2, m = build_graph(edges2)
+        colors2 = color_tree(graph2, m)
+        count2 = [0, 0]
+        for c in colors2:
+            count2[c] += 1
+        
+        # Calculate answer
+        max_count2 = max(count2[0], count2[1])
+        answer = []
         for i in range(n):
-            ans[i] = sizes1[c1[i]] + best_tree2
-        return ans
+            answer.append(count1[colors1[i]] + max_count2)
+        
+        return answer
 # @lc code=end
