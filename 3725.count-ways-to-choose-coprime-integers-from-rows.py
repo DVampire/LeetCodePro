@@ -4,56 +4,54 @@
 # [3725] Count Ways to Choose Coprime Integers from Rows
 #
 
+from typing import List
+
 # @lc code=start
 class Solution:
     def countCoprime(self, mat: List[List[int]]) -> int:
         MOD = 10**9 + 7
-        m = len(mat)
-        n = len(mat[0])
-        max_val = 150
-        
-        # Precompute frequencies of each number in each row
-        row_counts = [[0] * (max_val + 1) for _ in range(m)]
-        for i in range(m):
-            for val in mat[i]:
-                row_counts[i][val] += 1
-        
-        # Mobius function calculation up to 150
-        mu = [0] * (max_val + 1)
+        MAXV = 150
+
+        # Precompute divisors for each value up to MAXV
+        divisors = [[] for _ in range(MAXV + 1)]
+        for d in range(1, MAXV + 1):
+            for k in range(d, MAXV + 1, d):
+                divisors[k].append(d)
+
+        # Compute Möbius function mu[1..MAXV] using linear sieve
+        mu = [0] * (MAXV + 1)
         mu[1] = 1
         primes = []
-        is_prime = [True] * (max_val + 1)
-        for i in range(2, max_val + 1):
-            if is_prime[i]:
+        is_comp = [False] * (MAXV + 1)
+        for i in range(2, MAXV + 1):
+            if not is_comp[i]:
                 primes.append(i)
                 mu[i] = -1
             for p in primes:
-                if i * p > max_val: break
-                is_prime[i * p] = False
+                if i * p > MAXV:
+                    break
+                is_comp[i * p] = True
                 if i % p == 0:
                     mu[i * p] = 0
                     break
                 else:
                     mu[i * p] = -mu[i]
-        
+
+        # ways[d] = product over rows of (count of elements divisible by d)
+        ways = [1] * (MAXV + 1)
+        for row in mat:
+            cnt = [0] * (MAXV + 1)
+            for x in row:
+                for d in divisors[x]:
+                    cnt[d] += 1
+            for d in range(1, MAXV + 1):
+                ways[d] = (ways[d] * cnt[d]) % MOD
+
         ans = 0
-        for g in range(1, max_val + 1):
-            if mu[g] == 0: continue
-            
-            # Calculate f(g): number of ways such that GCD is multiple of g
-            ways_g = 1
-            for i in range(m):
-                count_divisible = 0
-                for multiple in range(g, max_val + 1, g):
-                    count_divisible += row_counts[i][multiple]
-                
-                ways_g = (ways_g * count_divisible) % MOD
-                if ways_g == 0: break
-            
-            if mu[g] == 1:
-                ans = (ans + ways_g) % MOD
-            else:
-                ans = (ans - ways_g + MOD) % MOD
-                
-        return ans
+        for d in range(1, MAXV + 1):
+            if mu[d] == 0:
+                continue
+            ans = (ans + mu[d] * ways[d]) % MOD
+
+        return ans % MOD
 # @lc code=end
