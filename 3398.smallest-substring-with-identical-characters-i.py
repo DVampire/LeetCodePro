@@ -8,51 +8,44 @@
 class Solution:
     def minLength(self, s: str, numOps: int) -> int:
         n = len(s)
-        INF = 10**9
-
-        def can(L: int) -> bool:
-            # dp0[len], dp1[len] for len in [1..L]
-            dp0 = [INF] * (L + 1)
-            dp1 = [INF] * (L + 1)
-
-            dp0[1] = 0 if s[0] == '0' else 1
-            dp1[1] = 0 if s[0] == '1' else 1
-
-            for i in range(1, n):
-                flip0 = 0 if s[i] == '0' else 1
-                flip1 = 0 if s[i] == '1' else 1
-
-                best0 = min(dp0[1:])
-                best1 = min(dp1[1:])
-
-                new0 = [INF] * (L + 1)
-                new1 = [INF] * (L + 1)
-
-                # switch character -> run length becomes 1
-                new0[1] = min(new0[1], best1 + flip0)
-                new1[1] = min(new1[1], best0 + flip1)
-
-                # extend same character run
-                for length in range(1, L):
-                    if dp0[length] < INF:
-                        new0[length + 1] = min(new0[length + 1], dp0[length] + flip0)
-                    if dp1[length] < INF:
-                        new1[length + 1] = min(new1[length + 1], dp1[length] + flip1)
-
-                dp0, dp1 = new0, new1
-
-                # costs only increase, so we can early stop
-                if min(min(dp0[1:]), min(dp1[1:])) > numOps:
-                    return False
-
-            return min(min(dp0[1:]), min(dp1[1:])) <= numOps
-
-        lo, hi = 1, n
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if can(mid):
-                hi = mid
+        
+        # Special case for k=1: check if we can make the string alternating
+        def canMakeAlternating():
+            mismatches1 = sum(1 for i in range(n) if s[i] != ('0' if i % 2 == 0 else '1'))
+            mismatches2 = sum(1 for i in range(n) if s[i] != ('1' if i % 2 == 0 else '0'))
+            return min(mismatches1, mismatches2) <= numOps
+        
+        if canMakeAlternating():
+            return 1
+        
+        # Find all runs of identical characters
+        runs = []
+        i = 0
+        while i < n:
+            j = i
+            while j < n and s[j] == s[i]:
+                j += 1
+            runs.append(j - i)
+            i = j
+        
+        # Binary search on the answer (starting from 2)
+        def canAchieve(k):
+            flips_needed = 0
+            for run_length in runs:
+                if run_length > k:
+                    flips_needed += run_length // (k + 1)
+            return flips_needed <= numOps
+        
+        left, right = 2, max(runs)
+        result = right
+        
+        while left <= right:
+            mid = (left + right) // 2
+            if canAchieve(mid):
+                result = mid
+                right = mid - 1
             else:
-                lo = mid + 1
-        return lo
+                left = mid + 1
+        
+        return result
 # @lc code=end
