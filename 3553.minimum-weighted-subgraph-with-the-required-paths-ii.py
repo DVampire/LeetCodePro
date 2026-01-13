@@ -4,9 +4,9 @@
 # [3553] Minimum Weighted Subgraph With the Required Paths II
 #
 
-# @lc code=start
-import collections
+from typing import List
 
+# @lc code=start
 class Solution:
     def minimumWeight(self, edges: List[List[int]], queries: List[List[int]]) -> List[int]:
         n = len(edges) + 1
@@ -14,67 +14,59 @@ class Solution:
         for u, v, w in edges:
             adj[u].append((v, w))
             adj[v].append((u, w))
-        
-        tour = []
-        first_occurrence = [-1] * n
+
+        LOG = n.bit_length()
+        parent = [[-1] * n for _ in range(LOG)]
         depth = [0] * n
-        D = [0] * n
-        
-        # Iterative DFS for Euler Tour
-        stack = [(0, 0)]  # node, child_index
-        first_occurrence[0] = 0
-        tour.append(0)
-        depth[0] = 0
-        D[0] = 0
-        
+        dist_root = [0] * n
+
+        # Iterative DFS from root 0
+        stack = [(0, -1, 0, 0)]  # (node, par, depth, dist_from_root)
         while stack:
-            u, idx = stack[-1]
-            if idx < len(adj[u]):
-                v, w = adj[u][idx]
-                stack[-1] = (u, idx + 1)
-                if first_occurrence[v] == -1:
-                    first_occurrence[v] = len(tour)
-                    depth[v] = depth[u] + 1
-                    D[v] = D[u] + w
-                    tour.append(v)
-                    stack.append((v, 0))
-            else:
-                stack.pop()
-                if stack:
-                    tour.append(stack[-1][0])
-        
-        m = len(tour)
-        K = m.bit_length()
-        st = [None] * K
-        st[0] = tour
-        for i in range(1, K):
-            prev = st[i-1]
-            curr = [0] * (m - (1 << i) + 1)
-            offset = 1 << (i - 1)
-            for j in range(m - (1 << i) + 1):
-                u, v = prev[j], prev[j + offset]
-                curr[j] = u if depth[u] < depth[v] else v
-            st[i] = curr
-            
-        # Precompute logs for O(1) LCA
-        logs = [0] * (m + 1)
-        for i in range(2, m + 1):
-            logs[i] = logs[i >> 1] + 1
-            
-        def get_lca(u, v):
-            l, r = first_occurrence[u], first_occurrence[v]
-            if l > r: l, r = r, l
-            i = logs[r - l + 1]
-            a, b = st[i][l], st[i][r - (1 << i) + 1]
-            return a if depth[a] < depth[b] else b
-        
+            u, p, dep, d = stack.pop()
+            parent[0][u] = p
+            depth[u] = dep
+            dist_root[u] = d
+            for v, w in adj[u]:
+                if v == p:
+                    continue
+                stack.append((v, u, dep + 1, d + w))
+
+        # Build binary lifting table
+        for k in range(1, LOG):
+            prev = parent[k - 1]
+            cur = parent[k]
+            for i in range(n):
+                mid = prev[i]
+                cur[i] = -1 if mid == -1 else prev[mid]
+
+        def lca(u: int, v: int) -> int:
+            if depth[u] < depth[v]:
+                u, v = v, u
+            diff = depth[u] - depth[v]
+            bit = 0
+            while diff:
+                if diff & 1:
+                    u = parent[bit][u]
+                diff >>= 1
+                bit += 1
+            if u == v:
+                return u
+            for k in range(LOG - 1, -1, -1):
+                pu, pv = parent[k][u], parent[k][v]
+                if pu != pv:
+                    u, v = pu, pv
+            return parent[0][u]
+
+        def dist(u: int, v: int) -> int:
+            w = lca(u, v)
+            return dist_root[u] + dist_root[v] - 2 * dist_root[w]
+
         ans = []
-        for s1, s2, d in queries:
-            l12 = get_lca(s1, s2)
-            l1d = get_lca(s1, d)
-            l2d = get_lca(s2, d)
-            res = D[s1] + D[s2] + D[d] - D[l12] - D[l1d] - D[l2d]
-            ans.append(res)
-            
+        for a, b, d in queries:
+            dab = dist(a, b)
+            dad = dist(a, d)
+            dbd = dist(b, d)
+            ans.append((dab + dad + dbd) // 2)
         return ans
 # @lc code=end
