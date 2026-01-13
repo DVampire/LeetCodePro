@@ -5,48 +5,76 @@
 #
 
 # @lc code=start
-import functools
+from functools import lru_cache
+
+MOD = 10**9 + 7
 
 class Solution:
     def countNumbers(self, l: str, r: str, b: int) -> int:
-        MOD = 10**9 + 7
+        def dec_one(s: str) -> str:
+            # assumes s represents an integer >= 0
+            if s == "0":
+                return "0"
+            a = list(s)
+            i = len(a) - 1
+            while i >= 0 and a[i] == '0':
+                a[i] = '9'
+                i -= 1
+            if i >= 0:
+                a[i] = chr(ord(a[i]) - 1)
+            # strip leading zeros
+            res = ''.join(a).lstrip('0')
+            return res if res else "0"
 
-        def to_base_b(n_str, base):
-            n = int(n_str)
-            if n == 0: return [0]
+        def divmod_dec_str(num: str, d: int):
+            # returns (quotient_str, remainder_int)
+            rem = 0
+            out = []
+            for ch in num:
+                rem = rem * 10 + (ord(ch) - 48)
+                q = rem // d
+                rem %= d
+                out.append(chr(q + 48))
+            qstr = ''.join(out).lstrip('0')
+            return (qstr if qstr else "0", rem)
+
+        def dec_to_base_digits(num: str, base: int):
+            if num == "0":
+                return [0]
             digits = []
-            while n > 0:
-                digits.append(n % base)
-                n //= base
-            return digits[::-1]
+            cur = num
+            while cur != "0":
+                cur, rem = divmod_dec_str(cur, base)
+                digits.append(rem)
+            digits.reverse()
+            return digits
 
-        @functools.lru_cache(None)
-        def solve_dp(idx, last_digit, is_less, is_started, digits_tuple, base):
-            if idx == len(digits_tuple):
-                return 1 if is_started else 0
-            
-            res = 0
-            upper = digits_tuple[idx] if not is_less else base - 1
-            
-            for d in range(upper + 1):
-                if not is_started:
-                    if d == 0:
-                        res = (res + solve_dp(idx + 1, 0, True, False, digits_tuple, base)) % MOD
+        def count_leq(x_dec: str) -> int:
+            digits = dec_to_base_digits(x_dec, b)
+            n = len(digits)
+
+            @lru_cache(None)
+            def dfs(i: int, prev: int, tight: int, started: int) -> int:
+                if i == n:
+                    return 1  # counts 0 if never started
+
+                lim = digits[i] if tight else (b - 1)
+                ans = 0
+                for dgt in range(lim + 1):
+                    ntight = 1 if (tight and dgt == lim) else 0
+                    if started == 0 and dgt == 0:
+                        ans += dfs(i + 1, 0, ntight, 0)
                     else:
-                        res = (res + solve_dp(idx + 1, d, is_less or (d < upper), True, digits_tuple, base)) % MOD
-                else:
-                    if d >= last_digit:
-                        res = (res + solve_dp(idx + 1, d, is_less or (d < upper), True, digits_tuple, base)) % MOD
-            return res
+                        if started == 0:
+                            ans += dfs(i + 1, dgt, ntight, 1)
+                        else:
+                            if dgt >= prev:
+                                ans += dfs(i + 1, dgt, ntight, 1)
+                return ans % MOD
 
-        def count_upto(s, base):
-            digits = to_base_b(s, base)
-            solve_dp.cache_clear()
-            return solve_dp(0, 0, False, False, tuple(digits), base)
+            return dfs(0, 0, 1, 0)
 
-        ans_r = count_upto(r, b)
-        l_minus_1 = str(int(l) - 1)
-        ans_l = count_upto(l_minus_1, b) if int(l) > 0 else 0
-        
-        return (ans_r - ans_l + MOD) % MOD
+        l_minus_1 = dec_one(l)
+        res = (count_leq(r) - count_leq(l_minus_1)) % MOD
+        return res
 # @lc code=end
