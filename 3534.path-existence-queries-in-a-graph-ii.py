@@ -4,70 +4,68 @@
 # [3534] Path Existence Queries in a Graph II
 #
 
-# @lc code=start
-import bisect
+from typing import List
 
+# @lc code=start
 class Solution:
     def pathExistenceQueries(self, n: int, nums: List[int], maxDiff: int, queries: List[List[int]]) -> List[int]:
-        # Get unique sorted values
-        U = sorted(list(set(nums)))
-        K = len(U)
-        val_to_idx = {val: i for i, val in enumerate(U)}
-        
-        # Precompute furthest reachable index for each value index
-        R = [0] * K
-        for i in range(K):
-            # Find the largest index j such that U[j] <= U[i] + maxDiff
-            R[i] = bisect.bisect_right(U, U[i] + maxDiff) - 1
-        
-        # Sparse table for binary lifting
-        MAX_LOG = 18
-        st = [R]
-        for p in range(1, MAX_LOG):
-            prev_st = st[p-1]
-            curr_st = [prev_st[prev_st[i]] for i in range(K)]
-            st.append(curr_st)
-            
-        # Precompute connected components of values
-        comp = [0] * K
-        curr_comp = 0
-        for i in range(1, K):
-            if U[i] - U[i-1] > maxDiff:
-                curr_comp += 1
-            comp[i] = curr_comp
-            
-        results = []
+        # Sort nodes by value
+        order = sorted([(nums[i], i) for i in range(n)])
+        val = [0] * n
+        pos = [0] * n  # original index -> sorted position
+        for p, (v, idx) in enumerate(order):
+            val[p] = v
+            pos[idx] = p
+
+        # Connected components in sorted order split by gaps > maxDiff
+        comp = [0] * n
+        cid = 0
+        for i in range(1, n):
+            if val[i] - val[i - 1] > maxDiff:
+                cid += 1
+            comp[i] = cid
+
+        # next[i] = farthest reachable index in 1 step (val[next[i]] - val[i] <= maxDiff)
+        nxt = [0] * n
+        r = 0
+        for i in range(n):
+            if r < i:
+                r = i
+            while r + 1 < n and val[r + 1] - val[i] <= maxDiff:
+                r += 1
+            nxt[i] = r
+
+        # Binary lifting table
+        LOG = (n).bit_length()
+        up = [nxt[:]]
+        for k in range(1, LOG):
+            prev = up[k - 1]
+            cur = [0] * n
+            for i in range(n):
+                cur[i] = prev[prev[i]]
+            up.append(cur)
+
+        ans = []
         for u, v in queries:
             if u == v:
-                results.append(0)
+                ans.append(0)
                 continue
-            
-            val_u, val_v = nums[u], nums[v]
-            idx_u, idx_v = val_to_idx[val_u], val_to_idx[val_v]
-            
-            if idx_u == idx_v:
-                # Same value but different nodes
-                results.append(1)
+            i, j = pos[u], pos[v]
+            if i > j:
+                i, j = j, i
+            if comp[i] != comp[j]:
+                ans.append(-1)
                 continue
-            
-            if idx_u > idx_v:
-                idx_u, idx_v = idx_v, idx_u
-            
-            # Check if they are in the same connected component
-            if comp[idx_u] != comp[idx_v]:
-                results.append(-1)
-                continue
-            
-            # Binary lifting to find minimum steps to reach idx_v starting from idx_u
+
             steps = 0
-            curr = idx_u
-            for p in range(MAX_LOG - 1, -1, -1):
-                if st[p][curr] < idx_v:
-                    curr = st[p][curr]
-                    steps += (1 << p)
-            
-            # One more step is needed to reach or exceed idx_v
-            results.append(steps + 1)
-            
-        return results
+            cur = i
+            for k in range(LOG - 1, -1, -1):
+                jump_to = up[k][cur]
+                if jump_to < j:
+                    cur = jump_to
+                    steps += 1 << k
+            # one more jump reaches >= j
+            ans.append(steps + 1)
+
+        return ans
 # @lc code=end
