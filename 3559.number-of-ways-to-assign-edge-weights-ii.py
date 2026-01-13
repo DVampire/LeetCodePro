@@ -1,74 +1,78 @@
-import sys
-from collections import deque
-
 #
 # @lc app=leetcode id=3559 lang=python3
 #
 # [3559] Number of Ways to Assign Edge Weights II
 #
 
+from typing import List
+
 # @lc code=start
 class Solution:
     def assignEdgeWeights(self, edges: List[List[int]], queries: List[List[int]]) -> List[int]:
-        n = len(edges) + 1
-        adj = [[] for _ in range(n + 1)]
-        for u, v in edges:
-            adj[u].append(v)
-            adj[v].append(u)
-        
-        LOG = 18
-        up = [[0] * (n + 1) for _ in range(LOG)]
-        depth = [0] * (n + 1)
-        
-        # BFS to compute depth and up[0]
-        queue = deque([(1, 0, 0)])
-        visited = [False] * (n + 1)
-        visited[1] = True
-        while queue:
-            u, p, d = queue.popleft()
-            up[0][u] = p
-            depth[u] = d
-            for v in adj[u]:
-                if not visited[v]:
-                    visited[v] = True
-                    queue.append((v, u, d + 1))
-        
-        # Fill binary lifting table
-        for i in range(1, LOG):
-            up_prev = up[i - 1]
-            up_curr = up[i]
-            for u in range(1, n + 1):
-                up_curr[u] = up_prev[up_prev[u]]
-        
-        def get_lca(u, v):
-            if depth[u] < depth[v]:
-                u, v = v, u
-            diff = depth[u] - depth[v]
-            for i in range(LOG):
-                if (diff >> i) & 1:
-                    u = up[i][u]
-            if u == v:
-                return u
-            for i in range(LOG - 1, -1, -1):
-                upi = up[i]
-                if upi[u] != upi[v]:
-                    u = upi[u]
-                    v = upi[v]
-            return up[0][u]
-        
         MOD = 10**9 + 7
+        n = len(edges) + 1
+
+        g = [[] for _ in range(n + 1)]
+        for u, v in edges:
+            g[u].append(v)
+            g[v].append(u)
+
+        LOG = (n).bit_length()
+        parent = [[0] * (n + 1) for _ in range(LOG)]
+        depth = [0] * (n + 1)
+
+        # Iterative DFS from root = 1
+        stack = [(1, 0)]
+        order = [1]
+        parent[0][1] = 0
+        depth[1] = 0
+        while stack:
+            node, par = stack.pop()
+            parent[0][node] = par
+            for nei in g[node]:
+                if nei == par:
+                    continue
+                depth[nei] = depth[node] + 1
+                stack.append((nei, node))
+
+        # Build binary lifting table
+        for j in range(1, LOG):
+            pj = parent[j - 1]
+            cur = parent[j]
+            for v in range(1, n + 1):
+                cur[v] = pj[pj[v]]
+
+        def lca(a: int, b: int) -> int:
+            if depth[a] < depth[b]:
+                a, b = b, a
+            # lift a
+            diff = depth[a] - depth[b]
+            bit = 0
+            while diff:
+                if diff & 1:
+                    a = parent[bit][a]
+                diff >>= 1
+                bit += 1
+            if a == b:
+                return a
+            for j in range(LOG - 1, -1, -1):
+                if parent[j][a] != parent[j][b]:
+                    a = parent[j][a]
+                    b = parent[j][b]
+            return parent[0][a]
+
+        # Precompute powers of 2
         pow2 = [1] * (n + 1)
         for i in range(1, n + 1):
             pow2[i] = (pow2[i - 1] * 2) % MOD
-        
-        results = []
+
+        ans = []
         for u, v in queries:
             if u == v:
-                results.append(0)
-            else:
-                lca = get_lca(u, v)
-                dist = depth[u] + depth[v] - 2 * depth[lca]
-                results.append(pow2[dist - 1])
-        
-        return results
+                ans.append(0)
+                continue
+            w = lca(u, v)
+            dist = depth[u] + depth[v] - 2 * depth[w]
+            ans.append(pow2[dist - 1])  # dist > 0 here
+        return ans
 # @lc code=end
