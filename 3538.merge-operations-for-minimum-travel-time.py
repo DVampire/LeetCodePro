@@ -4,45 +4,56 @@
 # [3538] Merge Operations for Minimum Travel Time
 #
 
-# @lc code=start
 from typing import List
-import functools
+import math
 
+# @lc code=start
 class Solution:
     def minTravelTime(self, l: int, n: int, k: int, position: List[int], time: List[int]) -> int:
-        # Precompute prefix sums of time to quickly calculate segment speeds
-        prefix_time = [0] * (n + 1)
+        INF = 10**30
+
+        # Prefix sums of time to query sum(time[a..b]) quickly.
+        pref = [0] * (n + 1)
         for i in range(n):
-            prefix_time[i + 1] = prefix_time[i] + time[i]
+            pref[i + 1] = pref[i] + time[i]
 
-        def get_speed(start_idx, end_idx):
-            # Speed of segment starting at end_idx, where signs between start_idx and end_idx were removed
-            return prefix_time[end_idx + 1] - prefix_time[start_idx + 1]
+        def sum_time(a: int, b: int) -> int:
+            """Sum of time[a..b], inclusive. Assumes 0 <= a <= b < n."""
+            return pref[b + 1] - pref[a]
 
-        @functools.lru_cache(None)
-        def dp(rem, last, prev):
-            # rem: number of signs removed from indices 1...n-2
-            # last: index of the last sign kept
-            # prev: index of the sign kept before 'last'
-            
-            if last == n - 1:
-                return 0 if rem == k else float('inf')
-            
-            res = float('inf')
-            # Try keeping the next sign 'nxt'
-            for nxt in range(last + 1, n):
-                removed_now = nxt - last - 1
-                if rem + removed_now <= k:
-                    # Calculate the cost of the segment [pos[last], pos[nxt]]
-                    # If last is 0, speed is time[0]. Otherwise, speed is sum(time[prev+1...last])
-                    speed = time[0] if last == 0 else get_speed(prev, last)
-                    cost = (position[nxt] - position[last]) * speed
-                    
-                    sub = dp(rem + removed_now, nxt, last)
-                    if sub != float('inf'):
-                        res = min(res, cost + sub)
-            return res
+        # dp[prev][cur][used]
+        dp = [[[INF] * (k + 1) for _ in range(n)] for __ in range(n)]
 
-        ans = dp(0, 0, -1)
-        return int(ans)
+        # Initialize: first kept sign after 0 is j
+        for j in range(1, n):
+            used = j - 1  # removed indices 1..j-1
+            if used <= k:
+                dp[0][j][used] = (position[j] - position[0]) * time[0]
+
+        # Transitions
+        for used in range(k + 1):
+            for prev in range(n):
+                for cur in range(prev + 1, n):
+                    base = dp[prev][cur][used]
+                    if base >= INF:
+                        continue
+                    if cur == n - 1:
+                        continue  # already at the end
+
+                    # Final time stored at `cur` depends only on (prev, cur)
+                    t_cur = sum_time(prev + 1, cur)
+
+                    for nxt in range(cur + 1, n):
+                        add_removed = nxt - cur - 1
+                        used2 = used + add_removed
+                        if used2 > k:
+                            break
+                        cost_add = (position[nxt] - position[cur]) * t_cur
+                        if base + cost_add < dp[cur][nxt][used2]:
+                            dp[cur][nxt][used2] = base + cost_add
+
+        ans = INF
+        for prev in range(n - 1):
+            ans = min(ans, dp[prev][n - 1][k])
+        return ans
 # @lc code=end
