@@ -5,35 +5,38 @@
 #
 
 # @lc code=start
-from typing import List
 import heapq
-import math
 
 class Solution:
     def minTimeToReach(self, moveTime: List[List[int]]) -> int:
-        n, m = len(moveTime), len(moveTime[0])
-
-        dist = [[math.inf] * m for _ in range(n)]
-        start_time = max(0, moveTime[0][0])
-        dist[0][0] = start_time
-
-        pq = [(start_time, 0, 0)]  # (time, r, c)
-        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
+        n = len(moveTime)
+        m = len(moveTime[0])
+        
+        # Priority queue: (time, row, col)
+        pq = [(0, 0, 0)]
+        
+        # visited set
+        visited = set()
+        
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        
         while pq:
-            t, r, c = heapq.heappop(pq)
-            if t != dist[r][c]:
+            time, r, c = heapq.heappop(pq)
+            
+            if (r, c) in visited:
                 continue
+            
+            visited.add((r, c))
+            
             if r == n - 1 and c == m - 1:
-                return t
-
+                return time
+            
             for dr, dc in directions:
                 nr, nc = r + dr, c + dc
-                if 0 <= nr < n and 0 <= nc < m:
-                    nt = max(t + 1, moveTime[nr][nc])
-                    if nt < dist[nr][nc]:
-                        dist[nr][nc] = nt
-                        heapq.heappush(pq, (nt, nr, nc))
-
-        return dist[n - 1][m - 1]
+                
+                if 0 <= nr < n and 0 <= nc < m and (nr, nc) not in visited:
+                    new_time = max(time, moveTime[nr][nc]) + 1
+                    heapq.heappush(pq, (new_time, nr, nc))
+        
+        return -1
 # @lc code=end
