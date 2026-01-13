@@ -5,51 +5,41 @@
 #
 
 # @lc code=start
-from collections import deque, defaultdict
 from typing import List
 
 class Solution:
     def maxTargetNodes(self, edges1: List[List[int]], edges2: List[List[int]]) -> List[int]:
-        def get_parities(edges, n):
-            adj = defaultdict(list)
+        def color_and_sizes(n: int, edges: List[List[int]]):
+            adj = [[] for _ in range(n)]
             for u, v in edges:
                 adj[u].append(v)
                 adj[v].append(u)
-            
-            parities = [-1] * n
-            counts = [0, 0] # counts[0] for parity 0, counts[1] for parity 1
-            
-            # Since it's a tree, it's connected. One BFS from node 0 suffices.
-            queue = deque([(0, 0)])
-            parities[0] = 0
-            counts[0] = 1
-            
-            while queue:
-                u, p = queue.popleft()
-                next_p = 1 - p
+
+            color = [-1] * n
+            stack = [0]
+            color[0] = 0
+            while stack:
+                u = stack.pop()
                 for v in adj[u]:
-                    if parities[v] == -1:
-                        parities[v] = next_p
-                        counts[next_p] += 1
-                        queue.append((v, next_p))
-            return parities, counts
+                    if color[v] == -1:
+                        color[v] = color[u] ^ 1
+                        stack.append(v)
+
+            cnt0 = sum(1 for c in color if c == 0)
+            cnt1 = n - cnt0
+            return color, (cnt0, cnt1)
 
         n = len(edges1) + 1
         m = len(edges2) + 1
-        
-        parities1, counts1 = get_parities(edges1, n)
-        _, counts2 = get_parities(edges2, m)
-        
-        # Max target nodes from Tree 2 is max(nodes with dist odd from some j)
-        # If we pick j such that its color is 0, nodes at odd distance are those with color 1 (count2[1]).
-        # If we pick j such that its color is 1, nodes at odd distance are those with color 0 (count2[0]).
-        max_from_tree2 = max(counts2[0], counts2[1])
-        
-        ans = []
+
+        c1, (a0, a1) = color_and_sizes(n, edges1)
+        _, (b0, b1) = color_and_sizes(m, edges2)
+
+        best_tree2 = max(b0, b1)
+        sizes1 = (a0, a1)
+
+        ans = [0] * n
         for i in range(n):
-            # Target nodes in Tree 1 are those with same parity as node i
-            p = parities1[i]
-            ans.append(counts1[p] + max_from_tree2)
-            
+            ans[i] = sizes1[c1[i]] + best_tree2
         return ans
 # @lc code=end
