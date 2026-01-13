@@ -5,69 +5,58 @@
 #
 
 # @lc code=start
+from typing import *
+
 class Solution:
     def maxDifference(self, s: str, k: int) -> int:
         n = len(s)
-        s_int = [int(c) for c in s]
-        
-        # Precompute prefix sums for all 5 characters
-        prefix = [[0] * (n + 1) for _ in range(5)]
-        for i in range(n):
-            char_idx = s_int[i]
+        digits = [ord(ch) - 48 for ch in s]  # 0..4
+
+        # pref[c][i] = count of digit c in s[:i]
+        pref = [[0] * (n + 1) for _ in range(5)]
+        cnt = [0] * 5
+        for i, d in enumerate(digits, 1):
+            cnt[d] += 1
             for c in range(5):
-                prefix[c][i+1] = prefix[c][i]
-            prefix[char_idx][i+1] += 1
-            
-        ans = -float('inf')
-        
-        # Iterate over all pairs of distinct characters (a, b)
+                pref[c][i] = cnt[c]
+
+        INF = 10**9
+        ans = -INF
+
         for a in range(5):
             for b in range(5):
                 if a == b:
                     continue
-                
-                # min_val stores the minimum (prefix_a[i] - prefix_b[i]) 
-                # for each parity combination (prefix_a % 2, prefix_b % 2)
-                min_val = [[float('inf')] * 2 for _ in range(2)]
-                last_b_pos = -1
-                processed_i = -1
-                
-                # diff_prefix stores prefix_a[i] - prefix_b[i]
-                # parity_a stores prefix_a[i] % 2
-                # parity_b stores prefix_b[i] % 2
-                
-                for j in range(1, n + 1):
-                    if s_int[j-1] == b:
-                        last_b_pos = j - 1
-                    
-                    # Valid i must satisfy: i <= j - k AND substring s[i:j] contains 'b'
-                    # Substring s[i:j] contains 'b' if i <= last_b_pos
-                    limit = j - k
-                    if last_b_pos < limit:
-                        limit = last_b_pos
-                    
-                    # Update min_val for all newly available i up to limit
-                    while processed_i < limit:
-                        processed_i += 1
-                        pa = prefix[a][processed_i] % 2
-                        pb = prefix[b][processed_i] % 2
-                        val = prefix[a][processed_i] - prefix[b][processed_i]
-                        if val < min_val[pa][pb]:
-                            min_val[pa][pb] = val
-                    
-                    # Current parities at index j
-                    cur_pa = prefix[a][j] % 2
-                    cur_pb = prefix[b][j] % 2
-                    
-                    # We need (prefix_a[j] - prefix_a[i]) to be odd -> parity_a[i] != cur_pa
-                    # We need (prefix_b[j] - prefix_b[i]) to be even -> parity_b[i] == cur_pb
-                    target_pa = 1 - cur_pa
-                    target_pb = cur_pb
-                    
-                    if min_val[target_pa][target_pb] != float('inf'):
-                        res = (prefix[a][j] - prefix[b][j]) - min_val[target_pa][target_pb]
-                        if res > ans:
-                            ans = res
-                            
-        return int(ans)
+                PA = pref[a]
+                PB = pref[b]
+
+                # best[paParity][pbParity] = min(PA[l]-PB[l]) among eligible l
+                best = [[INF, INF], [INF, INF]]
+
+                p_added = 0  # next l index to add into best
+                q = -1        # max index with PB[index] <= PB[r]-2 (moves monotonically)
+
+                for r in range(n + 1):
+                    pb_limit = PB[r] - 2
+                    while q + 1 <= n and PB[q + 1] <= pb_limit:
+                        q += 1
+
+                    bound = min(r - k, q)
+                    while p_added <= bound:
+                        pa_p = PA[p_added] & 1
+                        pb_p = PB[p_added] & 1
+                        dval = PA[p_added] - PB[p_added]
+                        if dval < best[pa_p][pb_p]:
+                            best[pa_p][pb_p] = dval
+                        p_added += 1
+
+                    pa_need = (PA[r] & 1) ^ 1
+                    pb_need = PB[r] & 1
+                    min_d = best[pa_need][pb_need]
+                    if min_d != INF:
+                        cand = (PA[r] - PB[r]) - min_d
+                        if cand > ans:
+                            ans = cand
+
+        return ans
 # @lc code=end
