@@ -7,31 +7,29 @@
 class TextEditor:
 
     def __init__(self):
-        self.left = []   # chars to the left of cursor
-        self.right = []  # chars to the right of cursor (top is nearest to cursor)
+        self.left = []
+        self.right = []
 
     def addText(self, text: str) -> None:
         self.left.extend(text)
 
     def deleteText(self, k: int) -> int:
-        deleted = 0
-        while k > 0 and self.left:
+        deleted = min(k, len(self.left))
+        for _ in range(deleted):
             self.left.pop()
-            k -= 1
-            deleted += 1
         return deleted
 
     def cursorLeft(self, k: int) -> str:
-        while k > 0 and self.left:
+        moves = min(k, len(self.left))
+        for _ in range(moves):
             self.right.append(self.left.pop())
-            k -= 1
-        return ''.join(self.left[-10:])
+        return "".join(self.left[-10:])
 
     def cursorRight(self, k: int) -> str:
-        while k > 0 and self.right:
+        moves = min(k, len(self.right))
+        for _ in range(moves):
             self.left.append(self.right.pop())
-            k -= 1
-        return ''.join(self.left[-10:])
+        return "".join(self.left[-10:])
 
 
 # Your TextEditor object will be instantiated and called as such:
