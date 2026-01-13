@@ -6,70 +6,71 @@
 
 # @lc code=start
 from typing import List
+import bisect
+
+class Fenwick:
+    def __init__(self, n: int):
+        self.n = n
+        self.bit = [0] * (n + 1)
+
+    def add(self, i: int, delta: int) -> None:
+        while i <= self.n:
+            self.bit[i] += delta
+            i += i & -i
+
+    def sum(self, i: int) -> int:
+        s = 0
+        while i > 0:
+            s += self.bit[i]
+            i -= i & -i
+        return s
 
 class Solution:
     def minInversionCount(self, nums: List[int], k: int) -> int:
         n = len(nums)
         if k <= 1:
             return 0
-        
-        # Coordinate compression to handle large values in nums
-        sorted_unique = sorted(list(set(nums)))
-        rank = {val: i + 1 for i, val in enumerate(sorted_unique)}
-        rank_nums = [rank[x] for x in nums]
-        m = len(sorted_unique)
-        
-        # Binary Indexed Tree (Fenwick Tree) implementation
-        tree = [0] * (m + 1)
-        
-        def update(i, delta):
-            while i <= m:
-                tree[i] += delta
-                i += i & (-i)
-        
-        def query(i):
-            s = 0
-            while i > 0:
-                s += tree[i]
-                i -= i & (-i)
-            return s
-        
-        # Calculate inversion count for the first subarray of length k
+
+        # Coordinate compression
+        vals = sorted(set(nums))
+        def rk(x: int) -> int:
+            return bisect.bisect_left(vals, x) + 1  # 1-indexed
+
+        m = len(vals)
+        bit = Fenwick(m)
+
+        # Inversion count for first window
         inv = 0
-        for j in range(k):
-            # Elements already in BIT are to the left of current element.
-            # Inversions = count of elements in BIT > current element.
-            inv += (j - query(rank_nums[j]))
-            update(rank_nums[j], 1)
-        
-        min_inv = inv
-        if min_inv == 0:
-            return 0
-        
-        # Slide the window across the array
-        for i in range(n - k):
-            # Current window is nums[i...i+k-1]. Move to nums[i+1...i+k].
-            
-            # 1. Remove nums[i] from BIT. 
-            # BIT now contains nums[i+1...i+k-1].
-            update(rank_nums[i], -1)
-            
-            # 2. Subtract inversions where nums[i] was the first element.
-            # These are elements in nums[i+1...i+k-1] that are strictly smaller than nums[i].
-            inv -= query(rank_nums[i] - 1)
-            
-            # 3. Add inversions where nums[i+k] is the second element.
-            # These are elements in nums[i+1...i+k-1] that are strictly larger than nums[i+k].
-            # Total elements in BIT is k-1.
-            inv += (k - 1 - query(rank_nums[i + k]))
-            
-            # 4. Add nums[i+k] to BIT.
-            update(rank_nums[i + k], 1)
-            
-            if inv < min_inv:
-                min_inv = inv
-                if min_inv == 0:
-                    return 0
-        
-        return min_inv
+        count_in = 0
+        for i in range(k):
+            r = rk(nums[i])
+            leq = bit.sum(r)
+            inv += count_in - leq  # previous > current
+            bit.add(r, 1)
+            count_in += 1
+
+        ans = inv
+
+        # Slide windows
+        for start in range(0, n - k):
+            ans = min(ans, inv)
+
+            x = nums[start]
+            y = nums[start + k]
+            rx = rk(x)
+            ry = rk(y)
+
+            # Remove leftmost x
+            bit.add(rx, -1)
+            removed = bit.sum(rx - 1)  # count of elements < x in remaining window
+            inv -= removed
+
+            # Add rightmost y
+            # current window size is k-1 before insertion
+            greater = (k - 1) - bit.sum(ry)  # count of elements > y
+            inv += greater
+            bit.add(ry, 1)
+
+        ans = min(ans, inv)
+        return ans
 # @lc code=end
