@@ -4,52 +4,61 @@
 # [3598] Longest Common Prefix Between Adjacent Strings After Removals
 #
 
-# @lc code=start
 from typing import List
 
+# @lc code=start
 class Solution:
     def longestCommonPrefix(self, words: List[str]) -> List[int]:
         n = len(words)
-        if n <= 1:
+
+        def lcp_len(a: str, b: str) -> int:
+            L = min(len(a), len(b))
+            i = 0
+            while i < L and a[i] == b[i]:
+                i += 1
+            return i
+
+        # lcp between original adjacent pairs
+        m = n - 1
+        lcp = [0] * max(0, m)
+        for j in range(m):
+            lcp[j] = lcp_len(words[j], words[j + 1])
+
+        if m <= 0:
             return [0] * n
-        
-        def get_lcp(s1, s2):
-            length = min(len(s1), len(s2))
-            for i in range(length):
-                if s1[i] != s2[i]:
-                    return i
-            return length
 
-        adj_lcps = []
-        for i in range(n - 1):
-            adj_lcps.append(get_lcp(words[i], words[i+1]))
+        # prefix and suffix maxima for lcp array
+        pref = [0] * m
+        cur = 0
+        for j in range(m):
+            cur = max(cur, lcp[j])
+            pref[j] = cur
 
-        # Precompute prefix and suffix maximums of adjacent LCPs
-        m = len(adj_lcps)
-        prefix_max = [0] * (m + 1)
-        suffix_max = [0] * (m + 1)
-        
-        for i in range(m):
-            prefix_max[i+1] = max(prefix_max[i], adj_lcps[i])
-        for i in range(m - 1, -1, -1):
-            suffix_max[i] = max(suffix_max[i+1], adj_lcps[i])
+        suf = [0] * m
+        cur = 0
+        for j in range(m - 1, -1, -1):
+            cur = max(cur, lcp[j])
+            suf[j] = cur
 
-        ans = []
+        ans = [0] * n
         for i in range(n):
-            res = 0
-            # When index i is removed, we look at adj_lcps before i-1 and after i
-            # Range before: [0, i-2] -> prefix_max[i-1]
-            # Range after: [i, m-1] -> suffix_max[i+1]
-            if i > 0:
-                res = max(res, prefix_max[i-1])
-            if i < n - 1:
-                res = max(res, suffix_max[i+1])
-            
-            # Bridge pair between i-1 and i+1
-            if 0 < i < n - 1:
-                res = max(res, get_lcp(words[i-1], words[i+1]))
-            
-            ans.append(res)
-            
+            best = 0
+
+            # unchanged pairs on the left: lcp[0 .. i-2]
+            left_idx = i - 2
+            if left_idx >= 0:
+                best = max(best, pref[left_idx])
+
+            # unchanged pairs on the right: lcp[i+1 .. m-1]
+            right_idx = i + 1
+            if right_idx <= m - 1:
+                best = max(best, suf[right_idx])
+
+            # new bridged pair (i-1, i+1)
+            if 0 <= i - 1 and i + 1 < n:
+                best = max(best, lcp_len(words[i - 1], words[i + 1]))
+
+            ans[i] = best
+
         return ans
 # @lc code=end
