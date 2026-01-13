@@ -4,100 +4,75 @@
 # [3486] Longest Special Path II
 #
 
+# @lc code=start
+from collections import defaultdict, deque
 from typing import List
 
-# @lc code=start
 class Solution:
     def longestSpecialPath(self, edges: List[List[int]], nums: List[int]) -> List[int]:
         n = len(nums)
-        adj = [[] for _ in range(n)]
-        for u, v, w in edges:
-            adj[u].append((v, w))
-            adj[v].append((u, w))
-
-        maxv = max(nums) if nums else 0
-        freq = [0] * (maxv + 1)
-        twos = 0
-        threes = 0
-
-        path_vals: List[int] = []
-        path_dist: List[int] = []
-
-        ops: List[tuple[int, int]] = []  # (val, delta)
-        l = 0
-
-        def apply(val: int, delta: int) -> None:
-            nonlocal twos, threes
-            prev = freq[val]
-            new = prev + delta
-
-            if prev == 2:
-                twos -= 1
-            elif prev == 3:
-                threes -= 1
-
-            if new == 2:
-                twos += 1
-            elif new == 3:
-                threes += 1
-
-            freq[val] = new
-
-        def do(val: int, delta: int) -> None:
-            apply(val, delta)
-            ops.append((val, delta))
-
-        bestLen = -1
-        bestNodes = 10**18
-
-        # stack frames:
-        # enter: (u, parent, dist, 0)
-        # exit : (u, parent, dist, 1, l0, ops_len)
-        stack = [(0, -1, 0, 0)]
-
-        while stack:
-            frame = stack.pop()
-            if frame[3] == 0:
-                u, parent, dist, _ = frame
-                l0 = l
-                ops_len = len(ops)
-
-                # enter node
-                path_vals.append(nums[u])
-                path_dist.append(dist)
-                do(nums[u], +1)
-
-                # shrink until valid
-                while threes > 0 or twos > 1:
-                    rem_val = path_vals[l]
-                    do(rem_val, -1)
-                    l += 1
-
-                # evaluate best suffix [l..r]
-                curLen = path_dist[-1] - path_dist[l]
-                curNodes = len(path_vals) - l
-                if curLen > bestLen:
-                    bestLen = curLen
-                    bestNodes = curNodes
-                elif curLen == bestLen and curNodes < bestNodes:
-                    bestNodes = curNodes
-
-                # schedule exit then children
-                stack.append((u, parent, dist, 1, l0, ops_len))
-                for v, w in reversed(adj[u]):
-                    if v == parent:
-                        continue
-                    stack.append((v, u, dist + w, 0))
-
-            else:
-                # exit node: rollback to saved state
-                _, _, _, _, l0, ops_len = frame
-                while len(ops) > ops_len:
-                    val, delta = ops.pop()
-                    apply(val, -delta)
-                l = l0
-                path_vals.pop()
-                path_dist.pop()
-
-        return [bestLen, bestNodes]
+        
+        # Build adjacency list
+        graph = defaultdict(list)
+        for u, v, length in edges:
+            graph[u].append((v, length))
+            graph[v].append((u, length))
+        
+        # Root the tree at node 0 - find parent-child relationships
+        children = defaultdict(list)
+        visited = [False] * n
+        queue = deque([0])
+        visited[0] = True
+        
+        while queue:
+            node = queue.popleft()
+            for neighbor, length in graph[node]:
+                if not visited[neighbor]:
+                    visited[neighbor] = True
+                    children[node].append((neighbor, length))
+                    queue.append(neighbor)
+        
+        def is_valid(value_count):
+            dup_count = 0
+            for count in value_count.values():
+                if count > 2:
+                    return False
+                if count == 2:
+                    dup_count += 1
+            return dup_count <= 1
+        
+        max_length = 0
+        min_nodes = float('inf')
+        
+        # Try each node as starting point
+        for start in range(n):
+            def dfs(node, value_count, path_length, node_count):
+                nonlocal max_length, min_nodes
+                
+                # Check if current path is valid (must have at least 2 nodes)
+                if node_count >= 2 and is_valid(value_count):
+                    if path_length > max_length:
+                        max_length = path_length
+                        min_nodes = node_count
+                    elif path_length == max_length:
+                        min_nodes = min(min_nodes, node_count)
+                
+                # Continue DFS to children
+                for child, length in children[node]:
+                    child_val = nums[child]
+                    value_count[child_val] += 1
+                    
+                    # Only continue if still valid
+                    if is_valid(value_count):
+                        dfs(child, value_count, path_length + length, node_count + 1)
+                    
+                    value_count[child_val] -= 1
+                    if value_count[child_val] == 0:
+                        del value_count[child_val]
+            
+            value_count = defaultdict(int)
+            value_count[nums[start]] = 1
+            dfs(start, value_count, 0, 1)
+        
+        return [max_length, min_nodes]
 # @lc code=end
