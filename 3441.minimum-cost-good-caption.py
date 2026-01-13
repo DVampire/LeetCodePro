@@ -5,61 +5,129 @@
 #
 
 # @lc code=start
+from array import array
+
 class Solution:
     def minCostGoodCaption(self, caption: str) -> str:
         n = len(caption)
-        if n < 3:
+        ALPHA = 26
+        START = 26
+        STATES = (ALPHA + 1) * 3  # 27 * 3 = 81
+        INF = 10**18
+
+        # dp is a flat array storing dp[i][last][lenState]
+        # index = i*STATES + last*3 + lenState
+        dp = array('q', [INF]) * ((n + 1) * STATES)
+
+        def idx(i: int, last: int, ls: int) -> int:
+            return i * STATES + last * 3 + ls
+
+        # Base: at end, valid only if current run length >= 3 (lenState==2)
+        for last in range(ALPHA + 1):
+            dp[idx(n, last, 2)] = 0
+            dp[idx(n, last, 0)] = INF
+            dp[idx(n, last, 1)] = INF
+
+        # Fill backwards
+        for i in range(n - 1, -1, -1):
+            nxt_base = (i + 1) * STATES
+            cur_base = i * STATES
+            s = ord(caption[i]) - 97
+
+            # Precompute A[ch] = w + dp[i+1][ch][0]
+            A = [0] * ALPHA
+            minVal = INF
+            countMin = 0
+            secondVal = INF
+
+            for ch in range(ALPHA):
+                w = s - ch
+                if w < 0:
+                    w = -w
+                val = w + dp[nxt_base + ch * 3 + 0]
+                A[ch] = val
+                if val < minVal:
+                    secondVal = minVal
+                    minVal = val
+                    countMin = 1
+                elif val == minVal:
+                    countMin += 1
+                elif val < secondVal:
+                    secondVal = val
+
+            # START state (only lenState=2 is meaningful)
+            dp[cur_base + START * 3 + 2] = minVal
+            dp[cur_base + START * 3 + 0] = INF
+            dp[cur_base + START * 3 + 1] = INF
+
+            # Normal states
+            for last in range(ALPHA):
+                wlast = s - last
+                if wlast < 0:
+                    wlast = -wlast
+
+                # Extend same run
+                ext0 = wlast + dp[nxt_base + last * 3 + 1]  # 1 -> 2
+                ext1 = wlast + dp[nxt_base + last * 3 + 2]  # 2 -> >=3
+                ext2 = wlast + dp[nxt_base + last * 3 + 2]  # >=3 -> >=3
+
+                dp[cur_base + last * 3 + 0] = ext0
+                dp[cur_base + last * 3 + 1] = ext1
+
+                # Switch run only if lenState==2
+                # best over ch != last
+                if A[last] != minVal or countMin > 1:
+                    sw = minVal
+                else:
+                    sw = secondVal
+
+                dp[cur_base + last * 3 + 2] = ext2 if ext2 < sw else sw
+
+        # If impossible
+        best = dp[idx(0, START, 2)]
+        if best >= INF // 2:
             return ""
 
-        # Precompute costs for converting caption[i] to character c
-        # cost[i][char_idx]
-        costs = [[0] * 26 for _ in range(n)]
-        for i in range(n):
-            val = ord(caption[i]) - ord('a')
-            for c in range(26):
-                costs[i][c] = abs(val - c)
-
-        # dp[i] = min cost to make caption[i:] good
-        dp = [float('inf')] * (n + 1)
-        dp[n] = 0
-        # To reconstruct the path and handle lexicographical order
-        # best_choice[i] = (char_idx, length)
-        best_choice = [None] * n
-
-        for i in range(n - 3, -1, -1):
-            for c in range(26):
-                current_cost = 0
-                # Try group lengths 3, 4, 5
-                for length in range(1, 6):
-                    if i + length > n:
-                        break
-                    current_cost += costs[i + length - 1][c]
-                    
-                    if length >= 3:
-                        total_cost = current_cost + dp[i + length]
-                        if total_cost < dp[i]:
-                            dp[i] = total_cost
-                            best_choice[i] = (c, length)
-                        elif total_cost == dp[i]:
-                            # Tie-breaking for lexicographical smallest
-                            if best_choice[i] is not None:
-                                prev_c, prev_len = best_choice[i]
-                                if c < prev_c:
-                                    best_choice[i] = (c, length)
-                                # If characters are same, shorter length is not necessarily better,
-                                # but since we check 'a' to 'z', the first 'c' that gives min cost
-                                # is usually the one. Lexicographical order is driven by the char choice.
-
-        if dp[0] == float('inf'):
-            return ""
-
+        # Reconstruct lexicographically smallest
         res = []
-        curr = 0
-        while curr < n:
-            c_idx, length = best_choice[curr]
-            char = chr(ord('a') + c_idx)
-            res.append(char * length)
-            curr += length
-        
+        last = START
+        ls = 2
+
+        for i in range(n):
+            cur_base = i * STATES
+            nxt_base = (i + 1) * STATES
+            target = dp[cur_base + last * 3 + ls]
+            s = ord(caption[i]) - 97
+
+            for ch in range(ALPHA):
+                w = s - ch
+                if w < 0:
+                    w = -w
+
+                if last == START:
+                    cost = w + dp[nxt_base + ch * 3 + 0]
+                    if cost == target:
+                        res.append(chr(ch + 97))
+                        last = ch
+                        ls = 0
+                        break
+                else:
+                    if ch == last:
+                        new_ls = 1 if ls == 0 else 2
+                        cost = w + dp[nxt_base + ch * 3 + new_ls]
+                        if cost == target:
+                            res.append(chr(ch + 97))
+                            ls = new_ls
+                            break
+                    else:
+                        if ls != 2:
+                            continue
+                        cost = w + dp[nxt_base + ch * 3 + 0]
+                        if cost == target:
+                            res.append(chr(ch + 97))
+                            last = ch
+                            ls = 0
+                            break
+
         return "".join(res)
 # @lc code=end
