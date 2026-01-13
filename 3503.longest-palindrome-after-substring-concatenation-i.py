@@ -7,31 +7,43 @@
 # @lc code=start
 class Solution:
     def longestPalindrome(self, s: str, t: str) -> int:
-        n, m = len(s), len(t)
-        
-        # Generate all substrings of s including an empty string
-        subs_s = [("", 0)]
-        for i in range(n):
-            for j in range(i + 1, n + 1):
-                subs_s.append((s[i:j], j - i))
-        
-        # Generate all substrings of t including an empty string
-        subs_t = [("", 0)]
-        for i in range(m):
-            for j in range(i + 1, m + 1):
-                subs_t.append((t[i:j], j - i))
-        
-        max_len = 0
-        # Iterate through every pair of substrings from s and t
-        for sub1, l1 in subs_s:
-            for sub2, l2 in subs_t:
-                current_len = l1 + l2
-                # Only check for palindrome if the length is better than our current best
-                if current_len > max_len:
-                    combined = sub1 + sub2
-                    # Check if the combined string is a palindrome
-                    if combined == combined[::-1]:
-                        max_len = current_len
-                        
-        return max_len
+        def all_substrings(x: str):
+            n = len(x)
+            subs = [""]
+            for i in range(n):
+                for j in range(i + 1, n + 1):
+                    subs.append(x[i:j])
+            return subs
+
+        def is_pal(x: str) -> bool:
+            i, j = 0, len(x) - 1
+            while i < j:
+                if x[i] != x[j]:
+                    return False
+                i += 1
+                j -= 1
+            return True
+
+        subs_s = all_substrings(s)
+        subs_t = all_substrings(t)
+
+        subs_s.sort(key=len, reverse=True)
+        subs_t.sort(key=len, reverse=True)
+
+        max_t_len = len(subs_t[0])
+        best = 0
+
+        for a in subs_s:
+            la = len(a)
+            if la + max_t_len <= best:
+                break
+            for b in subs_t:
+                total = la + len(b)
+                if total <= best:
+                    break
+                if is_pal(a + b):
+                    best = total
+                    break
+
+        return best
 # @lc code=end
