@@ -6,65 +6,60 @@
 
 # @lc code=start
 from typing import List
-import collections
+from collections import deque
 
 class Solution:
     def maxPartitionFactor(self, points: List[List[int]]) -> int:
         n = len(points)
         if n == 2:
             return 0
-        
-        # Calculate all pairwise Manhattan distances
-        dists = []
+
+        # Precompute pairwise Manhattan distances
+        dist = [[0] * n for _ in range(n)]
+        max_d = 0
         for i in range(n):
-            x1, y1 = points[i]
+            xi, yi = points[i]
             for j in range(i + 1, n):
-                x2, y2 = points[j]
-                dists.append(abs(x1 - x2) + abs(y1 - y2))
-        
-        # Sort unique distances
-        unique_dists = sorted(list(set(dists)))
-        
-        def is_bipartite(threshold):
-            # Build graph where edges exist if distance < threshold
-            adj = collections.defaultdict(list)
+                xj, yj = points[j]
+                d = abs(xi - xj) + abs(yi - yj)
+                dist[i][j] = d
+                dist[j][i] = d
+                if d > max_d:
+                    max_d = d
+
+        def feasible(D: int) -> bool:
+            # Build graph edges where dist < D, then test bipartite.
+            adj = [[] for _ in range(n)]
             for i in range(n):
-                x1, y1 = points[i]
+                di = dist[i]
                 for j in range(i + 1, n):
-                    x2, y2 = points[j]
-                    d = abs(x1 - x2) + abs(y1 - y2)
-                    if d < threshold:
+                    if di[j] < D:
                         adj[i].append(j)
                         adj[j].append(i)
-            
-            # Standard bipartite check using BFS/DFS coloring
-            color = {}
-            for i in range(n):
-                if i not in color:
-                    color[i] = 0
-                    queue = collections.deque([i])
-                    while queue:
-                        u = queue.popleft()
-                        for v in adj[u]:
-                            if v not in color:
-                                color[v] = 1 - color[u]
-                                queue.append(v)
-                            elif color[v] == color[u]:
-                                return False
+
+            color = [0] * n  # 0 uncolored, 1 / -1 are the two groups
+            for s in range(n):
+                if color[s] != 0:
+                    continue
+                color[s] = 1
+                q = deque([s])
+                while q:
+                    u = q.popleft()
+                    cu = color[u]
+                    for v in adj[u]:
+                        if color[v] == 0:
+                            color[v] = -cu
+                            q.append(v)
+                        elif color[v] == cu:
+                            return False
             return True
 
-        # Binary search for the maximum distance threshold
-        low = 0
-        high = len(unique_dists) - 1
-        ans = unique_dists[0]
-        
-        while low <= high:
-            mid = (low + high) // 2
-            if is_bipartite(unique_dists[mid]):
-                ans = unique_dists[mid]
-                low = mid + 1
+        lo, hi = 0, max_d
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if feasible(mid):
+                lo = mid
             else:
-                high = mid - 1
-        
-        return ans
+                hi = mid - 1
+        return lo
 # @lc code=end
