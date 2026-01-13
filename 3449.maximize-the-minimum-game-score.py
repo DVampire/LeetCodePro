@@ -5,66 +5,81 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maxScore(self, points: List[int], m: int) -> int:
         n = len(points)
+        min_p = min(points)
 
-        def check(X):
-            if X == 0:
+        def can(target: int) -> bool:
+            if target == 0:
                 return True
-            
-            needed = [(X + p - 1) // p for p in points]
-            v = [0] * n
-            total_m = 0
-            last_undone = n - 1
-            
-            # Initialize last_undone to the last index that needs more visits
-            while last_undone >= 0 and v[last_undone] >= needed[last_undone]:
-                last_undone -= 1
-            
-            for i in range(n):
-                # Move from i-1 to i
-                total_m += 1
-                if total_m > m:
-                    return False
-                v[i] += 1
-                
-                # If current index needs more visits, do round trips with next index
-                if v[i] < needed[i]:
-                    rem = needed[i] - v[i]
-                    if i < n - 1:
-                        v[i] += rem
-                        v[i + 1] += rem
-                        total_m += 2 * rem
-                    else:
-                        # Last element, must go back to n-2 and return to n-1
-                        v[i] += rem
-                        total_m += 2 * rem
-                    
-                    if total_m > m:
-                        return False
-                
-                # Update the last_undone pointer
-                while last_undone >= 0 and v[last_undone] >= needed[last_undone]:
-                    last_undone -= 1
-                
-                # If all indices are satisfied, we can stop here
-                if last_undone < 0:
-                    return total_m <= m
-            
-            return False
 
-        low = 0
-        high = 10**15 # Safe upper bound based on constraints
-        ans = 0
-        
-        while low <= high:
-            mid = (low + high) // 2
-            if check(mid):
-                ans = mid
-                low = mid + 1
+            # First move: -1 -> 0
+            moves = 1
+            if moves > m:
+                return False
+
+            # visits at current index i, and next index i+1 (built from operations at i)
+            cnt_cur = 1  # visits[0]
+            cnt_next = 0
+
+            if n == 2:
+                req0 = (target + points[0] - 1) // points[0]
+                req1 = (target + points[1] - 1) // points[1]
+
+                a = max(0, req0 - cnt_cur)  # need more visits to index 0 via back moves
+                c = max(0, req1 - 0)        # need visits to index 1 via forward moves
+
+                # End at index 0: forward=back=b
+                b1 = max(a, c)
+                total1 = moves + 2 * b1
+
+                # End at index 1: forward=back+1=b+1
+                b2 = max(a, c - 1, 0)
+                total2 = moves + (2 * b2 + 1)
+
+                return min(total1, total2) <= m
+
+            # Process indices 0..n-3, ending each stage at i+1
+            for i in range(n - 2 - 1):
+                req_i = (target + points[i] - 1) // points[i]
+                k = max(0, req_i - cnt_cur)
+
+                moves += 2 * k + 1
+                if moves > m:
+                    return False
+
+                cnt_next += k + 1  # visits gained at i+1
+
+                # advance window
+                cnt_cur = cnt_next
+                cnt_next = 0
+
+            # Now at index n-2 with cnt_cur visits; index n-1 not visited yet
+            req_a = (target + points[n - 2] - 1) // points[n - 2]
+            req_b = (target + points[n - 1] - 1) // points[n - 1]
+
+            a = max(0, req_a - cnt_cur)
+            c = max(0, req_b - 0)
+
+            # End at n-2
+            b1 = max(a, c)
+            extra1 = 2 * b1
+
+            # End at n-1
+            b2 = max(a, c - 1, 0)
+            extra2 = 2 * b2 + 1
+
+            return moves + min(extra1, extra2) <= m
+
+        lo, hi = 0, min_p * m
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if can(mid):
+                lo = mid
             else:
-                high = mid - 1
-        
-        return ans
+                hi = mid - 1
+        return lo
 # @lc code=end
