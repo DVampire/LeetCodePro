@@ -5,58 +5,44 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def maxProduct(self, nums: List[int], k: int, limit: int) -> int:
-        n = len(nums)
-        max_sum = 12 * n
-        if k < -max_sum or k > max_sum:
-            return -1
-
-        offset = max_sum
-        L = 2 * max_sum + 1
-        mask = (1 << L) - 1
-        target_bit = 1 << (k + offset)
-
-        # dp0[p] -> bitset of sums for non-empty subsequences with product p and length parity 0
-        # dp1[p] -> bitset of sums for non-empty subsequences with product p and length parity 1
-        dp0 = [0] * (limit + 1)
-        dp1 = [0] * (limit + 1)
-
-        for x in nums:
-            prev0, prev1 = dp0, dp1
-            new0 = prev0[:]  # skipping x
-            new1 = prev1[:]
-
-            # Start a new subsequence with just [x]
-            if x <= limit:
-                # sum = +x, parity becomes 1
-                new1[x] |= 1 << (x + offset)
-
-            if x == 0:
-                ub = limit
-            else:
-                ub = limit // x
-
-            # Extend existing subsequences
-            for p in range(ub + 1):
-                np = p * x
-
-                b0 = prev0[p]
-                if b0:
-                    # parity 0 -> parity 1, sum + x
-                    new1[np] |= (b0 << x) & mask
-
-                b1 = prev1[p]
-                if b1:
-                    # parity 1 -> parity 0, sum - x
-                    new0[np] |= (b1 >> x)
-
-            dp0, dp1 = new0, new1
-
-        for p in range(limit, -1, -1):
-            if (dp0[p] & target_bit) or (dp1[p] & target_bit):
-                return p
-        return -1
+        # dp[(sum, length_mod_2, is_empty)] = max_product
+        # sum: current alternating sum
+        # length_mod_2: 0 for even length, 1 for odd length
+        # is_empty: True if subsequence is empty, False otherwise
+        dp = {(0, 0, True): 1}  # Start with empty subsequence
+        
+        for num in nums:
+            new_dp = {}
+            
+            # Option 1: Don't take current number
+            for state, prod in dp.items():
+                if state not in new_dp or new_dp[state] < prod:
+                    new_dp[state] = prod
+            
+            # Option 2: Take current number
+            for (curr_sum, length_mod_2, is_empty), prod in dp.items():
+                if length_mod_2 == 0:  # Even length, add number
+                    new_sum = curr_sum + num
+                    new_length_mod_2 = 1
+                else:  # Odd length, subtract number
+                    new_sum = curr_sum - num
+                    new_length_mod_2 = 0
+                
+                new_prod = prod * num
+                if new_prod <= limit:
+                    new_state = (new_sum, new_length_mod_2, False)
+                    if new_state not in new_dp or new_dp[new_state] < new_prod:
+                        new_dp[new_state] = new_prod
+            
+            dp = new_dp
+        
+        # Find maximum product with sum = k and non-empty subsequence
+        result = -1
+        for (curr_sum, length_mod_2, is_empty), prod in dp.items():
+            if curr_sum == k and not is_empty:
+                result = max(result, prod)
+        
+        return result
 # @lc code=end
