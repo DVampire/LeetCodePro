@@ -5,71 +5,31 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def maximumCoins(self, coins: List[List[int]], k: int) -> int:
         coins.sort()
-        n = len(coins)
-        minL = coins[0][0]
-        maxR = max(r for _, r, _ in coins)
-
-        # Build disjoint intervals including zero-coin gaps.
-        intervals = []  # (l, r, c)
-        intervals.append((minL - k, minL - 1, 0))  # leading zeros of length k
-        prev_end = minL - 1
-
+        
+        max_coins = 0
+        starts = set()
+        
+        # Collect critical starting positions
         for l, r, c in coins:
-            if l > prev_end + 1:
-                intervals.append((prev_end + 1, l - 1, 0))
-            intervals.append((l, r, c))
-            prev_end = r
-
-        intervals.append((maxR + 1, maxR + k, 0))  # trailing zeros of length k
-
-        def best_left_aligned(ints: List[tuple], k: int) -> int:
-            # Assumes ints are sorted, disjoint, and cover enough range.
-            m = len(ints)
-            j = 0
-            sum_len = 0
-            sum_coins = 0
-            ans = 0
-
-            for i in range(m):
-                if j < i:
-                    j = i
-                    sum_len = 0
-                    sum_coins = 0
-
-                while j < m and sum_len < k:
-                    l, r, c = ints[j]
-                    length = r - l + 1
-                    sum_len += length
-                    sum_coins += length * c
-                    j += 1
-
-                # With leading/trailing zeros of length k, we should always reach sum_len >= k
-                if sum_len >= k:
-                    last_c = ints[j - 1][2]
-                    excess = sum_len - k
-                    cur = sum_coins - excess * last_c
-                    if cur > ans:
-                        ans = cur
-
-                # Slide left boundary past interval i
-                l, r, c = ints[i]
-                length = r - l + 1
-                sum_len -= length
-                sum_coins -= length * c
-
-            return ans
-
-        ans1 = best_left_aligned(intervals, k)
-
-        # Reverse coordinate transform to convert "right-aligned" cases into "left-aligned".
-        rev = [(-r, -l, c) for (l, r, c) in intervals]
-        rev.sort(key=lambda x: x[0])
-        ans2 = best_left_aligned(rev, k)
-
-        return max(ans1, ans2)
+            starts.add(l)  # Window starts at segment boundary
+            starts.add(max(1, r - k + 1))  # Window ends at segment boundary
+        
+        # For each starting position, calculate total coins
+        for start in starts:
+            end = start + k - 1
+            total = 0
+            
+            # Calculate coins by checking overlap with each segment
+            for l, r, c in coins:
+                overlap_start = max(start, l)
+                overlap_end = min(end, r)
+                if overlap_start <= overlap_end:
+                    total += (overlap_end - overlap_start + 1) * c
+            
+            max_coins = max(max_coins, total)
+        
+        return max_coins
 # @lc code=end
