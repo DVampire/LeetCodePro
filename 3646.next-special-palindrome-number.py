@@ -5,97 +5,78 @@
 #
 
 # @lc code=start
-from itertools import permutations
+from bisect import bisect_right
 
 class Solution:
-    def specialPalindrome(self, n: int) -> int:
-        str_n = str(n)
-        len_n = len(str_n)
-        
-        even_digits = [2, 4, 6, 8]
-        odd_digits = [1, 3, 5, 7, 9]
-        
-        def get_valid_sets(L):
-            valid_sets = []
-            if L % 2 == 0:
-                # L is even, only even digits allowed
-                def find_even_subsets(index, current_sum, current_set):
-                    if current_sum == L:
-                        valid_sets.append(list(current_set))
-                        return
-                    if index == len(even_digits) or current_sum > L:
-                        return
-                    # Include even_digits[index]
-                    current_set.append(even_digits[index])
-                    find_even_subsets(index + 1, current_sum + even_digits[index], current_set)
-                    current_set.pop()
-                    # Exclude
-                    find_even_subsets(index + 1, current_sum, current_set)
-                
-                find_even_subsets(0, 0, [])
-            else:
-                # L is odd, exactly one odd digit allowed
-                for o in odd_digits:
-                    target = L - o
-                    if target < 0: continue
-                    
-                    def find_even_subsets_for_odd(index, current_sum, current_set):
-                        if current_sum == target:
-                            valid_sets.append(list(current_set) + [o])
-                            return
-                        if index == len(even_digits) or current_sum > target:
-                            return
-                        # Include
-                        current_set.append(even_digits[index])
-                        find_even_subsets_for_odd(index + 1, current_sum + even_digits[index], current_set)
-                        current_set.pop()
-                        # Exclude
-                        find_even_subsets_for_odd(index + 1, current_sum, current_set)
-                    
-                    find_even_subsets_for_odd(0, 0, [])
-            return valid_sets
+    _specials = None
 
-        for L in range(len_n, 46):
-            sets = get_valid_sets(L)
-            candidates = []
-            for S in sets:
-                if L % 2 == 0:
-                    counts = {k: k // 2 for k in S}
-                    half_L = L // 2
-                    elements = []
-                    for k, count in counts.items():
-                        elements.extend([str(k)] * count)
-                    
-                    seen_prefixes = set()
-                    for p in permutations(elements):
-                        prefix = "".join(p)
-                        if prefix in seen_prefixes: continue
-                        seen_prefixes.add(prefix)
-                        pal = prefix + prefix[::-1]
-                        val = int(pal)
-                        if val > n:
-                            candidates.append(val)
-                else:
-                    o = [k for k in S if k % 2 == 1][0]
-                    counts = {k: k // 2 for k in S if k != o}
-                    counts[o] = (o - 1) // 2
-                    half_L = (L - 1) // 2
-                    elements = []
-                    for k, count in counts.items():
-                        elements.extend([str(k)] * count)
-                    
-                    seen_prefixes = set()
-                    for p in permutations(elements):
-                        prefix = "".join(p)
-                        if prefix in seen_prefixes: continue
-                        seen_prefixes.add(prefix)
-                        pal = prefix + str(o) + prefix[::-1]
-                        val = int(pal)
-                        if val > n:
-                            candidates.append(val)
-            
-            if candidates:
-                return min(candidates)
-        
-        return -1
+    @staticmethod
+    def _generate_all_special_palindromes(max_len: int = 17):
+        res = []
+
+        # digits are 1..9, represented by bit positions 0..8
+        for mask in range(1, 1 << 9):
+            digits = []
+            total_len = 0
+            odd_digits = 0
+            odd_center = 0
+
+            for i in range(9):
+                if (mask >> i) & 1:
+                    d = i + 1
+                    digits.append(d)
+                    total_len += d
+                    if d % 2 == 1:
+                        odd_digits += 1
+                        odd_center = d
+
+            if total_len > max_len:
+                continue
+            if odd_digits > 1:
+                continue
+
+            # Determine center
+            if total_len % 2 == 0:
+                if odd_digits != 0:
+                    continue
+                center = ""
+            else:
+                if odd_digits != 1:
+                    continue
+                center = str(odd_center)
+
+            half_len = total_len // 2
+            counts_left = [0] * 10
+            for d in digits:
+                counts_left[d] = d // 2
+
+            left_chars = []
+
+            def dfs(pos: int):
+                if pos == half_len:
+                    left = "".join(left_chars)
+                    pal = left + center + left[::-1]
+                    res.append(int(pal))
+                    return
+
+                for d in range(1, 10):
+                    if counts_left[d] > 0:
+                        counts_left[d] -= 1
+                        left_chars.append(str(d))
+                        dfs(pos + 1)
+                        left_chars.pop()
+                        counts_left[d] += 1
+
+            dfs(0)
+
+        res.sort()
+        return res
+
+    def specialPalindrome(self, n: int) -> int:
+        if Solution._specials is None:
+            # For n <= 1e15, length<=17 guarantees an answer.
+            Solution._specials = Solution._generate_all_special_palindromes(17)
+
+        idx = bisect_right(Solution._specials, n)
+        return Solution._specials[idx]
 # @lc code=end
