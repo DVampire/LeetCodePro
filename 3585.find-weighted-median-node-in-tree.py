@@ -4,90 +4,109 @@
 # [3585] Find Weighted Median Node in Tree
 #
 
+from typing import List
+from array import array
+
 # @lc code=start
-import sys
-
-# Increase recursion depth for deep trees
-sys.setrecursionlimit(200000)
-
 class Solution:
-    def findMedian(self, n: int, edges: list[list[int]], queries: list[list[int]]) -> list[int]:
+    def findMedian(self, n: int, edges: List[List[int]], queries: List[List[int]]) -> List[int]:
         adj = [[] for _ in range(n)]
         for u, v, w in edges:
             adj[u].append((v, w))
             adj[v].append((u, w))
-            
-        MAX_LOG = n.bit_length()
-        up = [[-1] * MAX_LOG for _ in range(n)]
-        tin = [0] * n
-        tout = [0] * n
-        depth_w = [0] * n
-        timer = 0
-        
-        def dfs(u, p, dw):
-            nonlocal timer
-            timer += 1
-            tin[u] = timer
-            depth_w[u] = dw
-            up[u][0] = p
-            for i in range(1, MAX_LOG):
-                if up[u][i-1] != -1:
-                    up[u][i] = up[up[u][i-1]][i-1]
-                else:
-                    break
-            
-            for v, w in adj[u]:
-                if v != p:
-                    dfs(v, u, dw + w)
-            tout[u] = timer
 
-        dfs(0, -1, 0)
+        LOG = n.bit_length()
+        up = [array('i', [-1]) * n for _ in range(LOG)]
+        ws = [array('q', [0]) * n for _ in range(LOG)]
+        depth = array('i', [0]) * n
+        dist = array('q', [0]) * n
 
-        def is_ancestor(u, v):
-            return tin[u] <= tin[v] and tout[u] >= tout[v]
+        # Iterative DFS to set level 0 parents and distances
+        stack = [(0, -1, 0, 0)]  # node, parent, depth, distRoot
+        while stack:
+            node, par, dep, ds = stack.pop()
+            up[0][node] = par
+            depth[node] = dep
+            dist[node] = ds
+            for nei, w in adj[node]:
+                if nei == par:
+                    continue
+                ws[0][nei] = w
+                stack.append((nei, node, dep + 1, ds + w))
 
-        def get_lca(u, v):
-            if is_ancestor(u, v): return u
-            if is_ancestor(v, u): return v
-            for i in range(MAX_LOG - 1, -1, -1):
-                if up[u][i] != -1 and not is_ancestor(up[u][i], v):
-                    u = up[u][i]
-            return up[u][0]
+        # Build binary lifting tables
+        for k in range(1, LOG):
+            upk = up[k]
+            upkm1 = up[k - 1]
+            wsk = ws[k]
+            wskm1 = ws[k - 1]
+            for v in range(n):
+                p = upkm1[v]
+                if p != -1:
+                    upk[v] = upkm1[p]
+                    wsk[v] = wskm1[v] + wskm1[p]
+
+        def lca(a: int, b: int) -> int:
+            if depth[a] < depth[b]:
+                a, b = b, a
+            diff = depth[a] - depth[b]
+            bit = 0
+            while diff:
+                if diff & 1:
+                    a = up[bit][a]
+                diff >>= 1
+                bit += 1
+            if a == b:
+                return a
+            for k in range(LOG - 1, -1, -1):
+                if up[k][a] != up[k][b]:
+                    a = up[k][a]
+                    b = up[k][b]
+            return up[0][a]
+
+        def first_reach_up(node: int, target: int) -> int:
+            # first node on upward path with distance from start >= target
+            if target <= 0:
+                return node
+            cur = node
+            acc = 0
+            for k in range(LOG - 1, -1, -1):
+                p = up[k][cur]
+                if p != -1 and acc + ws[k][cur] < target:
+                    acc += ws[k][cur]
+                    cur = p
+            # next step crosses/reaches target
+            p0 = up[0][cur]
+            return p0 if p0 != -1 else cur
+
+        def climb_with_limit(node: int, limit: int) -> int:
+            # climb up from node as far as possible with total climbed weight <= limit
+            cur = node
+            acc = 0
+            for k in range(LOG - 1, -1, -1):
+                p = up[k][cur]
+                if p != -1 and acc + ws[k][cur] <= limit:
+                    acc += ws[k][cur]
+                    cur = p
+            return cur
 
         ans = []
         for u, v in queries:
             if u == v:
                 ans.append(u)
                 continue
-            
-            lca = get_lca(u, v)
-            dist_u_lca = depth_w[u] - depth_w[lca]
-            dist_v_lca = depth_w[v] - depth_w[lca]
-            total_w = dist_u_lca + dist_v_lca
-            
-            # Target: dist(u, x) >= total_w / 2  => 2 * dist(u, x) >= total_w
-            if 2 * dist_u_lca >= total_w:
-                # Median is on path u -> lca. It's an ancestor of u.
-                # Find the lowest ancestor x such that 2 * (depth_w[u] - depth_w[x]) >= total_w
-                curr = u
-                for i in range(MAX_LOG - 1, -1, -1):
-                    anc = up[curr][i]
-                    if anc != -1 and is_ancestor(lca, anc):
-                        if 2 * (depth_w[u] - depth_w[anc]) < total_w:
-                            curr = anc
-                ans.append(up[curr][0])
+            l = lca(u, v)
+            du = dist[u] - dist[l]
+            dv = dist[v] - dist[l]
+            total = du + dv
+            target = (total + 1) // 2  # ceil(total/2)
+
+            if target <= du:
+                ans.append(first_reach_up(u, target))
             else:
-                # Median is on path lca -> v. It's an ancestor of v.
-                # Find the highest ancestor x such that 2 * dist(u, x) >= total_w
-                # dist(u, x) = dist(u, lca) + dist(lca, x) = (depth_w[u]-depth_w[lca]) + (depth_w[x]-depth_w[lca])
-                # 2 * (depth_w[u] + depth_w[x] - 2 * depth_w[lca]) >= total_w
-                curr = v
-                for i in range(MAX_LOG - 1, -1, -1):
-                    anc = up[curr][i]
-                    if anc != -1 and is_ancestor(lca, anc):
-                        if 2 * (depth_w[u] + depth_w[anc] - 2 * depth_w[lca]) >= total_w:
-                            curr = anc
-                ans.append(curr)
-                
+                remaining = target - du
+                limit = dv - remaining
+                ans.append(climb_with_limit(v, limit))
+
         return ans
 # @lc code=end
