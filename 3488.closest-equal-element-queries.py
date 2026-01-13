@@ -6,33 +6,29 @@
 
 # @lc code=start
 from typing import List
+from collections import defaultdict
 
 class Solution:
     def solveQueries(self, nums: List[int], queries: List[int]) -> List[int]:
         n = len(nums)
-        # Step 1: Group indices for each unique value
-        pos = {}
+        pos = defaultdict(list)
         for i, v in enumerate(nums):
-            if v not in pos:
-                pos[v] = []
-            pos[v].append(i)
-        
-        # Step 2: Precompute minimum circular distance for every index
-        min_distances = [-1] * n
-        for v in pos:
-            indices = pos[v]
-            k = len(indices)
-            if k > 1:
-                for i in range(k):
-                    curr = indices[i]
-                    # Distance to the previous index in the sorted list (counter-clockwise path)
-                    # Python's indices[i-1] handles the wrap-around to the last element when i=0
-                    d_prev = (curr - indices[i - 1] + n) % n
-                    # Distance to the next index in the sorted list (clockwise path)
-                    d_next = (indices[(i + 1) % k] - curr + n) % n
-                    
-                    min_distances[curr] = min(d_prev, d_next)
-        
-        # Step 3: Answer each query using the precomputed distances
-        return [min_distances[q] for q in queries]
+            pos[v].append(i)  # appended in increasing i, so each list is sorted
+
+        dist_at = [-1] * n
+
+        def circ_dist(a: int, b: int) -> int:
+            d = abs(a - b)
+            return min(d, n - d)
+
+        for indices in pos.values():
+            m = len(indices)
+            if m == 1:
+                continue
+            for k, cur in enumerate(indices):
+                prev_idx = indices[(k - 1) % m]
+                next_idx = indices[(k + 1) % m]
+                dist_at[cur] = min(circ_dist(cur, prev_idx), circ_dist(cur, next_idx))
+
+        return [dist_at[q] for q in queries]
 # @lc code=end
