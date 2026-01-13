@@ -4,88 +4,79 @@
 # [1206] Design Skiplist
 #
 # @lc code=start
-class _Node:
-    __slots__ = ("val", "next")
+import random
 
-    def __init__(self, val: int, level: int):
+class Node:
+    def __init__(self, val, level):
         self.val = val
-        self.next = [None] * level
-
+        self.forward = [None] * (level + 1)
 
 class Skiplist:
-    MAX_LEVEL = 20  # enough for n up to ~1e6 with p=0.5
 
     def __init__(self):
-        self.head = _Node(-1, self.MAX_LEVEL)
-        self.level = 1
-        # xorshift32 seed
-        self._seed = 2463534242
-
-    def _randbit(self) -> int:
-        # xorshift32
-        x = self._seed & 0xFFFFFFFF
-        x ^= (x << 13) & 0xFFFFFFFF
-        x ^= (x >> 17) & 0xFFFFFFFF
-        x ^= (x << 5) & 0xFFFFFFFF
-        self._seed = x
-        return x & 1
-
-    def _random_level(self) -> int:
-        lvl = 1
-        while lvl < self.MAX_LEVEL and self._randbit() == 1:
-            lvl += 1
-        return lvl
+        self.max_level = 16
+        self.p = 0.5
+        self.head = Node(-1, self.max_level)
+        self.level = 0
+    
+    def _random_level(self):
+        level = 0
+        while random.random() < self.p and level < self.max_level:
+            level += 1
+        return level
 
     def search(self, target: int) -> bool:
-        cur = self.head
-        for i in range(self.level - 1, -1, -1):
-            while cur.next[i] is not None and cur.next[i].val < target:
-                cur = cur.next[i]
-        cur = cur.next[0]
-        return cur is not None and cur.val == target
+        current = self.head
+        for i in range(self.level, -1, -1):
+            while current.forward[i] and current.forward[i].val < target:
+                current = current.forward[i]
+        current = current.forward[0]
+        return current is not None and current.val == target
 
     def add(self, num: int) -> None:
-        update = [None] * self.MAX_LEVEL
-        cur = self.head
-
-        for i in range(self.level - 1, -1, -1):
-            while cur.next[i] is not None and cur.next[i].val < num:
-                cur = cur.next[i]
-            update[i] = cur
-
-        lvl = self._random_level()
-        if lvl > self.level:
-            for i in range(self.level, lvl):
+        update = [None] * (self.max_level + 1)
+        current = self.head
+        
+        for i in range(self.level, -1, -1):
+            while current.forward[i] and current.forward[i].val < num:
+                current = current.forward[i]
+            update[i] = current
+        
+        new_level = self._random_level()
+        
+        if new_level > self.level:
+            for i in range(self.level + 1, new_level + 1):
                 update[i] = self.head
-            self.level = lvl
-
-        node = _Node(num, lvl)
-        for i in range(lvl):
-            node.next[i] = update[i].next[i]
-            update[i].next[i] = node
+            self.level = new_level
+        
+        new_node = Node(num, new_level)
+        
+        for i in range(new_level + 1):
+            new_node.forward[i] = update[i].forward[i]
+            update[i].forward[i] = new_node
 
     def erase(self, num: int) -> bool:
-        update = [None] * self.MAX_LEVEL
-        cur = self.head
-
-        for i in range(self.level - 1, -1, -1):
-            while cur.next[i] is not None and cur.next[i].val < num:
-                cur = cur.next[i]
-            update[i] = cur
-
-        target = update[0].next[0]
-        if target is None or target.val != num:
+        update = [None] * (self.max_level + 1)
+        current = self.head
+        
+        for i in range(self.level, -1, -1):
+            while current.forward[i] and current.forward[i].val < num:
+                current = current.forward[i]
+            update[i] = current
+        
+        current = current.forward[0]
+        
+        if current is None or current.val != num:
             return False
-
-        # Remove on every level where the node exists
-        for i in range(self.level):
-            if update[i].next[i] is target:
-                update[i].next[i] = target.next[i]
-
-        # Decrease current level if highest levels are empty
-        while self.level > 1 and self.head.next[self.level - 1] is None:
+        
+        for i in range(self.level + 1):
+            if update[i].forward[i] != current:
+                break
+            update[i].forward[i] = current.forward[i]
+        
+        while self.level > 0 and self.head.forward[self.level] is None:
             self.level -= 1
-
+        
         return True
 
 
