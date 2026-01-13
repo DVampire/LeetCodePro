@@ -4,58 +4,69 @@
 # [3414] Maximum Score of Non-overlapping Intervals
 #
 
-# @lc code=start
+from typing import List, Tuple
 import bisect
 
+# @lc code=start
 class Solution:
     def maximumWeight(self, intervals: List[List[int]]) -> List[int]:
         n = len(intervals)
-        # Store intervals with their original index: [l, r, w, original_idx]
-        indexed_intervals = []
-        for i in range(n):
-            indexed_intervals.append(intervals[i] + [i])
-        
-        # Sort by end time
-        indexed_intervals.sort(key=lambda x: x[1])
-        
-        ends = [x[1] for x in indexed_intervals]
+        K = 4
 
-        # dp[k][i] = (max_weight, sorted_indices_list)
-        # Use at most k intervals from first i intervals
-        # k ranges from 1 to 4
-        dp = [[(0, []) for _ in range(n + 1)] for _ in range(5)]
+        # Sort by end time; keep (l, r, w, original_index)
+        arr = [(l, r, w, idx) for idx, (l, r, w) in enumerate(intervals)]
+        arr.sort(key=lambda x: (x[1], x[0], x[3]))
 
+        # 1-indexed for DP convenience
+        starts = [0] * (n + 1)
+        ends = [-(10**30)] * (n + 1)  # dummy at 0
+        weights = [0] * (n + 1)
+        orig = [0] * (n + 1)
         for i in range(1, n + 1):
-            l, r, w, idx = indexed_intervals[i-1]
-            # Find the last interval that ends before current interval starts
-            prev_idx = bisect.bisect_left(ends, l) 
-            
-            for k in range(1, 5):
-                # Option 1: Don't include intervals[i-1]
-                best_w, best_indices = dp[k][i-1]
-                
-                # Option 2: Include intervals[i-1]
-                prev_w, prev_indices = dp[k-1][prev_idx]
-                current_w = prev_w + w
-                current_indices = sorted(prev_indices + [idx])
-                
-                if current_w > best_w:
-                    best_w, best_indices = current_w, current_indices
-                elif current_w == best_w and current_w > 0:
-                    if not best_indices or current_indices < best_indices:
-                        best_indices = current_indices
-                
-                dp[k][i] = (best_w, best_indices)
+            l, r, w, idx = arr[i - 1]
+            starts[i] = l
+            ends[i] = r
+            weights[i] = w
+            orig[i] = idx
 
-        # Find the best across all k for the full range n
-        final_w, final_indices = 0, []
-        for k in range(1, 5):
-            w, indices = dp[k][n]
-            if w > final_w:
-                final_w, final_indices = w, indices
-            elif w == final_w:
-                if not final_indices or indices < final_indices:
-                    final_indices = indices
-        
-        return final_indices
+        # prev[i] = max j < i with ends[j] < starts[i]
+        prev = [0] * (n + 1)
+        for i in range(1, n + 1):
+            # first position with end >= starts[i]
+            pos = bisect.bisect_left(ends, starts[i], 1, n + 1)
+            prev[i] = pos - 1  # could be 0
+
+        def insert_sorted(tup: Tuple[int, ...], x: int) -> Tuple[int, ...]:
+            # keep indices sorted ascending to minimize lexicographically
+            p = bisect.bisect_left(tup, x)
+            return tup[:p] + (x,) + tup[p:]
+
+        def better(w1: int, c1: Tuple[int, ...], w2: int, c2: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]]:
+            # Return the better of (w1,c1) vs (w2,c2)
+            if w1 != w2:
+                return (w1, c1) if w1 > w2 else (w2, c2)
+            return (w1, c1) if c1 < c2 else (w2, c2)
+
+        # dpW[t][i], dpC[t][i]
+        dpW = [[0] * (n + 1) for _ in range(K + 1)]
+        dpC = [[() for _ in range(n + 1)] for _ in range(K + 1)]
+
+        for t in range(1, K + 1):
+            for i in range(1, n + 1):
+                # skip
+                sw, sc = dpW[t][i - 1], dpC[t][i - 1]
+                # take
+                j = prev[i]
+                tw = dpW[t - 1][j] + weights[i]
+                tc = insert_sorted(dpC[t - 1][j], orig[i])
+
+                bw, bc = better(sw, sc, tw, tc)
+                dpW[t][i], dpC[t][i] = bw, bc
+
+        # Choose best among taking up to 4 intervals
+        bestW, bestC = 0, ()
+        for t in range(1, K + 1):
+            bestW, bestC = better(bestW, bestC, dpW[t][n], dpC[t][n])
+
+        return list(bestC)
 # @lc code=end
