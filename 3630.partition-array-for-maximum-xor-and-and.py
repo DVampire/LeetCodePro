@@ -4,62 +4,54 @@
 # [3630] Partition Array for Maximum XOR and AND
 #
 
-# @lc code=start
 from typing import List
 
+# @lc code=start
 class Solution:
     def maximizeXorAndXor(self, nums: List[int]) -> int:
         n = len(nums)
+        m = 1 << n
+        full = m - 1
+
+        # Precompute XOR for all masks
+        xorMask = [0] * m
+        for mask in range(1, m):
+            lb = mask & -mask
+            i = (lb.bit_length() - 1)
+            xorMask[mask] = xorMask[mask ^ lb] ^ nums[i]
+
+        # Precompute AND for all masks; empty mask -> 0
+        andMask = [0] * m
+        for mask in range(1, m):
+            lb = mask & -mask
+            i = (lb.bit_length() - 1)
+            prev = mask ^ lb
+            if prev == 0:
+                andMask[mask] = nums[i]
+            else:
+                andMask[mask] = andMask[prev] & nums[i]
+
+        # Compute bestXorPairSum for all masks: max_{s submask} xor[s] + (xor[mask]^xor[s])
+        bestX = [0] * m
+        for mask in range(m):
+            T = xorMask[mask]
+            best = 0
+            s = mask
+            while True:
+                x = xorMask[s]
+                cand = x + (T ^ x)
+                if cand > best:
+                    best = cand
+                if s == 0:
+                    break
+                s = (s - 1) & mask
+            bestX[mask] = best
+
         ans = 0
-        
-        # Precompute XOR of all elements
-        total_xor = 0
-        for x in nums:
-            total_xor ^= x
-            
-        # Iterate through all possible subsets for B
-        # 2^n combinations
-        for i in range(1 << n):
-            and_b = -1
-            xor_ac_total = 0
-            remaining = []
-            
-            for j in range(n):
-                if (i >> j) & 1:
-                    if and_b == -1:
-                        and_b = nums[j]
-                    else:
-                        and_b &= nums[j]
-                else:
-                    xor_ac_total ^= nums[j]
-                    remaining.append(nums[j])
-            
-            if and_b == -1: and_b = 0
-            
-            # Now we need to partition 'remaining' into A and C to maximize XOR(A) + XOR(C)
-            # Let x = XOR(A), then XOR(C) = x ^ xor_ac_total
-            # We want to maximize x + (x ^ xor_ac_total)
-            # Use Linear Basis to find possible values of x
-            basis = []
-            for x in remaining:
-                for b in basis:
-                    x = min(x, x ^ b)
-                if x > 0:
-                    basis.append(x)
-                    basis.sort(reverse=True)
-            
-            # Maximize x + (x ^ xor_ac_total)
-            # Note: x + (x ^ xor_ac_total) = sum of bits where at least one of x or (x^xor_ac_total) is 1,
-            # plus bits where both are 1. 
-            # Optimization: x + (x ^ xor_ac_total) = 2 * (x | xor_ac_total) - xor_ac_total is not quite right.
-            # But we can find the best x greedily.
-            cur_x = 0
-            for b in basis:
-                # If flipping the bit at the highest position of b improves the sum
-                if (cur_x ^ b) + (cur_x ^ b ^ xor_ac_total) > cur_x + (cur_x ^ xor_ac_total):
-                    cur_x ^= b
-            
-            ans = max(ans, cur_x + (cur_x ^ xor_ac_total) + and_b)
-            
+        for b in range(m):
+            r = full ^ b
+            cand = andMask[b] + bestX[r]
+            if cand > ans:
+                ans = cand
         return ans
 # @lc code=end
