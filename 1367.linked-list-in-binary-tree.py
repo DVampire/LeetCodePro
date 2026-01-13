@@ -3,10 +3,7 @@
 #
 # [1367] Linked List in Binary Tree
 #
-
 # @lc code=start
-from typing import Optional, List
-
 # Definition for singly-linked list.
 # class ListNode:
 #     def __init__(self, val=0, next=None):
@@ -18,48 +15,26 @@ from typing import Optional, List
 #         self.val = val
 #         self.left = left
 #         self.right = right
-
 class Solution:
-    def isSubPath(self, head: Optional['ListNode'], root: Optional['TreeNode']) -> bool:
-        if not head:
-            return True
+    def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
+        # Helper function to check if linked list matches from current tree node going downward
+        def matches(list_node, tree_node):
+            # If we've matched the entire linked list
+            if not list_node:
+                return True
+            # If tree ended but list hasn't
+            if not tree_node:
+                return False
+            # If values don't match
+            if list_node.val != tree_node.val:
+                return False
+            # Try matching in left or right subtree (continuing downward)
+            return matches(list_node.next, tree_node.left) or matches(list_node.next, tree_node.right)
+        
+        # Base case: empty tree
         if not root:
             return False
-
-        # Build pattern from linked list
-        pat: List[int] = []
-        cur = head
-        while cur:
-            pat.append(cur.val)
-            cur = cur.next
-        m = len(pat)
-
-        # Build LPS (KMP failure function)
-        lps = [0] * m
-        j = 0
-        for i in range(1, m):
-            while j > 0 and pat[i] != pat[j]:
-                j = lps[j - 1]
-            if pat[i] == pat[j]:
-                j += 1
-                lps[i] = j
-
-        # Iterative DFS with KMP state
-        stack = [(root, 0)]  # (tree_node, matched_length)
-        while stack:
-            node, j = stack.pop()
-            if not node:
-                continue
-
-            while j > 0 and node.val != pat[j]:
-                j = lps[j - 1]
-            if node.val == pat[j]:
-                j += 1
-                if j == m:
-                    return True
-
-            stack.append((node.left, j))
-            stack.append((node.right, j))
-
-        return False
+        
+        # Try starting from current node, or try starting from left/right subtrees
+        return matches(head, root) or self.isSubPath(head, root.left) or self.isSubPath(head, root.right)
 # @lc code=end
