@@ -1,1 +1,78 @@
-#\n# @lc app=leetcode id=3470 lang=python3\n#\n# [3470] Permutations IV\n#\n\n# @lc code=start\nclass Solution:\n    def permute(self, n: int, k: int) -> List[int]:\n        odds = [i for i in range(1, n+1) if i % 2 == 1]\n        evens = [i for i in range(1, n+1) if i % 2 == 0]\n        \n        memo = {}\n        \n        def count_perms(num_odds, num_evens, need_odd):\n            if num_odds == 0 and num_evens == 0:\n                return 1\n            if need_odd and num_odds == 0:\n                return 0\n            if not need_odd and num_evens == 0:\n                return 0\n            if (num_odds, num_evens, need_odd) in memo:\n                return memo[(num_odds, num_evens, need_odd)]\n            \n            if need_odd:\n                result = num_odds * count_perms(num_odds - 1, num_evens, False)\n            else:\n                result = num_evens * count_perms(num_odds, num_evens - 1, True)\n            \n            memo[(num_odds, num_evens, need_odd)] = result\n            return result\n        \n        # Check if k is valid\n        total = count_perms(len(odds), len(evens), True) + count_perms(len(odds), len(evens), False)\n        if k > total:\n            return []\n        \n        result = []\n        remaining_odds = odds[:]\n        remaining_evens = evens[:]\n        need_odd = None\n        \n        while remaining_odds or remaining_evens:\n            if need_odd is None:\n                # First element, try all in sorted order\n                for num in range(1, n+1):\n                    is_odd = num % 2 == 1\n                    if is_odd and num not in remaining_odds:\n                        continue\n                    if not is_odd and num not in remaining_evens:\n                        continue\n                    \n                    if is_odd:\n                        count = count_perms(len(odds) - 1, len(evens), False)\n                    else:\n                        count = count_perms(len(odds), len(evens) - 1, True)\n                    \n                    if k <= count:\n                        result.append(num)\n                        if is_odd:\n                            remaining_odds.remove(num)\n                            need_odd = False\n                        else:\n                            remaining_evens.remove(num)\n                            need_odd = True\n                        break\n                    k -= count\n            elif need_odd:\n                for num in remaining_odds:\n                    count = count_perms(len(remaining_odds) - 1, len(remaining_evens), False)\n                    if k <= count:\n                        result.append(num)\n                        remaining_odds.remove(num)\n                        need_odd = False\n                        break\n                    k -= count\n            else:\n                for num in remaining_evens:\n                    count = count_perms(len(remaining_odds), len(remaining_evens) - 1, True)\n                    if k <= count:\n                        result.append(num)\n                        remaining_evens.remove(num)\n                        need_odd = True\n                        break\n                    k -= count\n        \n        return result\n# @lc code=end
+#
+# @lc app=leetcode id=3470 lang=python3
+#
+# [3470] Permutations IV
+#
+
+# @lc code=start
+class Solution:
+    def permute(self, n: int, k: int) -> List[int]:
+        # Precompute factorials
+        fact = [1] * (n + 1)
+        for i in range(1, n + 1):
+            fact[i] = fact[i - 1] * i
+        
+        odd_count = (n + 1) // 2
+        even_count = n // 2
+        
+        def count_perms(odd_remaining, even_remaining, need_odd):
+            total = odd_remaining + even_remaining
+            if total == 0:
+                return 1
+            if need_odd:
+                needed_odds = (total + 1) // 2
+                needed_evens = total // 2
+            else:
+                needed_evens = (total + 1) // 2
+                needed_odds = total // 2
+            
+            if odd_remaining == needed_odds and even_remaining == needed_evens:
+                return fact[odd_remaining] * fact[even_remaining]
+            return 0
+        
+        # Total number of alternating permutations
+        total_perms = count_perms(odd_count, even_count, True) + count_perms(odd_count, even_count, False)
+        
+        if k > total_perms:
+            return []
+        
+        result = []
+        odds = list(range(1, n + 1, 2))
+        evens = list(range(2, n + 1, 2))
+        
+        odd_remaining = odd_count
+        even_remaining = even_count
+        need_odd = None
+        
+        for pos in range(n):
+            if pos == 0:
+                available = sorted(odds + evens)
+            elif need_odd:
+                available = odds[:]
+            else:
+                available = evens[:]
+            
+            for num in available:
+                is_odd = num % 2 == 1
+                
+                if is_odd:
+                    perms = count_perms(odd_remaining - 1, even_remaining, False)
+                else:
+                    perms = count_perms(odd_remaining, even_remaining - 1, True)
+                
+                if perms >= k:
+                    result.append(num)
+                    if is_odd:
+                        odds.remove(num)
+                        odd_remaining -= 1
+                        need_odd = False
+                    else:
+                        evens.remove(num)
+                        even_remaining -= 1
+                        need_odd = True
+                    break
+                else:
+                    k -= perms
+        
+        return result
+# @lc code=end
