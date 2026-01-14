@@ -5,45 +5,50 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def minMoves(self, balance: List[int]) -> int:
         n = len(balance)
-
-        neg = -1
-        for i, x in enumerate(balance):
-            if x < 0:
-                neg = i
-                break
-
-        # Already all non-negative
-        if neg == -1:
-            return 0
-
-        # Total balance must be >= 0 to end with all non-negative
-        if sum(balance) < 0:
+        total = sum(balance)
+        
+        # Check if it's possible
+        if total < 0:
             return -1
-
-        need = -balance[neg]
-
-        supplies = []  # (distance_to_neg, available_units)
-        for i, x in enumerate(balance):
-            if i == neg or x <= 0:
-                continue
-            diff = abs(i - neg)
-            dist = min(diff, n - diff)
-            supplies.append((dist, x))
-
-        supplies.sort()
-
-        moves = 0
-        for dist, s in supplies:
-            if need == 0:
+        
+        # Find the negative position
+        neg_idx = -1
+        deficit = 0
+        for i in range(n):
+            if balance[i] < 0:
+                neg_idx = i
+                deficit = -balance[i]
                 break
-            take = s if s < need else need
-            moves += take * dist
-            need -= take
-
-        return moves if need == 0 else -1
+        
+        # If no negative position, return 0
+        if neg_idx == -1:
+            return 0
+        
+        # Calculate distances from each position to neg_idx
+        distances = []
+        for i in range(n):
+            if i == neg_idx or balance[i] <= 0:
+                continue
+            clockwise = (neg_idx - i + n) % n
+            counterclockwise = (i - neg_idx + n) % n
+            dist = min(clockwise, counterclockwise)
+            distances.append((dist, balance[i]))
+        
+        # Sort by distance
+        distances.sort()
+        
+        # Greedily transfer from closer positions
+        total_cost = 0
+        remaining_deficit = deficit
+        for dist, amount in distances:
+            transfer = min(amount, remaining_deficit)
+            total_cost += transfer * dist
+            remaining_deficit -= transfer
+            if remaining_deficit == 0:
+                break
+        
+        return total_cost
 # @lc code=end
