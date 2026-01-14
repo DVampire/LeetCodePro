@@ -11,18 +11,25 @@
 #         self.next = next
 class Solution:
     def modifiedList(self, nums: List[int], head: Optional[ListNode]) -> Optional[ListNode]:
+        # Convert nums to a set for O(1) lookup
         nums_set = set(nums)
+        
+        # Create a dummy node to handle edge cases
         dummy = ListNode(0)
         dummy.next = head
-        prev = dummy
-        curr = head
         
-        while curr:
-            if curr.val in nums_set:
-                prev.next = curr.next
+        # Use prev to track the previous node
+        prev = dummy
+        current = head
+        
+        while current:
+            if current.val in nums_set:
+                # Remove this node by skipping it
+                prev.next = current.next
             else:
-                prev = curr
-            curr = curr.next
+                # Keep this node, move prev forward
+                prev = current
+            current = current.next
         
         return dummy.next
 # @lc code=end
