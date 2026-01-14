@@ -5,54 +5,48 @@
 #
 
 # @lc code=start
-from functools import lru_cache
-
 class Solution:
     def minMoves(self, sx: int, sy: int, tx: int, ty: int) -> int:
-        INF = 10**18
-
-        @lru_cache(None)
-        def dfs(x: int, y: int) -> int:
-            # reached start
-            if x == sx and y == sy:
-                return 0
-            # cannot go below start in reverse (forward never decreases coordinates)
-            if x < sx or y < sy:
-                return INF
-
-            if x == y:
-                if x == 0:
-                    return INF  # would have matched start above if start were (0,0)
-                a = dfs(x, 0)
-                b = dfs(0, x)
-                best = min(a, b)
-                return best + 1 if best < INF else INF
-
-            if x > y:
-                # last move must have increased x
-                if y == 0:
-                    if x % 2:
-                        return INF
-                    return 1 + dfs(x // 2, 0)
-                if x >= 2 * y:
-                    if x % 2:
-                        return INF
-                    return 1 + dfs(x // 2, y)
-                else:
-                    return 1 + dfs(x - y, y)
-            else:
-                # y > x, last move must have increased y
-                if x == 0:
-                    if y % 2:
-                        return INF
-                    return 1 + dfs(0, y // 2)
-                if y >= 2 * x:
-                    if y % 2:
-                        return INF
-                    return 1 + dfs(x, y // 2)
-                else:
-                    return 1 + dfs(x, y - x)
-
-        ans = dfs(tx, ty)
-        return -1 if ans >= INF else ans
+        if sx == tx and sy == ty:
+            return 0
+        
+        moves = 0
+        while tx > sx or ty > sy:
+            if tx < sx or ty < sy:
+                return -1
+            
+            if tx == ty:
+                # Special case: came from (0, ty) or (tx, 0)
+                if sy == ty and ty > 0 and sx % ty == 0:
+                    return moves + 1 + sx // ty
+                if sx == tx and tx > 0 and sy % tx == 0:
+                    return moves + 1 + sy // tx
+                return -1
+            
+            if tx > ty:
+                if ty == sy:
+                    max_val = max(sx, sy)
+                    if max_val == 0:
+                        return moves if tx == sx else -1
+                    if (tx - sx) % max_val == 0:
+                        return moves + (tx - sx) // max_val
+                    else:
+                        return -1
+                steps = max(1, (tx - sx) // ty)
+                moves += steps
+                tx -= steps * ty
+            else:  # ty > tx
+                if tx == sx:
+                    max_val = max(sx, sy)
+                    if max_val == 0:
+                        return moves if ty == sy else -1
+                    if (ty - sy) % max_val == 0:
+                        return moves + (ty - sy) // max_val
+                    else:
+                        return -1
+                steps = max(1, (ty - sy) // tx)
+                moves += steps
+                ty -= steps * tx
+        
+        return moves if tx == sx and ty == sy else -1
 # @lc code=end
