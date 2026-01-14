@@ -5,44 +5,52 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maxProduct(self, nums: List[int], k: int, limit: int) -> int:
-        # dp[(sum, length_mod_2, is_empty)] = max_product
-        # sum: current alternating sum
-        # length_mod_2: 0 for even length, 1 for odd length
-        # is_empty: True if subsequence is empty, False otherwise
-        dp = {(0, 0, True): 1}  # Start with empty subsequence
+        # dp[(alt_sum, parity)] = set of achievable products
+        # parity: 0 = even length, 1 = odd length
+        dp = {}
         
         for num in nums:
             new_dp = {}
             
-            # Option 1: Don't take current number
-            for state, prod in dp.items():
-                if state not in new_dp or new_dp[state] < prod:
-                    new_dp[state] = prod
+            # Copy existing states (option: skip current num)
+            for key, prods in dp.items():
+                new_dp[key] = prods.copy()
             
-            # Option 2: Take current number
-            for (curr_sum, length_mod_2, is_empty), prod in dp.items():
-                if length_mod_2 == 0:  # Even length, add number
-                    new_sum = curr_sum + num
-                    new_length_mod_2 = 1
-                else:  # Odd length, subtract number
-                    new_sum = curr_sum - num
-                    new_length_mod_2 = 0
+            # Option: Start a new subsequence with this number
+            if num <= limit:
+                key = (num, 1)  # alt_sum = num, odd length (length 1)
+                if key not in new_dp:
+                    new_dp[key] = set()
+                new_dp[key].add(num)
+            
+            # Option: Extend existing subsequences
+            for (alt, parity), prods in dp.items():
+                if parity == 1:  # odd length -> next position is odd (sign -)
+                    new_alt = alt - num
+                    new_parity = 0
+                else:  # even length -> next position is even (sign +)
+                    new_alt = alt + num
+                    new_parity = 1
                 
-                new_prod = prod * num
-                if new_prod <= limit:
-                    new_state = (new_sum, new_length_mod_2, False)
-                    if new_state not in new_dp or new_dp[new_state] < new_prod:
-                        new_dp[new_state] = new_prod
+                for prod in prods:
+                    new_prod = prod * num
+                    if new_prod <= limit:
+                        key = (new_alt, new_parity)
+                        if key not in new_dp:
+                            new_dp[key] = set()
+                        new_dp[key].add(new_prod)
             
             dp = new_dp
         
-        # Find maximum product with sum = k and non-empty subsequence
+        # Find the maximum product with alternating sum = k
         result = -1
-        for (curr_sum, length_mod_2, is_empty), prod in dp.items():
-            if curr_sum == k and not is_empty:
-                result = max(result, prod)
+        for parity in [0, 1]:
+            if (k, parity) in dp:
+                result = max(result, max(dp[(k, parity)]))
         
         return result
 # @lc code=end
