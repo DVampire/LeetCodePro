@@ -5,74 +5,75 @@
 #
 
 # @lc code=start
-from collections import defaultdict, deque
+from collections import defaultdict
+import bisect
+import sys
 from typing import List
 
 class Solution:
     def longestSpecialPath(self, edges: List[List[int]], nums: List[int]) -> List[int]:
+        sys.setrecursionlimit(60000)
         n = len(nums)
-        
-        # Build adjacency list
-        graph = defaultdict(list)
+        adj = defaultdict(list)
         for u, v, length in edges:
-            graph[u].append((v, length))
-            graph[v].append((u, length))
+            adj[u].append((v, length))
+            adj[v].append((u, length))
         
-        # Root the tree at node 0 - find parent-child relationships
-        children = defaultdict(list)
-        visited = [False] * n
-        queue = deque([0])
-        visited[0] = True
+        pos = defaultdict(list)
+        path_dist = [0]
+        dup_first_positions = []
         
-        while queue:
-            node = queue.popleft()
-            for neighbor, length in graph[node]:
-                if not visited[neighbor]:
-                    visited[neighbor] = True
-                    children[node].append((neighbor, length))
-                    queue.append(neighbor)
+        best_length = 0
+        best_nodes = 1
         
-        def is_valid(value_count):
-            dup_count = 0
-            for count in value_count.values():
-                if count > 2:
-                    return False
-                if count == 2:
-                    dup_count += 1
-            return dup_count <= 1
-        
-        max_length = 0
-        min_nodes = float('inf')
-        
-        # Try each node as starting point
-        for start in range(n):
-            def dfs(node, value_count, path_length, node_count):
-                nonlocal max_length, min_nodes
-                
-                # Check if current path is valid (must have at least 2 nodes)
-                if node_count >= 2 and is_valid(value_count):
-                    if path_length > max_length:
-                        max_length = path_length
-                        min_nodes = node_count
-                    elif path_length == max_length:
-                        min_nodes = min(min_nodes, node_count)
-                
-                # Continue DFS to children
-                for child, length in children[node]:
-                    child_val = nums[child]
-                    value_count[child_val] += 1
-                    
-                    # Only continue if still valid
-                    if is_valid(value_count):
-                        dfs(child, value_count, path_length + length, node_count + 1)
-                    
-                    value_count[child_val] -= 1
-                    if value_count[child_val] == 0:
-                        del value_count[child_val]
+        def dfs(node, parent, depth, blocked):
+            nonlocal best_length, best_nodes
             
-            value_count = defaultdict(int)
-            value_count[nums[start]] = 1
-            dfs(start, value_count, 0, 1)
+            v = nums[node]
+            old_pos_len = len(pos[v])
+            pos[v].append(depth)
+            
+            new_blocked = blocked
+            
+            if old_pos_len >= 2:
+                new_blocked = max(new_blocked, pos[v][-3])
+                old_first = pos[v][-3]
+                new_first = pos[v][-2]
+                idx = bisect.bisect_left(dup_first_positions, old_first)
+                dup_first_positions.pop(idx)
+                bisect.insort(dup_first_positions, new_first)
+            elif old_pos_len == 1:
+                bisect.insort(dup_first_positions, pos[v][-2])
+            
+            L = new_blocked + 1
+            if len(dup_first_positions) >= 2:
+                L = max(L, dup_first_positions[-2] + 1)
+            
+            current_length = path_dist[depth] - path_dist[L]
+            current_nodes = depth - L + 1
+            
+            if current_length > best_length or (current_length == best_length and current_nodes < best_nodes):
+                best_length = current_length
+                best_nodes = current_nodes
+            
+            for child, edge_len in adj[node]:
+                if child != parent:
+                    path_dist.append(path_dist[-1] + edge_len)
+                    dfs(child, node, depth + 1, new_blocked)
+                    path_dist.pop()
+            
+            pos[v].pop()
+            if old_pos_len >= 2:
+                old_first = pos[v][-2]
+                new_first = pos[v][-1]
+                idx = bisect.bisect_left(dup_first_positions, new_first)
+                dup_first_positions.pop(idx)
+                bisect.insort(dup_first_positions, old_first)
+            elif old_pos_len == 1:
+                idx = bisect.bisect_left(dup_first_positions, pos[v][-1])
+                dup_first_positions.pop(idx)
         
-        return [max_length, min_nodes]
+        dfs(0, -1, 0, -1)
+        
+        return [best_length, best_nodes]
 # @lc code=end
