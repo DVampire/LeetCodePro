@@ -3,71 +3,61 @@
 #
 # [3459] Length of Longest V-Shaped Diagonal Segment
 #
+
 # @lc code=start
 class Solution:
     def lenOfVDiagonal(self, grid: List[List[int]]) -> int:
-        n, m = len(grid), len(grid[0])
-        max_len = 0
+        import sys
+        sys.setrecursionlimit(10000)
         
-        # Four diagonal directions
+        n = len(grid)
+        m = len(grid[0])
+        
+        # Directions: down-right, down-left, up-left, up-right
         directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
         
-        # 90-degree clockwise turn mapping
-        clockwise_turn = {
-            (1, 1): (1, -1),
-            (1, -1): (-1, -1),
-            (-1, -1): (-1, 1),
-            (-1, 1): (1, 1)
-        }
+        memo = {}
         
-        # Expected sequence: 1, 2, 0, 2, 0, 2, 0, ...
-        def get_expected(idx):
-            if idx == 0:
-                return 1
-            elif idx % 2 == 1:
-                return 2
-            else:
+        def dfs(i, j, d, expected_val, turned):
+            if not (0 <= i < n and 0 <= j < m):
                 return 0
+            if grid[i][j] != expected_val:
+                return 0
+            
+            key = (i, j, d, expected_val, turned)
+            if key in memo:
+                return memo[key]
+            
+            dr, dc = directions[d]
+            ni, nj = i + dr, j + dc
+            
+            # Next expected value in the sequence
+            if expected_val == 1:
+                nv = 2
+            elif expected_val == 2:
+                nv = 0
+            else:  # expected_val == 0
+                nv = 2
+            
+            # Option 1: Continue without turning
+            result = 1 + dfs(ni, nj, d, nv, turned)
+            
+            # Option 2: Turn (if we haven't turned yet)
+            if not turned:
+                new_d = (d + 1) % 4
+                dr2, dc2 = directions[new_d]
+                ni2, nj2 = i + dr2, j + dc2
+                result = max(result, 1 + dfs(ni2, nj2, new_d, nv, True))
+            
+            memo[key] = result
+            return result
         
-        # Try starting from each cell with value 1
+        ans = 0
         for i in range(n):
             for j in range(m):
-                if grid[i][j] != 1:
-                    continue
-                
-                # Try each starting direction
-                for dr, dc in directions:
-                    # Follow the direction and collect valid positions
-                    positions = []
-                    r, c = i, j
-                    idx = 0
-                    
-                    while 0 <= r < n and 0 <= c < m and grid[r][c] == get_expected(idx):
-                        positions.append((r, c))
-                        idx += 1
-                        r += dr
-                        c += dc
-                    
-                    # No turn case
-                    max_len = max(max_len, len(positions))
-                    
-                    # Try turning at each valid position
-                    for turn_pos in range(len(positions)):
-                        turn_r, turn_c = positions[turn_pos]
-                        new_dr, new_dc = clockwise_turn[(dr, dc)]
-                        
-                        # Continue from the turn position with new direction
-                        r, c = turn_r + new_dr, turn_c + new_dc
-                        idx = turn_pos + 1
-                        turn_length = turn_pos + 1
-                        
-                        while 0 <= r < n and 0 <= c < m and grid[r][c] == get_expected(idx):
-                            turn_length += 1
-                            idx += 1
-                            r += new_dr
-                            c += new_dc
-                        
-                        max_len = max(max_len, turn_length)
+                if grid[i][j] == 1:
+                    for d in range(4):
+                        ans = max(ans, dfs(i, j, d, 1, False))
         
-        return max_len
+        return ans
 # @lc code=end
