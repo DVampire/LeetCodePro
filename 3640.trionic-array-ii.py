@@ -3,38 +3,53 @@
 #
 # [3640] Trionic Array II
 #
-
-from typing import List
-
 # @lc code=start
 class Solution:
     def maxSumTrionic(self, nums: List[int]) -> int:
         n = len(nums)
-        NEG = -10**30  # safely below minimal possible sum (~ -1e14)
-
-        dp1 = NEG  # inc, len>=2
-        dp2 = NEG  # inc->dec, in dec phase, both parts len>=2
-        dp3 = NEG  # inc->dec->inc, in final inc phase, all parts len>=2
-        ans = NEG
-
+        
+        inc1_sum = [0] * n
+        inc1_len = [0] * n
+        dec_sum = [float('-inf')] * n
+        dec_len = [0] * n
+        inc2_sum = [float('-inf')] * n
+        
+        inc1_sum[0] = nums[0]
+        inc1_len[0] = 1
+        
         for i in range(1, n):
-            a, b = nums[i - 1], nums[i]
-
-            new_dp1 = NEG
-            new_dp2 = NEG
-            new_dp3 = NEG
-
-            if a < b:
-                # increasing edge
-                new_dp1 = max(dp1 + b, a + b)
-                new_dp3 = max(dp3 + b, dp2 + b)
-            elif a > b:
-                # decreasing edge
-                new_dp2 = max(dp2 + b, dp1 + b)
-
-            dp1, dp2, dp3 = new_dp1, new_dp2, new_dp3
-            if dp3 > ans:
-                ans = dp3
-
-        return ans
+            # Update inc1: strictly increasing phase
+            if nums[i] > nums[i-1]:
+                inc1_sum[i] = inc1_sum[i-1] + nums[i]
+                inc1_len[i] = inc1_len[i-1] + 1
+            else:
+                inc1_sum[i] = nums[i]
+                inc1_len[i] = 1
+            
+            # Update dec: inc + dec phases
+            dec_sum[i] = float('-inf')
+            dec_len[i] = 0
+            if nums[i] < nums[i-1]:
+                # Transition from inc1[i-1] if it has at least 2 elements
+                if inc1_len[i-1] >= 2:
+                    dec_sum[i] = inc1_sum[i-1] + nums[i]
+                    dec_len[i] = 2
+                # Extend from dec[i-1]
+                if dec_sum[i-1] != float('-inf'):
+                    new_sum = dec_sum[i-1] + nums[i]
+                    if new_sum > dec_sum[i]:
+                        dec_sum[i] = new_sum
+                        dec_len[i] = dec_len[i-1] + 1
+            
+            # Update inc2: inc + dec + inc phases
+            inc2_sum[i] = float('-inf')
+            if nums[i] > nums[i-1]:
+                # Transition from dec[i-1] if dec phase has at least 2 elements
+                if dec_sum[i-1] != float('-inf') and dec_len[i-1] >= 2:
+                    inc2_sum[i] = dec_sum[i-1] + nums[i]
+                # Extend from inc2[i-1]
+                if inc2_sum[i-1] != float('-inf'):
+                    inc2_sum[i] = max(inc2_sum[i], inc2_sum[i-1] + nums[i])
+        
+        return max(inc2_sum)
 # @lc code=end
