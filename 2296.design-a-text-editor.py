@@ -7,8 +7,8 @@
 class TextEditor:
 
     def __init__(self):
-        self.left = []  # Stack for characters to the left of cursor
-        self.right = []  # Stack for characters to the right of cursor
+        self.left = []  # Characters to the left of cursor
+        self.right = []  # Characters to the right of cursor (reversed)
 
     def addText(self, text: str) -> None:
         for c in text:
@@ -16,20 +16,20 @@ class TextEditor:
 
     def deleteText(self, k: int) -> int:
         deleted = 0
-        while k > 0 and self.left:
+        while self.left and k > 0:
             self.left.pop()
             k -= 1
             deleted += 1
         return deleted
 
     def cursorLeft(self, k: int) -> str:
-        while k > 0 and self.left:
+        while self.left and k > 0:
             self.right.append(self.left.pop())
             k -= 1
         return ''.join(self.left[-10:])
 
     def cursorRight(self, k: int) -> str:
-        while k > 0 and self.right:
+        while self.right and k > 0:
             self.left.append(self.right.pop())
             k -= 1
         return ''.join(self.left[-10:])
