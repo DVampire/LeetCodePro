@@ -9,43 +9,33 @@ class Solution:
     def minLength(self, s: str, numOps: int) -> int:
         n = len(s)
         
-        # Special case for k=1: check if we can make the string alternating
-        def canMakeAlternating():
-            mismatches1 = sum(1 for i in range(n) if s[i] != ('0' if i % 2 == 0 else '1'))
-            mismatches2 = sum(1 for i in range(n) if s[i] != ('1' if i % 2 == 0 else '0'))
-            return min(mismatches1, mismatches2) <= numOps
+        def canAchieve(L):
+            if L == 1:
+                # Count differences from alternating patterns
+                diff1 = sum(1 for i, c in enumerate(s) if int(c) != i % 2)
+                diff2 = sum(1 for i, c in enumerate(s) if int(c) != (i + 1) % 2)
+                return min(diff1, diff2) <= numOps
+            else:
+                # For each run, count flips needed
+                ops = 0
+                i = 0
+                while i < n:
+                    j = i
+                    while j < n and s[j] == s[i]:
+                        j += 1
+                    run_len = j - i
+                    ops += run_len // (L + 1)
+                    i = j
+                return ops <= numOps
         
-        if canMakeAlternating():
-            return 1
-        
-        # Find all runs of identical characters
-        runs = []
-        i = 0
-        while i < n:
-            j = i
-            while j < n and s[j] == s[i]:
-                j += 1
-            runs.append(j - i)
-            i = j
-        
-        # Binary search on the answer (starting from 2)
-        def canAchieve(k):
-            flips_needed = 0
-            for run_length in runs:
-                if run_length > k:
-                    flips_needed += run_length // (k + 1)
-            return flips_needed <= numOps
-        
-        left, right = 2, max(runs)
-        result = right
-        
-        while left <= right:
+        # Binary search for the minimum achievable L
+        left, right = 1, n
+        while left < right:
             mid = (left + right) // 2
             if canAchieve(mid):
-                result = mid
-                right = mid - 1
+                right = mid
             else:
                 left = mid + 1
         
-        return result
+        return left
 # @lc code=end
