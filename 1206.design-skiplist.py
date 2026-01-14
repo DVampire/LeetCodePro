@@ -3,44 +3,45 @@
 #
 # [1206] Design Skiplist
 #
+
 # @lc code=start
 import random
 
-class Node:
-    def __init__(self, val, level):
-        self.val = val
-        self.forward = [None] * (level + 1)
-
 class Skiplist:
 
+    class Node:
+        def __init__(self, val, level):
+            self.val = val
+            self.forward = [None] * (level + 1)
+    
     def __init__(self):
         self.max_level = 16
         self.p = 0.5
-        self.head = Node(-1, self.max_level)
         self.level = 0
+        self.head = self.Node(-1, self.max_level)
     
     def _random_level(self):
-        level = 0
-        while random.random() < self.p and level < self.max_level:
-            level += 1
-        return level
-
+        lvl = 0
+        while random.random() < self.p and lvl < self.max_level:
+            lvl += 1
+        return lvl
+    
     def search(self, target: int) -> bool:
-        current = self.head
+        curr = self.head
         for i in range(self.level, -1, -1):
-            while current.forward[i] and current.forward[i].val < target:
-                current = current.forward[i]
-        current = current.forward[0]
-        return current is not None and current.val == target
-
+            while curr.forward[i] and curr.forward[i].val < target:
+                curr = curr.forward[i]
+        curr = curr.forward[0]
+        return curr is not None and curr.val == target
+    
     def add(self, num: int) -> None:
         update = [None] * (self.max_level + 1)
-        current = self.head
+        curr = self.head
         
         for i in range(self.level, -1, -1):
-            while current.forward[i] and current.forward[i].val < num:
-                current = current.forward[i]
-            update[i] = current
+            while curr.forward[i] and curr.forward[i].val < num:
+                curr = curr.forward[i]
+            update[i] = curr
         
         new_level = self._random_level()
         
@@ -49,30 +50,29 @@ class Skiplist:
                 update[i] = self.head
             self.level = new_level
         
-        new_node = Node(num, new_level)
-        
+        new_node = self.Node(num, new_level)
         for i in range(new_level + 1):
             new_node.forward[i] = update[i].forward[i]
             update[i].forward[i] = new_node
-
+    
     def erase(self, num: int) -> bool:
         update = [None] * (self.max_level + 1)
-        current = self.head
+        curr = self.head
         
         for i in range(self.level, -1, -1):
-            while current.forward[i] and current.forward[i].val < num:
-                current = current.forward[i]
-            update[i] = current
+            while curr.forward[i] and curr.forward[i].val < num:
+                curr = curr.forward[i]
+            update[i] = curr
         
-        current = current.forward[0]
+        curr = curr.forward[0]
         
-        if current is None or current.val != num:
+        if curr is None or curr.val != num:
             return False
         
         for i in range(self.level + 1):
-            if update[i].forward[i] != current:
+            if update[i].forward[i] != curr:
                 break
-            update[i].forward[i] = current.forward[i]
+            update[i].forward[i] = curr.forward[i]
         
         while self.level > 0 and self.head.forward[self.level] is None:
             self.level -= 1
