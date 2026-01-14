@@ -4,26 +4,21 @@
 # [3779] Minimum Number of Operations to Have Distinct Elements
 #
 
-from typing import List
-
 # @lc code=start
 class Solution:
     def minOperations(self, nums: List[int]) -> int:
-        n = len(nums)
-
-        # p = smallest index such that nums[p:] is all distinct
-        p = n
-
-        # Values are in [1, 1e5]
-        seen = [0] * 100001
-
-        for i in range(n - 1, -1, -1):
-            v = nums[i]
-            if seen[v]:
-                # First duplicate encountered from the right => boundary found
+        operations = 0
+        start = 0
+        
+        while start < len(nums):
+            # Check if remaining elements are all distinct
+            remaining = nums[start:]
+            if len(remaining) == len(set(remaining)):
                 break
-            seen[v] = 1
-            p = i
-
-        return (p + 2) // 3
+            
+            # Remove first 3 elements (or all if fewer than 3)
+            start += min(3, len(nums) - start)
+            operations += 1
+        
+        return operations
 # @lc code=end
