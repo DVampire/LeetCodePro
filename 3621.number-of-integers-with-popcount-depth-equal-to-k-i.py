@@ -3,69 +3,62 @@
 #
 # [3621] Number of Integers With Popcount-Depth Equal to K I
 #
-
 # @lc code=start
 class Solution:
     def popcountDepth(self, n: int, k: int) -> int:
-        # Special case: depth(1) = 0, and no other positive integer has depth 0.
-        if k == 0:
-            return 1  # since n >= 1
-
-        # Max bits needed: n <= 1e15 < 2^50, but keep some margin.
-        MAXB = 64
-
-        # Precompute combinations C[n][r] for 0 <= n,r <= MAXB.
-        C = [[0] * (MAXB + 1) for _ in range(MAXB + 1)]
-        for i in range(MAXB + 1):
-            C[i][0] = 1
-            for j in range(1, i + 1):
-                if j == i:
-                    C[i][j] = 1
-                else:
-                    C[i][j] = C[i - 1][j - 1] + C[i - 1][j]
-
-        def popcount(x: int) -> int:
-            return x.bit_count()
-
-        # Precompute depth for values up to MAXB.
-        depth = [0] * (MAXB + 1)
+        from functools import lru_cache
+        
+        # Precompute depths for popcount values 1 to 64
+        depth = [0] * 65
         depth[1] = 0
-        for v in range(2, MAXB + 1):
-            depth[v] = 1 + depth[popcount(v)]
-
-        # Count numbers in [0, n] with exactly `ones` set bits.
-        def count_leq(nval: int, ones: int) -> int:
-            if ones < 0:
+        for i in range(2, 65):
+            popcount_i = bin(i).count('1')
+            depth[i] = 1 + depth[popcount_i]
+        
+        # Special case: k = 0
+        if k == 0:
+            return 1 if n >= 1 else 0
+        
+        # Find target popcounts with depth k-1
+        target_popcounts = [c for c in range(1, 65) if depth[c] == k - 1]
+        
+        # Count numbers <= n with specific popcount using digit DP
+        def count_with_popcount(num, target_pc):
+            if num == 0:
                 return 0
-            bits = list(map(int, bin(nval)[2:]))  # MSB -> LSB
-            m = len(bits)
-            res = 0
-            c = ones
-            for i, b in enumerate(bits):
-                rem = m - i - 1
-                if b == 1:
-                    if c <= rem:
-                        res += C[rem][c]
-                    c -= 1
-                    if c < 0:
-                        break
-            else:
-                # If we matched all bits and used exactly `ones` ones
-                if c == 0:
-                    res += 1
-            return res
-
-        # For k >= 1: sum over popcount c such that depth(c) == k-1.
-        target = k - 1
-        max_ones = n.bit_length()  # maximum possible popcount for numbers <= n
-        ans = 0
-        for c in range(1, max_ones + 1):
-            if depth[c] == target:
-                ans += count_leq(n, c)
-
-        # Remove x=1 when k=1, because it has depth 0 but popcount 1.
-        if k == 1 and n >= 1:
-            ans -= 1
-
-        return ans
+            
+            binary = bin(num)[2:]
+            length = len(binary)
+            
+            @lru_cache(maxsize=None)
+            def dp(pos, count, tight, started):
+                if count > target_pc:
+                    return 0
+                if pos == length:
+                    return 1 if count == target_pc and started else 0
+                
+                limit = int(binary[pos]) if tight else 1
+                result = 0
+                
+                for digit in range(0, limit + 1):
+                    if not started and digit == 0:
+                        result += dp(pos + 1, count, False, False)
+                    else:
+                        new_count = count + digit
+                        new_tight = tight and (digit == limit)
+                        result += dp(pos + 1, new_count, new_tight, True)
+                
+                return result
+            
+            ans = dp(0, 0, True, False)
+            if target_pc == 1 and ans > 0:
+                ans -= 1  # Exclude x = 1 which has depth 0
+            return ans
+        
+        # Sum counts for all target popcounts
+        total = 0
+        for pc in target_popcounts:
+            total += count_with_popcount(n, pc)
+        
+        return total
 # @lc code=end
