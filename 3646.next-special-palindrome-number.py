@@ -5,78 +5,66 @@
 #
 
 # @lc code=start
-from bisect import bisect_right
-
 class Solution:
-    _specials = None
-
-    @staticmethod
-    def _generate_all_special_palindromes(max_len: int = 17):
-        res = []
-
-        # digits are 1..9, represented by bit positions 0..8
+    def specialPalindrome(self, n: int) -> int:
+        special = []
+        
+        # Generate all subsets of digits 1-9
         for mask in range(1, 1 << 9):
             digits = []
-            total_len = 0
-            odd_digits = 0
-            odd_center = 0
-
-            for i in range(9):
-                if (mask >> i) & 1:
-                    d = i + 1
+            for d in range(1, 10):
+                if mask & (1 << (d - 1)):
                     digits.append(d)
-                    total_len += d
-                    if d % 2 == 1:
-                        odd_digits += 1
-                        odd_center = d
-
-            if total_len > max_len:
+            
+            # Check if valid (at most one odd digit)
+            odd_count = sum(1 for d in digits if d % 2 == 1)
+            if odd_count > 1:
                 continue
-            if odd_digits > 1:
+            
+            total_len = sum(digits)
+            
+            # Skip if too long
+            if total_len > 18:
                 continue
-
-            # Determine center
-            if total_len % 2 == 0:
-                if odd_digits != 0:
-                    continue
-                center = ""
-            else:
-                if odd_digits != 1:
-                    continue
-                center = str(odd_center)
-
-            half_len = total_len // 2
-            counts_left = [0] * 10
+            
+            # Generate the smallest palindrome
+            counts = {d: d for d in digits}
+            
+            # Determine middle element
+            middle = None
             for d in digits:
-                counts_left[d] = d // 2
-
-            left_chars = []
-
-            def dfs(pos: int):
-                if pos == half_len:
-                    left = "".join(left_chars)
-                    pal = left + center + left[::-1]
-                    res.append(int(pal))
-                    return
-
-                for d in range(1, 10):
-                    if counts_left[d] > 0:
-                        counts_left[d] -= 1
-                        left_chars.append(str(d))
-                        dfs(pos + 1)
-                        left_chars.pop()
-                        counts_left[d] += 1
-
-            dfs(0)
-
-        res.sort()
-        return res
-
-    def specialPalindrome(self, n: int) -> int:
-        if Solution._specials is None:
-            # For n <= 1e15, length<=17 guarantees an answer.
-            Solution._specials = Solution._generate_all_special_palindromes(17)
-
-        idx = bisect_right(Solution._specials, n)
-        return Solution._specials[idx]
+                if d % 2 == 1:
+                    middle = d
+                    counts[d] -= 1
+                    break
+            
+            # Build the first half
+            half_len = total_len // 2
+            first_half = []
+            
+            for _ in range(half_len):
+                for d in sorted(digits):
+                    if counts[d] >= 2:
+                        first_half.append(d)
+                        counts[d] -= 2
+                        break
+            
+            # Construct the palindrome
+            if middle is not None:
+                palin = first_half + [middle] + first_half[::-1]
+            else:
+                palin = first_half + first_half[::-1]
+            
+            num = int(''.join(map(str, palin)))
+            if num <= 10**18:
+                special.append(num)
+        
+        special.sort()
+        
+        # Find the next special number after n
+        for num in special:
+            if num > n:
+                return num
+        
+        return -1
 # @lc code=end
