@@ -3,56 +3,102 @@
 #
 # [3435] Frequencies of Shortest Supersequences
 #
+
 # @lc code=start
+from typing import List
+from collections import defaultdict
+
 class Solution:
     def supersequences(self, words: List[str]) -> List[List[int]]:
-        n = len(words)
-        memo = {}
+        # Find unique characters
+        chars = set()
+        for w in words:
+            chars.update(w)
+        chars = sorted(chars)
+        char_to_idx = {c: i for i, c in enumerate(chars)}
+        n = len(chars)
         
-        def dfs(progress):
-            # progress[i] = how many characters of word[i] have been matched
-            if all(p == 2 for p in progress):
-                return {tuple([0] * 26)}  # Base case: empty frequency
+        if n == 0:
+            return [[0] * 26]
+        
+        # Build graph and identify self-loops
+        edges = [set() for _ in range(n)]
+        has_self_loop = [False] * n
+        
+        for w in words:
+            a, b = char_to_idx[w[0]], char_to_idx[w[1]]
+            if a == b:
+                has_self_loop[a] = True
+            else:
+                edges[a].add(b)
+        
+        # Hard characters: those without self-loop
+        hard_chars = [i for i in range(n) if not has_self_loop[i]]
+        num_hard = len(hard_chars)
+        hard_idx = {hard_chars[i]: i for i in range(num_hard)}
+        
+        # Build subgraph among hard characters
+        hard_edges = [[] for _ in range(num_hard)]
+        for i, hi in enumerate(hard_chars):
+            for j in edges[hi]:
+                if j in hard_idx:
+                    hard_edges[i].append(hard_idx[j])
+        
+        # Check if removing a subset (FVS) makes graph acyclic
+        def is_acyclic(fvs_mask):
+            remaining = ((1 << num_hard) - 1) ^ fvs_mask if num_hard > 0 else 0
+            if remaining == 0:
+                return True
             
-            if progress in memo:
-                return memo[progress]
-            
-            # Get all unique characters
-            chars = set()
-            for word in words:
-                chars.add(word[0])
-                chars.add(word[1])
-            
-            min_len = float('inf')
-            best_freqs = set()
-            
-            for ch in sorted(chars):  # Sort for consistency
-                new_progress = list(progress)
-                for i, word in enumerate(words):
-                    if new_progress[i] < 2 and word[new_progress[i]] == ch:
-                        new_progress[i] += 1
-                
-                # Skip if no progress was made
-                if tuple(new_progress) == progress:
+            in_degree = [0] * num_hard
+            for u in range(num_hard):
+                if not (remaining & (1 << u)):
                     continue
-                
-                sub_freqs = dfs(tuple(new_progress))
-                for freq in sub_freqs:
-                    new_freq = list(freq)
-                    new_freq[ord(ch) - ord('a')] += 1
-                    total = sum(new_freq)
-                    
-                    if total < min_len:
-                        min_len = total
-                        best_freqs = {tuple(new_freq)}
-                    elif total == min_len:
-                        best_freqs.add(tuple(new_freq))
+                for v in hard_edges[u]:
+                    if remaining & (1 << v):
+                        in_degree[v] += 1
             
-            memo[progress] = best_freqs
-            return best_freqs
+            queue = [u for u in range(num_hard) if (remaining & (1 << u)) and in_degree[u] == 0]
+            count = 0
+            while queue:
+                u = queue.pop()
+                count += 1
+                for v in hard_edges[u]:
+                    if not (remaining & (1 << v)):
+                        continue
+                    in_degree[v] -= 1
+                    if in_degree[v] == 0:
+                        queue.append(v)
+            
+            return count == bin(remaining).count('1')
         
-        initial_progress = tuple([0] * n)
-        freqs = dfs(initial_progress)
+        # Group masks by popcount for early termination
+        masks_by_popcount = defaultdict(list)
+        for mask in range(1 << num_hard):
+            masks_by_popcount[bin(mask).count('1')].append(mask)
         
-        return [list(f) for f in freqs]
+        # Find minimum FVS size and collect all masks with that size
+        min_masks = []
+        for size in range(num_hard + 1):
+            for mask in masks_by_popcount[size]:
+                if is_acyclic(mask):
+                    min_masks.append(mask)
+            if min_masks:
+                break
+        
+        # Generate frequency arrays
+        result_set = set()
+        for mask in min_masks:
+            freq = [0] * 26
+            for i, c in enumerate(chars):
+                idx = ord(c) - ord('a')
+                if has_self_loop[i]:
+                    freq[idx] = 2
+                elif i in hard_idx and (mask & (1 << hard_idx[i])):
+                    freq[idx] = 2
+                else:
+                    freq[idx] = 1
+            result_set.add(tuple(freq))
+        
+        return [list(f) for f in result_set]
 # @lc code=end
