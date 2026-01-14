@@ -2,16 +2,17 @@
 # @lc app=leetcode id=3493 lang=python3
 #
 # [3493] Properties Graph
+#
 
 # @lc code=start
 class Solution:
     def numberOfComponents(self, properties: List[List[int]], k: int) -> int:
         n = len(properties)
         
-        # Convert each property array to a set to get distinct elements
+        # Convert each property array to a set of distinct elements
         prop_sets = [set(p) for p in properties]
         
-        # Union-Find
+        # Union-Find with path compression
         parent = list(range(n))
         
         def find(x):
@@ -24,14 +25,13 @@ class Solution:
             if px != py:
                 parent[px] = py
         
-        # Check each pair
+        # Check all pairs
         for i in range(n):
             for j in range(i + 1, n):
-                common = len(prop_sets[i] & prop_sets[j])
-                if common >= k:
+                # Count distinct integers common to both
+                if len(prop_sets[i] & prop_sets[j]) >= k:
                     union(i, j)
         
         # Count connected components
-        components = len(set(find(i) for i in range(n)))
-        return components
+        return len(set(find(i) for i in range(n)))
 # @lc code=end
