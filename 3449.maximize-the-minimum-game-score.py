@@ -5,31 +5,51 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maxScore(self, points: List[int], m: int) -> int:
         n = len(points)
         
-        # We need at least n moves to visit all positions
-        if m < n:
-            return 0
-        
-        def can_achieve(target):
+        def canAchieve(target: int) -> bool:
             if target == 0:
                 return True
-            total_visits = sum((target + points[i] - 1) // points[i] for i in range(n))
-            return total_visits <= m
+            
+            moves = 1  # Initial move from -1 to 0
+            carry = 1  # Visits at current position
+            
+            for i in range(n):
+                need_i = (target + points[i] - 1) // points[i]  # ceil(target / points[i])
+                short = max(need_i - carry, 0)
+                
+                if i < n - 1:
+                    # Oscillate with next position
+                    moves += 2 * short
+                    next_carry = short
+                    need_next = (target + points[i + 1] - 1) // points[i + 1]
+                    
+                    # Decide whether to move forward
+                    if i + 1 < n - 1 or next_carry < need_next:
+                        moves += 1
+                        next_carry += 1
+                    
+                    carry = next_carry
+                else:
+                    # Last position: oscillate with previous position
+                    moves += 2 * short
+                
+                if moves > m:
+                    return False
+            
+            return True
         
-        # Binary search on the minimum score
-        left, right = 0, m * max(points)
-        result = 0
-        
-        while left <= right:
-            mid = (left + right) // 2
-            if can_achieve(mid):
-                result = mid
-                left = mid + 1
+        lo, hi = 0, max(points) * m
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if canAchieve(mid):
+                lo = mid
             else:
-                right = mid - 1
+                hi = mid - 1
         
-        return result
+        return lo
 # @lc code=end
