@@ -5,21 +5,28 @@
 #
 
 # @lc code=start
-from typing import List
-import bisect
+from bisect import bisect_left
 
 class Solution:
     def totalScore(self, hp: int, damage: List[int], requirement: List[int]) -> int:
         n = len(damage)
-        pref = [0] * (n + 1)
-        for i in range(1, n + 1):
-            pref[i] = pref[i - 1] + damage[i - 1]
-
-        ans = 0
-        for i in range(1, n + 1):
-            threshold = pref[i] + requirement[i - 1] - hp
-            # count k in [0..i-1] with pref[k] >= threshold
-            idx = bisect.bisect_left(pref, threshold, 0, i)
-            ans += i - idx
-        return ans
+        
+        # Build prefix sum array
+        prefix = [0]
+        for d in damage:
+            prefix.append(prefix[-1] + d)
+        
+        total = 0
+        
+        # For each room i
+        for i in range(n):
+            # Calculate threshold: minimum prefix[j] needed to get a point at room i
+            threshold = prefix[i+1] - hp + requirement[i]
+            
+            # Use binary search to find count of elements >= threshold in prefix[0..i]
+            idx = bisect_left(prefix, threshold, 0, i+1)
+            count = (i + 1) - idx
+            total += count
+        
+        return total
 # @lc code=end
