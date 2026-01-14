@@ -8,31 +8,59 @@
 class Solution:
     def maxDifference(self, s: str, k: int) -> int:
         n = len(s)
-        max_diff = float('-inf')
+        ans = float('-inf')
         
-        for i in range(n):
-            freq = {}
-            for j in range(i, n):
-                # Update frequency for s[j]
-                freq[s[j]] = freq.get(s[j], 0) + 1
+        for a in '01234':
+            for b in '01234':
+                if a == b:
+                    continue
                 
-                # Check if substring length is at least k
-                if j - i + 1 >= k:
-                    # Find max odd frequency
-                    max_odd = float('-inf')
-                    for count in freq.values():
-                        if count % 2 == 1:
-                            max_odd = max(max_odd, count)
+                # Precompute prefix sums
+                prefix_a = [0] * (n + 1)
+                prefix_b = [0] * (n + 1)
+                for i in range(n):
+                    prefix_a[i+1] = prefix_a[i] + (1 if s[i] == a else 0)
+                    prefix_b[i+1] = prefix_b[i] + (1 if s[i] == b else 0)
+                
+                INF = float('inf')
+                # min_data[(pa, pb)] = [min1, pb1, min2]
+                # min1: minimum diff, pb1: prefix_b value achieving min1
+                # min2: minimum diff among positions with prefix_b != pb1
+                min_data = {(pa, pb): [INF, -1, INF] for pa in range(2) for pb in range(2)}
+                
+                for r in range(k, n + 1):
+                    # Make position l = r - k eligible
+                    l = r - k
+                    pa_l = prefix_a[l] % 2
+                    pb_l = prefix_b[l] % 2
+                    diff_l = prefix_a[l] - prefix_b[l]
+                    pb_val_l = prefix_b[l]
+                    state = (pa_l, pb_l)
                     
-                    # Find min even frequency
-                    min_even = float('inf')
-                    for count in freq.values():
-                        if count % 2 == 0:
-                            min_even = min(min_even, count)
+                    # Update min_data[state]
+                    data = min_data[state]
+                    if diff_l < data[0]:
+                        if pb_val_l != data[1]:
+                            data[2] = data[0]
+                        data[0], data[1] = diff_l, pb_val_l
+                    elif pb_val_l != data[1]:
+                        data[2] = min(data[2], diff_l)
                     
-                    # Calculate difference if both exist
-                    if max_odd != float('-inf') and min_even != float('inf'):
-                        max_diff = max(max_diff, max_odd - min_even)
+                    # Query at r
+                    pa_r = prefix_a[r] % 2
+                    pb_r = prefix_b[r] % 2
+                    target_state = (1 - pa_r, pb_r)
+                    target_data = min_data[target_state]
+                    
+                    diff_r = prefix_a[r] - prefix_b[r]
+                    pb_val_r = prefix_b[r]
+                    
+                    if pb_val_r != target_data[1]:
+                        if target_data[0] != INF:
+                            ans = max(ans, diff_r - target_data[0])
+                    else:
+                        if target_data[2] != INF:
+                            ans = max(ans, diff_r - target_data[2])
         
-        return int(max_diff)
+        return ans
 # @lc code=end
