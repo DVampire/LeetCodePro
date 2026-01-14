@@ -9,63 +9,65 @@ class Solution:
     def findAnswer(self, parent: List[int], s: str) -> List[bool]:
         n = len(parent)
         
-        # Build adjacency list
+        # Build adjacency list (children for each node)
         children = [[] for _ in range(n)]
         for i in range(1, n):
             children[parent[i]].append(i)
         
-        # Sort children for each node
-        for i in range(n):
-            children[i].sort()
+        # Children are already in sorted order since we iterate i from 1 to n-1
         
-        # Build global DFS string and track positions
+        # Iterative DFS to build the full DFS string
         dfs_str = []
         start = [0] * n
         end = [0] * n
         
-        def dfs(x):
-            start[x] = len(dfs_str)
-            for child in children[x]:
-                dfs(child)
-            dfs_str.append(s[x])
-            end[x] = len(dfs_str)
+        stack = [(0, False)]  # (node, exiting)
         
-        dfs(0)
+        while stack:
+            node, exiting = stack.pop()
+            
+            if exiting:
+                dfs_str.append(s[node])
+                end[node] = len(dfs_str)
+            else:
+                start[node] = len(dfs_str)
+                stack.append((node, True))
+                for child in reversed(children[node]):
+                    stack.append((child, False))
         
-        # Convert to string
-        dfs_string = ''.join(dfs_str)
-        m = len(dfs_string)
+        dfs_str = ''.join(dfs_str)
         
-        # Polynomial rolling hash
-        MOD = 10**9 + 7
-        BASE = 31
+        # Manacher's algorithm to find all palindromic substrings
+        t = '#' + '#'.join(dfs_str) + '#'
+        t_len = len(t)
+        p = [0] * t_len
+        center = right = 0
         
-        # Forward hash
-        fwd_hash = [0] * (m + 1)
-        pow_base = [1] * (m + 1)
-        for i in range(m):
-            fwd_hash[i + 1] = (fwd_hash[i] * BASE + ord(dfs_string[i])) % MOD
-            pow_base[i + 1] = (pow_base[i] * BASE) % MOD
+        for i in range(t_len):
+            if i < right:
+                p[i] = min(right - i, p[2 * center - i])
+            
+            # Expand around center i
+            while i + p[i] + 1 < t_len and i - p[i] - 1 >= 0 and t[i + p[i] + 1] == t[i - p[i] - 1]:
+                p[i] += 1
+            
+            # Update center and right boundary
+            if i + p[i] > right:
+                center = i
+                right = i + p[i]
         
-        # Backward hash
-        bwd_hash = [0] * (m + 1)
-        for i in range(m):
-            bwd_hash[i + 1] = (bwd_hash[i] * BASE + ord(dfs_string[m - 1 - i])) % MOD
-        
-        def get_hash_range(hash_arr, l, r):
-            return (hash_arr[r] - hash_arr[l] * pow_base[r - l]) % MOD
-        
-        answer = []
+        # Check palindrome for each node
+        answer = [False] * n
         for i in range(n):
-            l, r = start[i], end[i]
-            
-            # Forward hash
-            fwd = get_hash_range(fwd_hash, l, r)
-            
-            # Backward hash
-            bwd = get_hash_range(bwd_hash, m - r, m - l)
-            
-            answer.append(fwd == bwd)
+            left, r = start[i], end[i] - 1
+            if left > r:
+                answer[i] = True
+            else:
+                # For substring [left, r], center in transformed string is left + r + 1
+                # Needed radius is r - left
+                mid = left + r + 1
+                needed_radius = r - left
+                answer[i] = p[mid] >= needed_radius
         
         return answer
 # @lc code=end
