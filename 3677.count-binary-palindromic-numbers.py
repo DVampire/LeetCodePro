@@ -3,51 +3,49 @@
 #
 # [3677] Count Binary Palindromic Numbers
 #
+
 # @lc code=start
 class Solution:
     def countBinaryPalindromes(self, n: int) -> int:
         if n == 0:
-            return 1  # only "0"
-
-        def rev_bits(x: int, bits: int) -> int:
-            r = 0
-            for _ in range(bits):
-                r = (r << 1) | (x & 1)
-                x >>= 1
-            return r
-
-        def make_pal(x: int, L: int) -> int:
-            # x encodes the first half (including the leading 1)
-            if L % 2 == 0:
-                half = L // 2
-                return (x << half) | rev_bits(x, half)
+            return 1
+        
+        bin_n = bin(n)[2:]
+        L = len(bin_n)
+        
+        count = 1  # Count for "0"
+        
+        # Count all palindromes with length < L
+        for length in range(1, L):
+            if length == 1:
+                count += 1  # Only "1"
             else:
-                half = (L + 1) // 2
-                return (x << (half - 1)) | rev_bits(x >> 1, half - 1)
-
-        ans = 1  # count k=0
-        bl = n.bit_length()
-
-        # Count all palindromes with length < bl
-        for L in range(1, bl):
-            half = (L + 1) // 2
-            ans += 1 << (half - 1)
-
-        # Count palindromes with length == bl
-        L = bl
-        half = (L + 1) // 2
-        start = 1 << (half - 1)
-        prefix = n >> (L - half)  # top 'half' bits
-
-        cnt = prefix - start
-        if cnt < 0:
-            cnt = 0
-
-        if prefix >= start:
-            pal = make_pal(prefix, L)
-            if pal <= n:
-                cnt += 1
-
-        ans += cnt
-        return ans
+                num_free_bits = (length + 1) // 2 - 1
+                count += 2 ** num_free_bits
+        
+        # Count palindromes with length == L
+        num_free_bits = (L + 1) // 2 - 1
+        
+        for i in range(2 ** num_free_bits):
+            # Construct the palindrome
+            if num_free_bits > 0:
+                free_bits = bin(i)[2:].zfill(num_free_bits)
+            else:
+                free_bits = ""
+            first_half = '1' + free_bits
+            
+            if L % 2 == 1:
+                # Odd length
+                palindrome = first_half + first_half[:-1][::-1]
+            else:
+                # Even length
+                palindrome = first_half + first_half[::-1]
+            
+            palindrome_val = int(palindrome, 2)
+            if palindrome_val <= n:
+                count += 1
+            else:
+                break  # All subsequent palindromes will be > n
+        
+        return count
 # @lc code=end
