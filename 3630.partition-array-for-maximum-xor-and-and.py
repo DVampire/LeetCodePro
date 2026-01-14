@@ -4,54 +4,41 @@
 # [3630] Partition Array for Maximum XOR and AND
 #
 
-from typing import List
-
 # @lc code=start
 class Solution:
     def maximizeXorAndXor(self, nums: List[int]) -> int:
         n = len(nums)
-        m = 1 << n
-        full = m - 1
-
-        # Precompute XOR for all masks
-        xorMask = [0] * m
-        for mask in range(1, m):
-            lb = mask & -mask
-            i = (lb.bit_length() - 1)
-            xorMask[mask] = xorMask[mask ^ lb] ^ nums[i]
-
-        # Precompute AND for all masks; empty mask -> 0
-        andMask = [0] * m
-        for mask in range(1, m):
-            lb = mask & -mask
-            i = (lb.bit_length() - 1)
-            prev = mask ^ lb
-            if prev == 0:
-                andMask[mask] = nums[i]
-            else:
-                andMask[mask] = andMask[prev] & nums[i]
-
-        # Compute bestXorPairSum for all masks: max_{s submask} xor[s] + (xor[mask]^xor[s])
-        bestX = [0] * m
-        for mask in range(m):
-            T = xorMask[mask]
-            best = 0
-            s = mask
-            while True:
-                x = xorMask[s]
-                cand = x + (T ^ x)
-                if cand > best:
-                    best = cand
-                if s == 0:
-                    break
-                s = (s - 1) & mask
-            bestX[mask] = best
-
-        ans = 0
-        for b in range(m):
-            r = full ^ b
-            cand = andMask[b] + bestX[r]
-            if cand > ans:
-                ans = cand
-        return ans
+        max_val = 0
+        
+        # Iterate through all 3^n partitions
+        for partition in range(3 ** n):
+            # Decode partition to assignment (0=A, 1=B, 2=C)
+            assignment = []
+            temp = partition
+            for i in range(n):
+                assignment.append(temp % 3)
+                temp //= 3
+            
+            # Calculate XOR(A), AND(B), XOR(C)
+            xor_a = 0
+            and_b = 0
+            first_b = True
+            xor_c = 0
+            
+            for i in range(n):
+                if assignment[i] == 0:  # A
+                    xor_a ^= nums[i]
+                elif assignment[i] == 1:  # B
+                    if first_b:
+                        and_b = nums[i]
+                        first_b = False
+                    else:
+                        and_b &= nums[i]
+                else:  # C
+                    xor_c ^= nums[i]
+            
+            # Update maximum
+            max_val = max(max_val, xor_a + and_b + xor_c)
+        
+        return max_val
 # @lc code=end
