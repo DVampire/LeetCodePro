@@ -4,30 +4,73 @@
 # [3670] Maximum Product of Two Integers With No Common Bits
 #
 
+from typing import List
+
 # @lc code=start
 class Solution:
     def maxProduct(self, nums: List[int]) -> int:
-        MAX_BITS = 20
-        SIZE = 1 << MAX_BITS
-        FULL_MASK = SIZE - 1
+        """
+        Find two distinct indices i,j such that nums[i] & nums[j]==0,
+        maximizing product nums[i]*nums[j].
+        """
+        n = len(nums)
+        if n < 2:
+            return 0
         
-        # Initialize the DP array with the values present in nums
-        dp = [0] * SIZE
-        for num in nums:
-            dp[num] = num
+        # Determine required number of bits
+        max_num = max(nums)
+        L = max_num.bit_length()
+        total_masks = 1 << L          # size = pow(2,L)
         
-        # SOS DP to compute max value among all submasks for each mask
-        for bit in range(MAX_BITS):
-            for mask in range(SIZE):
-                if mask & (1 << bit):
-                    dp[mask] = max(dp[mask], dp[mask ^ (1 << bit)])
+        # Store maximum number per exact mask
+        max_val = [0] * total_masks
+        present_masks = []          
         
-        # Find the answer
-        result = 0
-        for num in nums:
-            complement = FULL_MASK ^ num
-            max_partner = dp[complement]
-            result = max(result, num * max_partner)
+        for x in nums:
+            # x itself serves as its unique bit pattern
+            idx = x
+            
+            # Record first occurrence of this exact pattern
+            if idx < total_masks:
+                if not max_val[idx]:
+                    present_masks.append(idx)
+                
+                # Store x as representative.
+                # Since idx uniquely identifies x among positive ints,
+                # storing x itself suffices.
+                max_val[idx] = x
         
-        return result
+        # Initialize DP array for Sum Over Subsets.
+        # After DP processing,
+        #   dp[mask]=max{max_val[s] | s subset-of mask}
+        dp = list(max_val)
+        
+        # Standard SOS DP for taking maximum over subsets.
+        for i in range(L):
+            step = 1 << i
+            for mask in range(total_masks):
+                if mask & step:
+                    other = mask ^ step
+                    cand = dp[other]
+                    
+                    # Update current entry using entry without this bit.
+                    if cand > dp[mask]:
+                        dp[mask] = cand
+
+        ans = 0
+        full_mask = total_masks - 1   # All lower L bits are ones.
+
+        for cur_mask in present_masks:
+            val_cur = cur_mask          
+            
+            # Complement w.r.t lower L bits.
+            comp = (~cur_mask) & full_mask
+            best_partner = dp[comp]
+
+            # Ensure partner exists and yields valid product.
+            if best_partner:
+                prod = val_cur * best_partner
+                ans = prod if prod > ans else ans
+
+        return ans
 # @lc code=end
