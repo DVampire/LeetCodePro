@@ -3,44 +3,34 @@
 #
 # [3341] Find Minimum Time to Reach Last Room I
 #
+
 # @lc code=start
+from typing import List
 import heapq
 
 class Solution:
     def minTimeToReach(self, moveTime: List[List[int]]) -> int:
-        n, m = len(moveTime), len(moveTime[0])
-        
-        # dist[i][j] = minimum time to reach room (i, j)
+        n = len(moveTime)
+        m = len(moveTime[0])
+        # Dijkstra's algorithm: (time, i, j)
+        pq = []
+        heapq.heappush(pq, (0, 0, 0))
         dist = [[float('inf')] * m for _ in range(n)]
         dist[0][0] = 0
-        
-        # Min heap: (time, row, col)
-        heap = [(0, 0, 0)]
-        
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-        
-        while heap:
-            time, r, c = heapq.heappop(heap)
-            
-            # If we've already found a better path, skip
-            if time > dist[r][c]:
+        dirs = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        while pq:
+            t, i, j = heapq.heappop(pq)
+            if i == n-1 and j == m-1:
+                return t
+            if t > dist[i][j]:
                 continue
-            
-            # If we've reached the destination
-            if r == n - 1 and c == m - 1:
-                return time
-            
-            for dr, dc in directions:
-                nr, nc = r + dr, c + dc
-                
-                if 0 <= nr < n and 0 <= nc < m:
-                    # Calculate arrival time at (nr, nc)
-                    # We can start moving when time >= moveTime[nr][nc]
-                    arrival = max(time, moveTime[nr][nc]) + 1
-                    
-                    if arrival < dist[nr][nc]:
-                        dist[nr][nc] = arrival
-                        heapq.heappush(heap, (arrival, nr, nc))
-        
+            for di, dj in dirs:
+                ni, nj = i + di, j + dj
+                if 0 <= ni < n and 0 <= nj < m:
+                    # The earliest time we can enter (ni,nj) is max(t+1, moveTime[ni][nj])
+                    nt = max(t + 1, moveTime[ni][nj])
+                    if nt < dist[ni][nj]:
+                        dist[ni][nj] = nt
+                        heapq.heappush(pq, (nt, ni, nj))
         return dist[n-1][m-1]
 # @lc code=end
