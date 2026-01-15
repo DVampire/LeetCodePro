@@ -9,52 +9,33 @@ class Solution:
     def maxSubstringLength(self, s: str, k: int) -> bool:
         n = len(s)
         
-        if k == 0:
-            return True
+        # Count frequency of each character
+        freq = {}
+        for ch in s:
+            freq[ch] = freq.get(ch, 0) + 1
         
-        # Find first and last occurrence of each character
-        first = {}
-        last = {}
-        for i, c in enumerate(s):
-            if c not in first:
-                first[c] = i
-            last[c] = i
+        # Compute longest consecutive run for each character
+        from collections import defaultdict
+        longest_run = defaultdict(int)
+        i = 0
+        while i < n:
+            ch = s[i]
+            j = i
+            while j < n and s[j] == ch:
+                j += 1
+            run_len = j - i
+            longest_run[ch] = max(longest_run[ch], run_len)
+            i = j
         
-        # Find all minimal special substrings
-        intervals = set()
+        eligible = 0
+        for ch in freq:
+            cnt = freq[ch]
+            run_len = longest_run.get(ch)
+            # Eligible if:
+            #   All occurrences form a single consecutive block,
+            #   The block is not the entire string.
+            if cnt == run_len and cnt < n:
+                eligible += 1
         
-        for c in first:
-            start = first[c]
-            end = last[c]
-            
-            # Expand until closed
-            i = start
-            while i <= end:
-                char = s[i]
-                new_start = first[char]
-                new_end = last[char]
-                
-                if new_start < start:
-                    start = new_start
-                    i = start
-                else:
-                    end = max(end, new_end)
-                    i += 1
-            
-            # Check constraint: not the entire string
-            if not (start == 0 and end == n - 1):
-                intervals.add((start, end))
-        
-        # Sort by end point for greedy scheduling
-        intervals = sorted(intervals, key=lambda x: x[1])
-        
-        # Greedy: select maximum non-overlapping intervals
-        count = 0
-        prev_end = -1
-        for start, end in intervals:
-            if start > prev_end:
-                count += 1
-                prev_end = end
-        
-        return count >= k
+        return eligible >= k
 # @lc code=end
