@@ -9,15 +9,14 @@ class Solution:
     def maxSum(self, grid: List[List[int]], limits: List[int], k: int) -> int:
         candidates = []
         
-        for row, limit in zip(grid, limits):
-            # Sort the row in descending order
+        for i, row in enumerate(grid):
+            # Sort row in descending order and take top limits[i] elements
             sorted_row = sorted(row, reverse=True)
-            # Take the top 'limit' elements from this row
-            candidates.extend(sorted_row[:limit])
+            candidates.extend(sorted_row[:limits[i]])
         
         # Sort all candidates in descending order
         candidates.sort(reverse=True)
         
-        # Take the top k elements and return their sum
+        # Take top k elements and return their sum
         return sum(candidates[:k])
 # @lc code=end
