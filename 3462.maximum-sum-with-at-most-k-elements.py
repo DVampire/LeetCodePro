@@ -8,15 +8,15 @@
 class Solution:
     def maxSum(self, grid: List[List[int]], limits: List[int], k: int) -> int:
         candidates = []
-        
-        for row, limit in zip(grid, limits):
-            # Sort row in descending order and take top 'limit' elements
+        for i, row in enumerate(grid):
+            # Sort row in descending order
             sorted_row = sorted(row, reverse=True)
-            candidates.extend(sorted_row[:limit])
+            # Take top limits[i] elements as candidates
+            candidates.extend(sorted_row[:limits[i]])
         
         # Sort all candidates in descending order
         candidates.sort(reverse=True)
         
-        # Take top k elements and return their sum
+        # Return sum of top k candidates
         return sum(candidates[:k])
 # @lc code=end
