@@ -9,54 +9,50 @@ from functools import lru_cache
 
 class Solution:
     def totalWaviness(self, num1: int, num2: int) -> int:
-        def count_up_to(n):
-            if n < 0:
+        MOD = 10**9 + 7
+        
+        def count(n):
+            if n <= 0:
                 return 0
             s = str(n)
-            L = len(s)
+            m = len(s)
             
             @lru_cache(maxsize=None)
-            def dp(pos, tight, prev, prev_cmp, started):
-                # Returns (count, total_waviness)
-                if pos == L:
+            def dp(pos, tight, pp, p):
+                # pp = prev_prev digit (-1 if not set)
+                # p = prev digit (-1 if number hasn't started)
+                if pos == m:
                     return (1, 0)
                 
                 limit = int(s[pos]) if tight else 9
                 cnt, wav = 0, 0
                 
                 for d in range(limit + 1):
-                    new_tight = tight and (d == limit)
+                    nt = tight and (d == limit)
                     
-                    if not started:
-                        if d == 0:
-                            c, w = dp(pos + 1, new_tight, -1, -2, False)
-                        else:
-                            c, w = dp(pos + 1, new_tight, d, -2, True)
-                        cnt += c
-                        wav += w
+                    if p == -1 and d == 0:
+                        # Still in leading zeros
+                        c, w = dp(pos + 1, nt, -1, -1)
+                    elif p == -1:
+                        # First significant digit
+                        c, w = dp(pos + 1, nt, -1, d)
                     else:
-                        peak_valley = 0
-                        # Check if prev is a peak or valley
-                        if prev_cmp == -1 and d < prev:  # prev2 < prev1 and d < prev1 => peak
-                            peak_valley = 1
-                        elif prev_cmp == 1 and d > prev:  # prev2 > prev1 and d > prev1 => valley
-                            peak_valley = 1
-                        
-                        # Calculate new prev_cmp
-                        if prev < d:
-                            new_cmp = -1
-                        elif prev > d:
-                            new_cmp = 1
-                        else:
-                            new_cmp = 0
-                        
-                        c, w = dp(pos + 1, new_tight, d, new_cmp, True)
-                        cnt += c
-                        wav += w + peak_valley * c
+                        # Check if prev (p) is peak or valley
+                        add = 0
+                        if pp != -1:
+                            if pp < p > d:  # peak
+                                add = 1
+                            elif pp > p < d:  # valley
+                                add = 1
+                        c, w = dp(pos + 1, nt, p, d)
+                        w = (w + c * add) % MOD
+                    
+                    cnt = (cnt + c) % MOD
+                    wav = (wav + w) % MOD
                 
                 return (cnt, wav)
             
-            return dp(0, True, -1, -2, False)[1]
+            return dp(0, True, -1, -1)[1]
         
-        return count_up_to(num2) - count_up_to(num1 - 1)
+        return (count(num2) - count(num1 - 1) + MOD) % MOD
 # @lc code=end
