@@ -3,49 +3,27 @@
 #
 # [3725] Count Ways to Choose Coprime Integers from Rows
 #
+
 # @lc code=start
 class Solution:
     def countCoprime(self, mat: List[List[int]]) -> int:
+        from math import gcd
+        from collections import Counter
+        
         MOD = 10**9 + 7
         
-        # Find the maximum value in the matrix
-        max_val = max(max(row) for row in mat)
+        # dp[g] = number of ways to choose integers from processed rows with GCD = g
+        dp = Counter(mat[0])
         
-        # Compute Möbius function using sieve
-        mu = [0] * (max_val + 1)
-        mu[1] = 1
-        smallest_prime_factor = [0] * (max_val + 1)
+        # Process remaining rows
+        for row in mat[1:]:
+            new_dp = Counter()
+            row_count = Counter(row)
+            for prev_gcd, count in dp.items():
+                for val, freq in row_count.items():
+                    new_gcd = gcd(prev_gcd, val)
+                    new_dp[new_gcd] = (new_dp[new_gcd] + count * freq) % MOD
+            dp = new_dp
         
-        # Sieve to find smallest prime factor
-        for i in range(2, max_val + 1):
-            if smallest_prime_factor[i] == 0:  # i is prime
-                smallest_prime_factor[i] = i
-                for j in range(i, max_val + 1, i):
-                    if smallest_prime_factor[j] == 0:
-                        smallest_prime_factor[j] = i
-        
-        # Compute Möbius function
-        for i in range(2, max_val + 1):
-            p = smallest_prime_factor[i]
-            if smallest_prime_factor[i // p] == p:
-                # i has p^2 as a factor
-                mu[i] = 0
-            else:
-                mu[i] = -mu[i // p]
-        
-        # Apply Möbius inversion
-        result = 0
-        for d in range(1, max_val + 1):
-            if mu[d] == 0:
-                continue
-            
-            # Count ways where all chosen numbers are divisible by d
-            ways = 1
-            for row in mat:
-                count = sum(1 for x in row if x % d == 0)
-                ways = (ways * count) % MOD
-            
-            result = (result + mu[d] * ways) % MOD
-        
-        return result
+        return dp.get(1, 0)
 # @lc code=end
