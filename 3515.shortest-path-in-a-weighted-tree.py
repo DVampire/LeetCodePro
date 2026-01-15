@@ -3,49 +3,78 @@
 #
 # [3515] Shortest Path in a Weighted Tree
 #
+
 # @lc code=start
 class Solution:
     def treeQueries(self, n: int, edges: List[List[int]], queries: List[List[int]]) -> List[int]:
-        from collections import defaultdict, deque
-        
         # Build adjacency list
-        graph = defaultdict(dict)
+        adj = [[] for _ in range(n + 1)]
         for u, v, w in edges:
-            graph[u][v] = w
-            graph[v][u] = w
+            adj[u].append((v, w))
+            adj[v].append((u, w))
         
-        def find_distance(target):
-            if target == 1:
-                return 0
-            
-            # BFS from node 1 to target
-            queue = deque([(1, 0)])  # (node, distance)
-            visited = set([1])
-            
-            while queue:
-                node, dist = queue.popleft()
-                
-                for neighbor, weight in graph[node].items():
-                    if neighbor not in visited:
-                        if neighbor == target:
-                            return dist + weight
-                        visited.add(neighbor)
-                        queue.append((neighbor, dist + weight))
-            
-            return -1
+        # Iterative DFS to compute in_time, out_time, parent, dist
+        in_time = [0] * (n + 1)
+        out_time = [0] * (n + 1)
+        parent = [0] * (n + 1)
+        dist = [0] * (n + 1)
+        edge_weight = {}
         
-        result = []
+        timer = 0
+        stack = [(1, 0, 0, False)]
         
-        for query in queries:
-            if query[0] == 1:
-                # Update query
-                u, v, w_new = query[1], query[2], query[3]
-                graph[u][v] = w_new
-                graph[v][u] = w_new
+        while stack:
+            u, p, d, visited = stack.pop()
+            if visited:
+                out_time[u] = timer
             else:
-                # Distance query
-                x = query[1]
-                result.append(find_distance(x))
+                timer += 1
+                in_time[u] = timer
+                parent[u] = p
+                dist[u] = d
+                stack.append((u, p, d, True))
+                for v, w in adj[u]:
+                    if v != p:
+                        edge_weight[(u, v)] = w
+                        stack.append((v, u, d + w, False))
+        
+        # BIT for range update and point query
+        bit = [0] * (n + 2)
+        
+        def add(i, delta):
+            while i <= n:
+                bit[i] += delta
+                i += i & (-i)
+        
+        def query(i):
+            s = 0
+            while i > 0:
+                s += bit[i]
+                i -= i & (-i)
+            return s
+        
+        def range_add(l, r, delta):
+            add(l, delta)
+            add(r + 1, -delta)
+        
+        # Process queries
+        result = []
+        for q in queries:
+            if q[0] == 1:
+                _, u, v, w_new = q
+                if parent[v] == u:
+                    child = v
+                    key = (u, v)
+                else:
+                    child = u
+                    key = (v, u)
+                w_old = edge_weight[key]
+                delta = w_new - w_old
+                edge_weight[key] = w_new
+                range_add(in_time[child], out_time[child], delta)
+            else:
+                _, x = q
+                result.append(dist[x] + query(in_time[x]))
         
         return result
 # @lc code=end
