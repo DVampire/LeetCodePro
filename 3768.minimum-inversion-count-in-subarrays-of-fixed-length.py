@@ -4,57 +4,78 @@
 # [3768] Minimum Inversion Count in Subarrays of Fixed Length
 #
 
+from typing import List
+
 # @lc code=start
-class Solution:
-    def minInversionCount(self, nums: List[int], k: int) -> int:
-        n = len(nums)
-        if k == 1:
+class FenwickTree:
+    def __init__(self,n):
+        self.n=n
+        self.tree=[0]*(n+2)
+    def _lowbit(self,x):
+        return x&(-x)
+    def _update(self,i,v):
+        while i<=self.n:
+            self.tree[i]+=v
+            i+=self._lowbit(i)
+    def _query(self,i):
+        s=0
+        while i>0:
+            s+=self.tree[i]
+            i-=self._lowbit(i)
+        return s
+    def add(self,c):
+        self._update(c+1,+1)
+    def remove(self,c):
+        self._update(c+1,-1)
+    def count_less(self,c):
+        if c<=0:
             return 0
-        
-        # Coordinate compression
-        sorted_nums = sorted(set(nums))
-        rank = {v: i + 1 for i, v in enumerate(sorted_nums)}
-        max_rank = len(sorted_nums)
-        
-        # BIT for counting
-        bit = [0] * (max_rank + 1)
-        
-        def update(i, delta=1):
-            while i <= max_rank:
-                bit[i] += delta
-                i += i & (-i)
-        
-        def query(i):
-            s = 0
-            while i > 0:
-                s += bit[i]
-                i -= i & (-i)
-            return s
-        
-        # Count inversions in first window
-        inv_count = 0
+        return self._query(c)
+    def count_less_equal(self,c):
+        return self._query(c+1)
+
+class Solution:
+    def minInversionCount(self,nums,k):
+        n=len(nums)
+        if k==:
+            return 
+
+        # coordinate compression
+        sorted_unique=sorted(set(nums))
+        val_to_idx={v:i for i,v in enumerate(sorted_unique)}
+        m=len(sorted_unique)
+
+        ft=FenwickTree(m)
+
+        # compute initial inversion count for first k elements
+        inv=
         for i in range(k):
-            r = rank[nums[i]]
-            # Count elements > nums[i] already added
-            inv_count += query(max_rank) - query(r)
-            update(r)
-        
-        min_inv = inv_count
-        
-        # Slide the window
-        for i in range(n - k):
-            # Remove nums[i] from window
-            r_old = rank[nums[i]]
-            update(r_old, -1)
-            removed_inv = query(r_old - 1)  # Elements < nums[i] remaining in window
-            
-            # Add nums[i+k] to window
-            r_new = rank[nums[i + k]]
-            added_inv = query(max_rank) - query(r_new)  # Elements > nums[i+k] in window
-            update(r_new)
-            
-            inv_count = inv_count - removed_inv + added_inv
-            min_inv = min(min_inv, inv_count)
-        
+            idx=val_to_idx[nums[i]]
+            # number of previously inserted elements greater than nums[i]
+            cur_total=i
+            leq=ft.count_less_equal(idx)
+            inv += cur_total-leq
+            ft.add(idx)
+
+        min_inv=inv
+
+        # slide windows
+        for left in range(n-k):
+            # remove leftmost
+            idx_left=val_to_idx[nums[left]]
+            smaller=ft.count_less(idx_left)
+            inv-=smaller
+            ft.remove(idx_left)
+
+            # add new rightmost
+            idx_new=val_to_idx[nums[left+k]]
+            cur_total=k-
+            leq_new=ft.count_less_equal(idx_new)
+            greater=cur_total-leq_new
+            inv+=greater
+            ft.add(idx_new)
+
+            min_inv=min(min_inv,inv)
+
         return min_inv
 # @lc code=end
