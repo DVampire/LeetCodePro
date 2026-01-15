@@ -8,28 +8,50 @@
 class Solution:
     def countStableSubarrays(self, nums: List[int], queries: List[List[int]]) -> List[int]:
         n = len(nums)
-        # max_reach[i] = the maximum index j such that nums[i:j+1] is non-decreasing
-        max_reach = [0] * n
         
-        # Process from right to left
-        for i in range(n - 1, -1, -1):
-            if i == n - 1:
-                max_reach[i] = i
-            elif nums[i + 1] < nums[i]:
-                max_reach[i] = i
-            else:
-                max_reach[i] = max_reach[i + 1]
+        # Build segments of non-decreasing subarrays
+        seg = [0] * n  # seg[i] = segment index containing position i
+        seg_start = [0]  # Start index of each segment
+        seg_end = []     # End index of each segment
         
-        result = []
+        current_seg = 0
+        for i in range(n - 1):
+            seg[i] = current_seg
+            if nums[i] > nums[i + 1]:  # Breaking point
+                seg_end.append(i)
+                current_seg += 1
+                seg_start.append(i + 1)
+        seg[n - 1] = current_seg
+        seg_end.append(n - 1)
+        
+        num_segments = len(seg_start)
+        
+        # Count of subarrays in a range of length `length`
+        def count_subarrays(length):
+            return length * (length + 1) // 2
+        
+        # Prefix sum of full segment counts
+        prefix_count = [0] * (num_segments + 1)
+        for j in range(num_segments):
+            length = seg_end[j] - seg_start[j] + 1
+            prefix_count[j + 1] = prefix_count[j] + count_subarrays(length)
+        
+        ans = []
         for l, r in queries:
-            count = 0
-            for i in range(l, r + 1):
-                # The maximum ending position within [l, r]
-                end = min(max_reach[i], r)
-                # Number of stable subarrays starting at i
-                count += (end - i + 1)
+            seg_l = seg[l]
+            seg_r = seg[r]
             
-            result.append(count)
+            if seg_l == seg_r:
+                # Query range is within a single segment
+                ans.append(count_subarrays(r - l + 1))
+            else:
+                # First partial segment
+                first_partial = count_subarrays(seg_end[seg_l] - l + 1)
+                # Last partial segment
+                last_partial = count_subarrays(r - seg_start[seg_r] + 1)
+                # Full segments in between
+                full_count = prefix_count[seg_r] - prefix_count[seg_l + 1]
+                ans.append(first_partial + last_partial + full_count)
         
-        return result
+        return ans
 # @lc code=end
