@@ -5,48 +5,48 @@
 #
 
 # @lc code=start
+from collections import deque
+
 class Solution:
     def minMoves(self, sx: int, sy: int, tx: int, ty: int) -> int:
         if sx == tx and sy == ty:
             return 0
         
-        moves = 0
-        while tx > sx or ty > sy:
-            if tx < sx or ty < sy:
-                return -1
-            
-            if tx == ty:
-                # Special case: came from (0, ty) or (tx, 0)
-                if sy == ty and ty > 0 and sx % ty == 0:
-                    return moves + 1 + sx // ty
-                if sx == tx and tx > 0 and sy % tx == 0:
-                    return moves + 1 + sy // tx
-                return -1
-            
-            if tx > ty:
-                if ty == sy:
-                    max_val = max(sx, sy)
-                    if max_val == 0:
-                        return moves if tx == sx else -1
-                    if (tx - sx) % max_val == 0:
-                        return moves + (tx - sx) // max_val
-                    else:
-                        return -1
-                steps = max(1, (tx - sx) // ty)
-                moves += steps
-                tx -= steps * ty
-            else:  # ty > tx
-                if tx == sx:
-                    max_val = max(sx, sy)
-                    if max_val == 0:
-                        return moves if ty == sy else -1
-                    if (ty - sy) % max_val == 0:
-                        return moves + (ty - sy) // max_val
-                    else:
-                        return -1
-                steps = max(1, (ty - sy) // tx)
-                moves += steps
-                ty -= steps * tx
+        if sx == 0 and sy == 0:
+            return -1
         
-        return moves if tx == sx and ty == sy else -1
+        visited = {(tx, ty)}
+        queue = deque([(tx, ty, 0)])
+        
+        while queue:
+            x, y, dist = queue.popleft()
+            
+            prevs = []
+            
+            # Option 1: (x/2, y) if x is even and x >= 2y
+            if x % 2 == 0 and x >= 2 * y and x > 0:
+                prevs.append((x // 2, y))
+            
+            # Option 2: (x - y, y) if y <= x < 2y
+            if y > 0 and y <= x < 2 * y:
+                prevs.append((x - y, y))
+            
+            # Option 3: (x, y/2) if y is even and y >= 2x
+            if y % 2 == 0 and y >= 2 * x and y > 0:
+                prevs.append((x, y // 2))
+            
+            # Option 4: (x, y - x) if x <= y < 2x
+            if x > 0 and x <= y < 2 * x:
+                prevs.append((x, y - x))
+            
+            for px, py in prevs:
+                if px < sx or py < sy:
+                    continue
+                if (px, py) == (sx, sy):
+                    return dist + 1
+                if (px, py) not in visited:
+                    visited.add((px, py))
+                    queue.append((px, py, dist + 1))
+        
+        return -1
 # @lc code=end
