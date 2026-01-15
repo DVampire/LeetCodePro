@@ -5,75 +5,81 @@
 #
 
 # @lc code=start
-import heapq
-from typing import List
+from sortedcontainers import SortedList
 
 class Solution:
     def minimumPairRemoval(self, nums: List[int]) -> int:
         n = len(nums)
-        if n <= 1:
+        if n == 1:
             return 0
         
-        values = nums[:]
-        prev_node = [i - 1 for i in range(n)]
-        next_node = [i + 1 for i in range(n)]
-        next_node[-1] = -1
+        # Doubly linked list using arrays
+        prev = [i - 1 for i in range(n)]
+        nxt = [i + 1 for i in range(n)]
+        val = list(nums)
+        deleted = [False] * n
         
-        heap = []
-        pair_sum_map = {}
+        # Count bad pairs (where left > right)
+        bad_count = sum(1 for i in range(n - 1) if val[i] > val[i + 1])
+        if bad_count == 0:
+            return 0
         
-        bad_pairs = 0
+        # SortedList of (sum, left_index) for efficient min-sum retrieval
+        pairs = SortedList()
         for i in range(n - 1):
-            s = values[i] + values[i + 1]
-            heapq.heappush(heap, (s, i))
-            pair_sum_map[i] = s
-            if values[i] > values[i + 1]:
-                bad_pairs += 1
+            pairs.add((val[i] + val[i + 1], i))
         
         operations = 0
-        while bad_pairs > 0 and heap:
-            s, i = heapq.heappop(heap)
-            if i not in pair_sum_map or pair_sum_map[i] != s:
-                continue
+        
+        while bad_count > 0:
+            # Get minimum sum pair with lazy deletion
+            while pairs:
+                min_sum, left_idx = pairs[0]
+                right_idx = nxt[left_idx]
+                if (not deleted[left_idx] and 
+                    right_idx < n and 
+                    not deleted[right_idx] and 
+                    val[left_idx] + val[right_idx] == min_sum):
+                    break
+                pairs.pop(0)
             
-            j = next_node[i]
-            old_val_i = values[i]
-            old_val_j = values[j]
+            # Remove the valid pair
+            pairs.pop(0)
             
-            p = prev_node[i]
-            if p != -1 and p in pair_sum_map:
-                if values[p] > old_val_i:
-                    bad_pairs -= 1
-                del pair_sum_map[p]
+            right_idx = nxt[left_idx]
+            new_val = val[left_idx] + val[right_idx]
             
-            if old_val_i > old_val_j:
-                bad_pairs -= 1
-            del pair_sum_map[i]
+            prev_left = prev[left_idx]
+            next_right = nxt[right_idx]
             
-            k = next_node[j]
-            if k != -1 and j in pair_sum_map:
-                if old_val_j > values[k]:
-                    bad_pairs -= 1
-                del pair_sum_map[j]
+            # Update bad_count and pairs for (prev_left, left_idx)
+            if prev_left >= 0:
+                if val[prev_left] > val[left_idx]:
+                    bad_count -= 1
+                if val[prev_left] > new_val:
+                    bad_count += 1
+                pairs.discard((val[prev_left] + val[left_idx], prev_left))
+                pairs.add((val[prev_left] + new_val, prev_left))
             
-            values[i] = old_val_i + old_val_j
-            next_node[i] = k
-            if k != -1:
-                prev_node[k] = i
+            # Update bad_count for merged pair
+            if val[left_idx] > val[right_idx]:
+                bad_count -= 1
             
-            if p != -1:
-                new_sum = values[p] + values[i]
-                heapq.heappush(heap, (new_sum, p))
-                pair_sum_map[p] = new_sum
-                if values[p] > values[i]:
-                    bad_pairs += 1
+            # Update bad_count and pairs for (right_idx, next_right)
+            if next_right < n:
+                if val[right_idx] > val[next_right]:
+                    bad_count -= 1
+                if new_val > val[next_right]:
+                    bad_count += 1
+                pairs.discard((val[right_idx] + val[next_right], right_idx))
+                pairs.add((new_val + val[next_right], left_idx))
             
-            if k != -1:
-                new_sum = values[i] + values[k]
-                heapq.heappush(heap, (new_sum, i))
-                pair_sum_map[i] = new_sum
-                if values[i] > values[k]:
-                    bad_pairs += 1
+            # Update linked list
+            val[left_idx] = new_val
+            deleted[right_idx] = True
+            nxt[left_idx] = next_right
+            if next_right < n:
+                prev[next_right] = left_idx
             
             operations += 1
         
