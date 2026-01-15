@@ -4,52 +4,133 @@
 # [3449] Maximize the Minimum Game Score
 #
 
-# @lc code=start
 from typing import List
+import math
 
+# @lc code=start
 class Solution:
-    def maxScore(self, points: List[int], m: int) -> int:
-        n = len(points)
+    
+    def _required_moves(self, required):
+        """
+        Estimate minimum additional moves needed given required visits.
+        Uses idea of transporting "demands" along line.
+        """
+        n = len(required)
+        # Find leftmost and rightmost indices with positive requirement
+        left = None
+        right = None
+        tot_req = 0
+        weighted_sum = 0
         
-        def canAchieve(target: int) -> bool:
-            if target == 0:
-                return True
-            
-            moves = 1  # Initial move from -1 to 0
-            carry = 1  # Visits at current position
-            
-            for i in range(n):
-                need_i = (target + points[i] - 1) // points[i]  # ceil(target / points[i])
-                short = max(need_i - carry, 0)
-                
-                if i < n - 1:
-                    # Oscillate with next position
-                    moves += 2 * short
-                    next_carry = short
-                    need_next = (target + points[i + 1] - 1) // points[i + 1]
-                    
-                    # Decide whether to move forward
-                    if i + 1 < n - 1 or next_carry < need_next:
-                        moves += 1
-                        next_carry += 1
-                    
-                    carry = next_carry
-                else:
-                    # Last position: oscillate with previous position
-                    moves += 2 * short
-                
-                if moves > m:
-                    return False
-            
-            return True
+        for i in range(n):
+            if required[i] > 0:
+                tot_req += required[i]
+                weighted_sum += required[i] * i
+                if left is None:
+                    left = i
+                right = i
         
-        lo, hi = 0, max(points) * m
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            if canAchieve(mid):
-                lo = mid
+        # No positive requirement
+        if tot_req == 0:
+            return 0
+        
+        # Every positive requirement contributes.
+        # Minimum movements include:
+        #   - Traveling to cover spread.
+        #   - Multiple passes.
+        
+        # Conservative estimate:
+        #   At least tot_req moves just for depositing.
+        #   Additional travel overhead.
+        
+        # Starting position is index 0.
+        overhead = max(0, right - left)
+        
+        # Simplified heuristic:
+        estimated_moves = tot_req + overhead
+        
+        return estimated_moves
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+def _feasible(self,t,move_limit):
+        """
+        Check whether target minimum score t can be achieved.
+        """
+        pts=self.points
+        n=self.n
+        
+        # Required visits
+        req=[(t+p-)//p for p in pts]
+        
+        # Account for mandatory first move
+        req[01]-=
+        if req[01]<:
+            req[01]=
+            
+        tot_req_sum(req)
+        
+        # Available moves after mandatory first
+        avail_move_limit-
+        
+        if tot_req>avail_move:
+            return False
+            
+        est_move=self._required_moves(req)
+            
+            est_move<=
+avail_move
+            returne True
             else:
-                hi = mid - 1
-        
-        return lo
-# @lc code=end
+                returne False
+                
