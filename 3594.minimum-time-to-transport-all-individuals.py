@@ -3,78 +3,57 @@
 #
 # [3594] Minimum Time to Transport All Individuals
 #
+
 # @lc code=start
-from typing import List
-from itertools import combinations
 import heapq
 
 class Solution:
     def minTime(self, n: int, k: int, m: int, time: List[int], mul: List[float]) -> float:
-        # Edge case: impossible if boat capacity is 1 and multiple people
+        # Impossible case: boat holds 1 person but more than 1 need transport
         if k == 1 and n > 1:
             return -1.0
         
-        # If everyone can go in one trip
-        if k >= n:
-            return max(time) * mul[0]
+        all_transported = (1 << n) - 1
+        dist = {}
+        # (total_time, at_dest_bitmask, stage, boat_at_dest)
+        pq = [(0.0, 0, 0, 0)]
         
-        target_mask = (1 << n) - 1
-        
-        # Dijkstra's algorithm
-        heap = [(0.0, 0, 0)]  # (time, mask, stage)
-        visited = set()
-        
-        while heap:
-            total_time, mask, stage = heapq.heappop(heap)
+        while pq:
+            curr_time, at_dest, stage, boat_at_dest = heapq.heappop(pq)
             
-            # Skip if already visited
-            if (mask, stage) in visited:
+            state = (at_dest, stage, boat_at_dest)
+            if state in dist:
                 continue
-            visited.add((mask, stage))
+            dist[state] = curr_time
             
-            # Check if all transported
-            if mask == target_mask:
-                return total_time
+            # Check if all individuals transported
+            if at_dest == all_transported:
+                return curr_time
             
-            # Identify people at base and destination
-            at_base = [i for i in range(n) if not (mask & (1 << i))]
-            at_dest = [i for i in range(n) if mask & (1 << i)]
-            
-            # Try sending different groups
-            for group_size in range(1, min(k, len(at_base)) + 1):
-                for group in combinations(at_base, group_size):
-                    # Crossing phase
-                    max_time_in_group = max(time[i] for i in group)
-                    crossing_time = max_time_in_group * mul[stage]
-                    
-                    # New mask after crossing
-                    new_mask = mask
-                    for i in group:
-                        new_mask |= (1 << i)
-                    
-                    # Stage update after crossing
-                    stage_advance = int(crossing_time) % m
-                    new_stage = (stage + stage_advance) % m
-                    new_total_time = total_time + crossing_time
-                    
-                    if new_mask == target_mask:
-                        # All people now at destination
-                        if (new_mask, new_stage) not in visited:
-                            heapq.heappush(heap, (new_total_time, new_mask, new_stage))
-                    else:
-                        # Return phase needed
-                        new_at_dest = at_dest + list(group)
-                        
-                        # Try each person returning
-                        for returner in new_at_dest:
-                            return_time = time[returner] * mul[new_stage]
-                            return_stage_advance = int(return_time) % m
-                            final_stage = (new_stage + return_stage_advance) % m
-                            return_mask = new_mask & ~(1 << returner)
-                            final_time = new_total_time + return_time
-                            
-                            if (return_mask, final_stage) not in visited:
-                                heapq.heappush(heap, (final_time, return_mask, final_stage))
+            if boat_at_dest == 0:  # Boat at base camp
+                at_base = all_transported ^ at_dest
+                # Enumerate all non-empty subsets of people at base
+                subset = at_base
+                while subset > 0:
+                    if bin(subset).count('1') <= k:
+                        # Calculate crossing time
+                        max_t = max(time[i] for i in range(n) if subset & (1 << i))
+                        trip_time = max_t * mul[stage]
+                        new_at_dest = at_dest | subset
+                        new_stage = (stage + int(trip_time) % m) % m
+                        new_state = (new_at_dest, new_stage, 1)
+                        if new_state not in dist:
+                            heapq.heappush(pq, (curr_time + trip_time, new_at_dest, new_stage, 1))
+                    subset = (subset - 1) & at_base
+            else:  # Boat at destination - someone must return
+                for r in range(n):
+                    if at_dest & (1 << r):
+                        ret_time = time[r] * mul[stage]
+                        new_at_dest = at_dest & ~(1 << r)
+                        new_stage = (stage + int(ret_time) % m) % m
+                        new_state = (new_at_dest, new_stage, 0)
+                        if new_state not in dist:
+                            heapq.heappush(pq, (curr_time + ret_time, new_at_dest, new_stage, 0))
         
         return -1.0
 # @lc code=end
