@@ -5,75 +5,47 @@
 #
 
 # @lc code=start
-from itertools import combinations
+from itertools import permutations
 import bisect
 
 class Solution:
     def specialPalindrome(self, n: int) -> int:
-        def next_permutation(arr):
-            i = len(arr) - 2
-            while i >= 0 and arr[i] >= arr[i + 1]:
-                i -= 1
-            if i < 0:
-                return False
-            j = len(arr) - 1
-            while arr[i] >= arr[j]:
-                j -= 1
-            arr[i], arr[j] = arr[j], arr[i]
-            arr[i+1:] = arr[i+1:][::-1]
-            return True
+        all_palindromes = set()
         
-        def all_unique_perms(elements):
-            if not elements:
-                return [()]
-            arr = sorted(elements)
-            result = [tuple(arr)]
-            while next_permutation(arr):
-                result.append(tuple(arr))
+        def generate_subsets(max_sum):
+            result = []
+            def backtrack(start, current, total, odd):
+                if odd > 1:
+                    return
+                if current:
+                    result.append(tuple(current))
+                for d in range(start, 10):
+                    if total + d > max_sum:
+                        break
+                    current.append(d)
+                    backtrack(d + 1, current, total + d, odd + (d % 2))
+                    current.pop()
+            backtrack(1, [], 0, 0)
             return result
         
-        even_digits = [2, 4, 6, 8]
-        odd_digits = [1, 3, 5, 7, 9]
+        for subset in generate_subsets(22):
+            middle = next((d for d in subset if d % 2 == 1), None)
+            
+            half = []
+            for d in subset:
+                half.extend([d] * (d // 2))
+            
+            if not half:
+                all_palindromes.add(middle)
+            else:
+                for perm in set(permutations(half)):
+                    s1 = ''.join(map(str, perm))
+                    if middle is not None:
+                        p = s1 + str(middle) + s1[::-1]
+                    else:
+                        p = s1 + s1[::-1]
+                    all_palindromes.add(int(p))
         
-        all_palindromes = []
-        max_length = 25
-        
-        # Generate even length palindromes
-        for r in range(1, 5):
-            for combo in combinations(even_digits, r):
-                length = sum(combo)
-                if length <= max_length:
-                    half = []
-                    for d in combo:
-                        half.extend([d] * (d // 2))
-                    for perm in all_unique_perms(half):
-                        perm_str = ''.join(map(str, perm))
-                        palindrome = int(perm_str + perm_str[::-1])
-                        all_palindromes.append(palindrome)
-        
-        # Generate odd length palindromes
-        for odd_d in odd_digits:
-            for r in range(0, 5):
-                for even_combo in combinations(even_digits, r):
-                    length = odd_d + sum(even_combo)
-                    if length <= max_length:
-                        half = []
-                        for d in even_combo:
-                            half.extend([d] * (d // 2))
-                        half.extend([odd_d] * ((odd_d - 1) // 2))
-                        
-                        if not half:
-                            all_palindromes.append(odd_d)
-                        else:
-                            for perm in all_unique_perms(half):
-                                perm_str = ''.join(map(str, perm))
-                                palindrome = int(perm_str + str(odd_d) + perm_str[::-1])
-                                all_palindromes.append(palindrome)
-        
-        all_palindromes.sort()
-        
-        idx = bisect.bisect_right(all_palindromes, n)
-        if idx < len(all_palindromes):
-            return all_palindromes[idx]
-        return -1
+        sorted_palindromes = sorted(all_palindromes)
+        return sorted_palindromes[bisect.bisect_right(sorted_palindromes, n)]
 # @lc code=end
