@@ -4,36 +4,51 @@
 # [3739] Count Subarrays With Majority Element II
 #
 
+from typing import List
+
 # @lc code=start
 class Solution:
     def countMajoritySubarrays(self, nums: List[int], target: int) -> int:
         n = len(nums)
-        offset = n + 1  # Shift values from [-n, n] to [1, 2n+1]
-        size = 2 * n + 3
-        bit = [0] * size
+        # transform nums into +1/-1 array
+        arr = [1 if x == target else -1 for x in nums]
         
-        def update(i):
-            while i < size:
-                bit[i] += 1
-                i += i & (-i)
+        # compute prefix sums
+        pref = [0] * (n + 1)
+        for i in range(n):
+            pref[i + 1] = pref[i] + arr[i]
         
-        def query(i):
-            total = 0
-            while i > 0:
-                total += bit[i]
-                i -= i & (-i)
-            return total
+        # coordinate compression
+        sorted_vals = sorted(set(pref))
+        rank_map = {val: idx + 1 for idx, val in enumerate(sorted_vals)}   # 1-indexed
+        m = len(sorted_vals)
         
-        result = 0
-        prefix_sum = 0
-        update(offset)  # Add initial prefix_sum = 0
+        # Fenwick tree
+        bit = [0] * (m + 2)
         
-        for num in nums:
-            prefix_sum += 1 if num == target else -1
-            val = prefix_sum + offset
-            # Count how many previous prefix sums are < current
-            result += query(val - 1)
-            update(val)
+        def update(idx: int, delta: int):
+            while idx <= m:
+                bit[idx] += delta
+                idx += idx & -idx
         
-        return result
+        def query(idx: int) -> int:
+            s = 0
+            while idx > 0:
+                s += bit[idx]
+                idx -= idx & -idx
+            return s
+        
+        ans = 0
+        # insert first prefix sum
+        update(rank_map[pref[0]], 1)
+        
+        for i in range(1, n + 1):
+            v = pref[i]
+            r = rank_map[v]
+            # count previous prefix sums strictly less than v
+            cnt = query(r - 1)
+            ans += cnt
+            update(r, 1)
+        
+        return ans
 # @lc code=end
