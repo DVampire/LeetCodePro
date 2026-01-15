@@ -5,33 +5,58 @@
 #
 
 # @lc code=start
+from typing import List
+from collections import Counter
+
 class Solution:
     def countEffective(self, nums: List[int]) -> int:
         MOD = 10**9 + 7
         
-        # Calculate total OR
-        total_or = 0
-        for num in nums:
-            total_or |= num
+        # Compute the overall OR
+        U = 0
+        for v in nums:
+            U |= v
         
-        # DP: dp[or_val] = number of removed subsequences such that remaining OR = or_val
-        dp = {0: 1}
+        if U == 0:
+            return 0
         
-        for num in nums:
-            new_dp = {}
-            for or_val, count in dp.items():
-                # Case 1: Remove current element (don't keep it in remaining)
-                new_dp[or_val] = (new_dp.get(or_val, 0) + count) % MOD
-                # Case 2: Keep current element (in remaining)
-                new_or = or_val | num
-                new_dp[new_or] = (new_dp.get(new_or, 0) + count) % MOD
-            dp = new_dp
+        # g[m] = count of elements with (v & U) = m
+        g = Counter(v & U for v in nums)
         
-        # Count effective subsequences (where remaining OR < total OR)
-        result = 0
-        for or_val, count in dp.items():
-            if or_val < total_or:
-                result = (result + count) % MOD
+        # Generate all submasks of U
+        submasks = []
+        M = U
+        while True:
+            submasks.append(M)
+            if M == 0:
+                break
+            M = (M - 1) & U
         
-        return result
+        # SOS DP: sos[m] = sum of g[m'] for m' subset of m
+        sos = {m: g.get(m, 0) for m in submasks}
+        
+        bit = 1
+        while bit <= U:
+            if bit & U:
+                for m in submasks:
+                    if m & bit:
+                        sos[m] += sos[m ^ bit]
+            bit <<= 1
+        
+        # Compute the answer using inclusion-exclusion
+        # For non-empty submask M of U: contribution = (-1)^(popcount(M)+1) * 2^sos[U^M]
+        ans = 0
+        for M in submasks:
+            if M == 0:
+                continue
+            pop = bin(M).count('1')
+            complement = U ^ M
+            cnt = sos[complement]
+            contribution = pow(2, cnt, MOD)
+            if pop % 2 == 1:
+                ans = (ans + contribution) % MOD
+            else:
+                ans = (ans - contribution) % MOD
+        
+        return ans % MOD
 # @lc code=end
