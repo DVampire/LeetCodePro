@@ -3,67 +3,60 @@
 #
 # [3753] Total Waviness of Numbers in Range II
 #
+
 # @lc code=start
+from functools import lru_cache
+
 class Solution:
     def totalWaviness(self, num1: int, num2: int) -> int:
-        def dp_solve(max_str):
-            target_len = len(max_str)
-            if target_len < 3:
+        def count_up_to(n):
+            if n < 0:
                 return 0
+            s = str(n)
+            L = len(s)
             
-            memo = {}
-            
-            def dp(pos, tight, prev, prev_prev):
-                if pos == target_len:
+            @lru_cache(maxsize=None)
+            def dp(pos, tight, prev, prev_cmp, started):
+                # Returns (count, total_waviness)
+                if pos == L:
                     return (1, 0)
                 
-                state = (pos, tight, prev, prev_prev)
-                if state in memo:
-                    return memo[state]
+                limit = int(s[pos]) if tight else 9
+                cnt, wav = 0, 0
                 
-                limit = int(max_str[pos]) if tight else 9
-                start = 1 if pos == 0 else 0
-                
-                total_count = 0
-                total_waviness = 0
-                
-                for digit in range(start, limit + 1):
-                    new_tight = tight and (digit == limit)
+                for d in range(limit + 1):
+                    new_tight = tight and (d == limit)
                     
-                    wave_contrib = 0
-                    if 2 <= pos <= target_len - 1 and prev != -1 and prev_prev != -1:
-                        if prev > prev_prev and prev > digit:
-                            wave_contrib = 1
-                        elif prev < prev_prev and prev < digit:
-                            wave_contrib = 1
-                    
-                    sub_count, sub_waviness = dp(pos + 1, new_tight, digit, prev)
-                    
-                    total_count += sub_count
-                    total_waviness += sub_waviness + wave_contrib * sub_count
+                    if not started:
+                        if d == 0:
+                            c, w = dp(pos + 1, new_tight, -1, -2, False)
+                        else:
+                            c, w = dp(pos + 1, new_tight, d, -2, True)
+                        cnt += c
+                        wav += w
+                    else:
+                        peak_valley = 0
+                        # Check if prev is a peak or valley
+                        if prev_cmp == -1 and d < prev:  # prev2 < prev1 and d < prev1 => peak
+                            peak_valley = 1
+                        elif prev_cmp == 1 and d > prev:  # prev2 > prev1 and d > prev1 => valley
+                            peak_valley = 1
+                        
+                        # Calculate new prev_cmp
+                        if prev < d:
+                            new_cmp = -1
+                        elif prev > d:
+                            new_cmp = 1
+                        else:
+                            new_cmp = 0
+                        
+                        c, w = dp(pos + 1, new_tight, d, new_cmp, True)
+                        cnt += c
+                        wav += w + peak_valley * c
                 
-                memo[state] = (total_count, total_waviness)
-                return (total_count, total_waviness)
+                return (cnt, wav)
             
-            _, waviness = dp(0, True, -1, -1)
-            return waviness
+            return dp(0, True, -1, -2, False)[1]
         
-        def solve(n):
-            if n < 100:
-                return 0
-            
-            total = 0
-            n_str = str(n)
-            n_len = len(n_str)
-            
-            for length in range(3, n_len):
-                max_val = 10 ** length - 1
-                total += dp_solve(str(max_val))
-            
-            if n_len >= 3:
-                total += dp_solve(n_str)
-            
-            return total
-        
-        return solve(num2) - solve(num1 - 1)
+        return count_up_to(num2) - count_up_to(num1 - 1)
 # @lc code=end
