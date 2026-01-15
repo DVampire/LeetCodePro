@@ -5,62 +5,62 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def goodSubtreeSum(self, vals: List[int], par: List[int]) -> int:
         MOD = 10**9 + 7
         n = len(vals)
         
-        # Build adjacency list for children
+        # Build tree
         children = [[] for _ in range(n)]
         for i in range(1, n):
             children[par[i]].append(i)
         
-        def get_digit_mask(val):
-            """Returns bitmask of digits in val, or -1 if any digit repeats"""
+        # Compute digit mask for each value (-1 if invalid due to duplicate digits)
+        def get_mask(v):
             mask = 0
-            while val > 0:
-                digit = val % 10
-                if mask & (1 << digit):
+            while v > 0:
+                d = v % 10
+                if mask & (1 << d):
                     return -1
-                mask |= (1 << digit)
-                val //= 10
+                mask |= (1 << d)
+                v //= 10
             return mask
         
-        max_scores = [0] * n
+        masks = [get_mask(v) for v in vals]
         
-        def dfs(node):
-            """Returns dict {mask: max_sum} for subtree of node"""
-            # Start with empty subset
+        result = 0
+        
+        def dfs(u):
+            nonlocal result
+            
+            # dp[mask] = max sum with digit mask `mask`
             dp = {0: 0}
             
-            # Try including current node
-            node_mask = get_digit_mask(vals[node])
-            if node_mask != -1:
-                dp[node_mask] = vals[node]
+            # Include current node if valid
+            if masks[u] != -1:
+                dp[masks[u]] = vals[u]
             
-            # Process each child
-            for child in children[node]:
-                child_dp = dfs(child)
+            # Process children
+            for c in children[u]:
+                child_dp = dfs(c)
                 
-                # Merge child_dp into dp
-                new_dp = dict(dp)
-                for curr_mask, curr_sum in dp.items():
-                    for child_mask, child_sum in child_dp.items():
-                        if child_mask == 0:  # skip empty
-                            continue
-                        if curr_mask & child_mask == 0:  # no conflict
-                            new_mask = curr_mask | child_mask
-                            new_sum = curr_sum + child_sum
-                            if new_mask not in new_dp or new_dp[new_mask] < new_sum:
-                                new_dp[new_mask] = new_sum
+                # Merge dp with child_dp
+                new_dp = {}
+                for m1, v1 in dp.items():
+                    for m2, v2 in child_dp.items():
+                        if (m1 & m2) == 0:
+                            m = m1 | m2
+                            if m not in new_dp or new_dp[m] < v1 + v2:
+                                new_dp[m] = v1 + v2
                 dp = new_dp
             
-            # Record max score for this node
-            max_scores[node] = max(dp.values())
+            # maxScore[u] = max value in dp
+            result = (result + max(dp.values())) % MOD
             
             return dp
         
         dfs(0)
-        
-        return sum(max_scores) % MOD
+        return result
 # @lc code=end
