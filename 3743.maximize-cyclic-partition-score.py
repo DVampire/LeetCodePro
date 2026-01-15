@@ -13,35 +13,42 @@ class Solution:
         if n == 1:
             return 0
         
-        doubled = nums + nums
-        effective_k = min(k, n)
-        ans = 0
+        # Double the array to handle cyclic nature
+        arr = nums + nums
         
-        for s in range(n):
-            arr = doubled[s:s+n]
-            
-            # Precompute ranges for all subarrays
-            ranges = [[0] * (n + 1) for _ in range(n)]
-            for i in range(n):
-                mx = mn = arr[i]
-                for j in range(i, n):
-                    mx = max(mx, arr[j])
-                    mn = min(mn, arr[j])
-                    ranges[i][j + 1] = mx - mn
-            
-            # DP: dp[i] = max score for first i elements
-            dp = [float('-inf')] * (n + 1)
-            dp[0] = 0
-            
-            for _ in range(effective_k):
-                ndp = [float('-inf')] * (n + 1)
-                for i in range(1, n + 1):
-                    for p in range(i):
-                        if dp[p] > float('-inf'):
-                            ndp[i] = max(ndp[i], dp[p] + ranges[p][i])
-                dp = ndp
-                if dp[n] > float('-inf'):
-                    ans = max(ans, dp[n])
+        # Precompute ranges for all relevant subarrays
+        range_arr = [[0] * (2 * n) for _ in range(2 * n)]
+        for i in range(2 * n):
+            mn = mx = arr[i]
+            for j in range(i, min(i + n, 2 * n)):
+                mn = min(mn, arr[j])
+                mx = max(mx, arr[j])
+                range_arr[i][j] = mx - mn
         
-        return ans
+        best = 0
+        
+        # Try each starting position
+        for start in range(n):
+            # prev_dp[j] = max score for first j elements with m-1 partitions
+            prev_dp = [-1] * (n + 1)
+            prev_dp[0] = 0
+            
+            for m in range(1, k + 1):
+                curr_dp = [-1] * (n + 1)
+                for j in range(1, n + 1):
+                    for i in range(j):
+                        if prev_dp[i] >= 0:
+                            val = prev_dp[i] + range_arr[start + i][start + j - 1]
+                            curr_dp[j] = max(curr_dp[j], val)
+                
+                if curr_dp[n] >= 0:
+                    best = max(best, curr_dp[n])
+                
+                prev_dp = curr_dp
+                
+                # Early termination if no valid states
+                if all(x < 0 for x in prev_dp):
+                    break
+        
+        return best
 # @lc code=end
