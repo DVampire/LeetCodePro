@@ -3,60 +3,71 @@
 #
 # [3605] Minimum Stability Factor of Array
 #
+
 # @lc code=start
-from math import gcd
+from typing import List
+from math import gcd, log2, floor
 
 class Solution:
     def minStable(self, nums: List[int], maxC: int) -> int:
         n = len(nums)
-        
-        # Count elements >= 2
-        count_ge_2 = sum(1 for num in nums if num >= 2)
-        
-        # If we can modify all elements >= 2 to be < 2, the stability factor is 0
-        if count_ge_2 <= maxC:
+        if n == 0:
             return 0
         
-        # Find all maximal stable segments
-        maximal_segments = []
-        i = 0
-        while i < n:
-            # Check if nums[i] can start a stable segment
+        # Build sparse table for range GCD queries
+        LOG = floor(log2(n)) + 1 if n > 1 else 1
+        st = [[0] * n for _ in range(LOG)]
+        st[0] = nums[:]
+        
+        for k in range(1, LOG):
+            for i in range(n - (1 << k) + 1):
+                st[k][i] = gcd(st[k-1][i], st[k-1][i + (1 << (k-1))])
+        
+        def query_gcd(l, r):
+            if l > r:
+                return 0
+            length = r - l + 1
+            k = floor(log2(length))
+            return gcd(st[k][l], st[k][r - (1 << k) + 1])
+        
+        # Compute L[i] for each i using binary search
+        # L[i] = minimum j such that GCD(nums[j:i+1]) >= 2
+        L = [0] * n
+        for i in range(n):
             if nums[i] < 2:
-                i += 1
-                continue
-            
-            # Find the longest stable segment starting at i
-            j = i + 1
-            current_gcd = nums[i]
-            while j < n:
-                new_gcd = gcd(current_gcd, nums[j])
-                if new_gcd >= 2:
-                    current_gcd = new_gcd
-                    j += 1
-                else:
-                    break
-            
-            maximal_segments.append((i, j - 1))
-            i = j
+                L[i] = i + 1  # No stable subarray ending at i
+            else:
+                lo, hi = 0, i
+                while lo < hi:
+                    mid_j = (lo + hi) // 2
+                    if query_gcd(mid_j, i) >= 2:
+                        hi = mid_j
+                    else:
+                        lo = mid_j + 1
+                L[i] = lo
+        
+        # Check if we can achieve stability factor <= mid with at most maxC modifications
+        def check(mid):
+            start = 0
+            blocker_count = 0
+            for i in range(n):
+                if L[i] <= i:  # There's a stable subarray ending at i
+                    length = i - max(L[i], start) + 1
+                    if length > mid:
+                        blocker_count += 1
+                        if blocker_count > maxC:
+                            return False
+                        start = i + 1
+            return True
         
         # Binary search on the answer
-        left, right = 1, n
-        
-        while left < right:
-            mid = (left + right) // 2
-            
-            # Check if we can achieve a stability factor of mid
-            modifications_needed = 0
-            for start, end in maximal_segments:
-                length = end - start + 1
-                if length > mid:
-                    modifications_needed += (length - 1) // mid
-            
-            if modifications_needed <= maxC:
-                right = mid
+        lo, hi = 0, n
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if check(mid):
+                hi = mid
             else:
-                left = mid + 1
+                lo = mid + 1
         
-        return left
+        return lo
 # @lc code=end
