@@ -3,9 +3,10 @@
 #
 # [3604] Minimum Time to Reach Destination in Directed Graph
 #
+
 # @lc code=start
-import heapq
 from collections import defaultdict
+import heapq
 
 class Solution:
     def minTime(self, n: int, edges: List[List[int]]) -> int:
@@ -15,30 +16,31 @@ class Solution:
             graph[u].append((v, start, end))
         
         # Dijkstra's algorithm
-        visited = set()
+        dist = [float('inf')] * n
+        dist[0] = 0
         pq = [(0, 0)]  # (time, node)
         
         while pq:
             time, node = heapq.heappop(pq)
             
-            if node in visited:
+            if time > dist[node]:
                 continue
-            
-            visited.add(node)
             
             if node == n - 1:
                 return time
             
-            for neighbor, start, end in graph[node]:
-                if neighbor in visited:
+            for v, start, end in graph[node]:
+                if time > end:
                     continue
                 
-                if time <= end:
-                    if time >= start:
-                        arrival_time = time + 1
-                    else:
-                        arrival_time = start + 1
-                    heapq.heappush(pq, (arrival_time, neighbor))
+                if time >= start:
+                    arrival = time + 1
+                else:
+                    arrival = start + 1
+                
+                if arrival < dist[v]:
+                    dist[v] = arrival
+                    heapq.heappush(pq, (arrival, v))
         
         return -1
 # @lc code=end
