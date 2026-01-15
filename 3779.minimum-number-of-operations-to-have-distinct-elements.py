@@ -7,18 +7,10 @@
 # @lc code=start
 class Solution:
     def minOperations(self, nums: List[int]) -> int:
-        operations = 0
-        start = 0
-        
-        while start < len(nums):
-            # Check if remaining elements are all distinct
-            remaining = nums[start:]
-            if len(remaining) == len(set(remaining)):
-                break
-            
-            # Remove first 3 elements (or all if fewer than 3)
-            start += min(3, len(nums) - start)
-            operations += 1
-        
-        return operations
+        seen = set()
+        for i in range(len(nums) - 1, -1, -1):
+            if nums[i] in seen:
+                return (i + 3) // 3
+            seen.add(nums[i])
+        return 0
 # @lc code=end
