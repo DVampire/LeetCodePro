@@ -7,35 +7,57 @@
 # @lc code=start
 class Solution:
     def maxSubstringLength(self, s: str, k: int) -> bool:
+        if k == 0:
+            return True
+        
         n = len(s)
         
-        # Count frequency of each character
-        freq = {}
-        for ch in s:
-            freq[ch] = freq.get(ch, 0) + 1
+        # Precompute character frequencies in the entire string
+        total_count = [0] * 26
+        for char in s:
+            total_count[ord(char) - ord('a')] += 1
         
-        # Compute longest consecutive run for each character
-        from collections import defaultdict
-        longest_run = defaultdict(int)
-        i = 0
-        while i < n:
-            ch = s[i]
-            j = i
-            while j < n and s[j] == ch:
-                j += 1
-            run_len = j - i
-            longest_run[ch] = max(longest_run[ch], run_len)
-            i = j
+        # Find all special substrings
+        special_intervals = []
         
-        eligible = 0
-        for ch in freq:
-            cnt = freq[ch]
-            run_len = longest_run.get(ch)
-            # Eligible if:
-            #   All occurrences form a single consecutive block,
-            #   The block is not the entire string.
-            if cnt == run_len and cnt < n:
-                eligible += 1
+        # For each possible substring
+        for i in range(n):
+            # Character count in current substring
+            substring_count = [0] * 26
+            for j in range(i, n):
+                # Add current character to substring count
+                substring_count[ord(s[j]) - ord('a')] += 1
+                
+                # Check if this substring is special
+                # A substring is special if every character in it appears only within this substring
+                is_special = True
+                for c in range(26):
+                    # If character appears in substring but also appears outside
+                    if substring_count[c] > 0 and substring_count[c] != total_count[c]:
+                        is_special = False
+                        break
+                
+                # Also, substring cannot be the entire string
+                if is_special and (j - i + 1) < n:
+                    special_intervals.append((i, j))
         
-        return eligible >= k
+        # Now we need to find maximum number of disjoint intervals we can select
+        if not special_intervals:
+            return k == 0
+        
+        # Sort intervals by end position for greedy selection
+        special_intervals.sort(key=lambda x: x[1])
+        
+        # Greedily select disjoint intervals
+        count = 0
+        last_end = -1
+        
+        for start, end in special_intervals:
+            if start > last_end:  # No overlap
+                count += 1
+                last_end = end
+                if count >= k:
+                    return True
+        
+        return count >= k
 # @lc code=end
