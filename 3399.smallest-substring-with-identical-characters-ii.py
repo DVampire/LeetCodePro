@@ -8,42 +8,36 @@
 class Solution:
     def minLength(self, s: str, numOps: int) -> int:
         n = len(s)
+        # Binary search on the answer
+        def canAchieve(maxLen: int) -> bool:
+            # For each segment of same characters, we want to break it into pieces of length at most maxLen
+            # We need to count how many operations are needed
+            ops = 0
+            i = 0
+            while i < n:
+                j = i
+                while j < n and s[j] == s[i]:
+                    j += 1
+                # s[i..j-1] is a segment of same characters
+                length = j - i
+                if length > maxLen:
+                    # We need to break this segment
+                    # Number of breaks needed = length // (maxLen + 1)
+                    # Because each piece can be at most maxLen long
+                    breaks = (length - 1) // maxLen
+                    ops += breaks
+                i = j
+            return ops <= numOps
         
-        def feasible(M):
-            # Returns True if it's possible to achieve max run length <= M
-            # using at most numOps operations.
-            def calculate(start_char):
-                edits = 0
-                cur_char = start_char
-                cur_len = 0
-                for ch in s:
-                    if cur_len == M:
-                        # forced switch
-                        new_char = '0' if cur_char == '1' else '1'
-                        if new_char != ch:
-                            edits += 1
-                        cur_char = new_char
-                        cur_len = 1
-                    else:
-                        # stay with current char
-                        new_char = cur_char
-                        if new_char != ch:
-                            edits += 1
-                        cur_len += 1
-                return edits
-            
-            # Try both possible starting characters.
-            return min(calculate('0'), calculate('1')) <= numOps
-        
-        # Binary search on answer.
-        lo = 1
-        hi = n
-        while lo < hi:
-            mid = lo + hi >> 1
-            if feasible(mid):
-                hi = mid
+        # Binary search for the minimum possible maxLen
+        left, right = 1, n
+        answer = n
+        while left <= right:
+            mid = (left + right) // 2
+            if canAchieve(mid):
+                answer = mid
+                right = mid - 1
             else:
-                lo = mid + 1
-        return lo
-
+                left = mid + 1
+        return answer
 # @lc code=end
