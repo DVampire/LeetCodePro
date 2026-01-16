@@ -4,38 +4,43 @@
 # [3493] Properties Graph
 #
 
-from typing import List
-from collections import defaultdict, deque
-
 # @lc code=start
 class Solution:
     def numberOfComponents(self, properties: List[List[int]], k: int) -> int:
         n = len(properties)
-        # Convert each row to a set of distinct integers
-        sets = [set(row) for row in properties]
-        # Build adjacency list based on intersect condition
+        
+        # Convert each property list to a set for faster intersection computation
+        property_sets = [set(prop) for prop in properties]
+        
+        # Build adjacency list representation of the graph
         adj = [[] for _ in range(n)]
+        
+        # Check all pairs of nodes to see if they should be connected
         for i in range(n):
-            for j in range(i+1, n):
-                # Compute intersection size efficiently
-                inter = len(sets[i] & sets[j])
-                if inter >= k:
+            for j in range(i + 1, n):
+                # Count intersection of properties
+                intersection_count = len(property_sets[i] & property_sets[j])
+                
+                # If intersection count is at least k, add an edge
+                if intersection_count >= k:
                     adj[i].append(j)
                     adj[j].append(i)
-        # Count connected components using BFS/DFS
+        
+        # Use DFS to count connected components
         visited = [False] * n
         components = 0
+        
+        def dfs(node):
+            visited[node] = True
+            for neighbor in adj[node]:
+                if not visited[neighbor]:
+                    dfs(neighbor)
+        
+        # Count connected components
         for i in range(n):
             if not visited[i]:
+                dfs(i)
                 components += 1
-                # BFS to mark all nodes in the same component
-                q = deque([i])
-                visited[i] = True
-                while q:
-                    u = q.popleft()
-                    for v in adj[u]:
-                        if not visited[v]:
-                            visited[v] = True
-                            q.append(v)
+        
         return components
 # @lc code=end
