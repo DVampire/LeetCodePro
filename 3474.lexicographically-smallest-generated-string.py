@@ -8,70 +8,53 @@
 class Solution:
     def generateString(self, str1: str, str2: str) -> str:
         n, m = len(str1), len(str2)
-        total = n + m - 1
+        word_len = n + m - 1
         
-        word = [''] * total
-        locked = [False] * total
+        # Initialize result array with 'a' (lexicographically smallest)
+        result = ['a'] * word_len
         
-        # Apply 'T' constraints
+        # For each position i in str1, check the constraint
         for i in range(n):
-            if str1[i] == 'T':
-                for j in range(m):
-                    pos = i + j
-                    if locked[pos]:
-                        if word[pos] != str2[j]:
-                            return ""
-                    else:
-                        word[pos] = str2[j]
-                        locked[pos] = True
-        
-        # Fill free positions with 'a'
-        for i in range(total):
-            if not locked[i]:
-                word[i] = 'a'
-        
-        # Collect 'F' constraints and sort by rightmost position
-        f_constraints = [i for i in range(n) if str1[i] == 'F']
-        f_constraints.sort(key=lambda i: i + m - 1)
-        
-        # Iterate until stable
-        for _ in range(total + 1):
-            changed = False
-            for i in f_constraints:
-                # Check if substring matches str2
-                match = True
-                for j in range(m):
-                    if word[i + j] != str2[j]:
-                        match = False
-                        break
+            # Extract the substring of length m starting at position i
+            if i + m <= word_len:
+                current_substring = ''.join(result[i:i+m])
                 
-                if match:
-                    # Find rightmost free position to change
-                    found = False
-                    for j in range(m - 1, -1, -1):
-                        pos = i + j
-                        if not locked[pos]:
-                            # Change to something other than str2[j]
-                            word[pos] = 'b' if str2[j] == 'a' else 'a'
-                            changed = True
-                            found = True
-                            break
-                    
-                    if not found:
-                        return ""  # All positions locked, can't fix
-            
-            if not changed:
-                break
-        
-        # Final verification
-        for i in f_constraints:
-            match = True
-            for j in range(m):
-                if word[i + j] != str2[j]:
-                    match = False
-                    break
-            if match:
+                if str1[i] == 'T':
+                    # Must equal str2
+                    if current_substring != str2:
+                        # Try to make it equal to str2
+                        for j in range(m):
+                            result[i + j] = str2[j]
+                else:  # str1[i] == 'F'
+                    # Must NOT equal str2
+                    if current_substring == str2:
+                        # Need to change at least one character
+                        # Change the last character to the next character if possible
+                        # or previous if it's 'z'
+                        pos = i + m - 1
+                        if pos < word_len:
+                            if result[pos] < 'z':
+                                result[pos] = chr(ord(result[pos]) + 1)
+                            else:
+                                result[pos] = chr(ord(result[pos]) - 1)
+                        else:
+                            # This shouldn't happen due to initialization
+                            return ""
+            else:
+                # Not enough characters left for substring of length m
                 return ""
         
-        return ''.join(word)
+        # Verify the solution satisfies all constraints
+        for i in range(n):
+            if i + m <= word_len:
+                substring = ''.join(result[i:i+m])
+                if str1[i] == 'T' and substring != str2:
+                    return ""
+                if str1[i] == 'F' and substring == str2:
+                    return ""
+            else:
+                return ""
+        
+        return ''.join(result)
+        
 # @lc code=end
