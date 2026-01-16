@@ -3,56 +3,40 @@
 #
 # [3563] Lexicographically Smallest String After Adjacent Removals
 #
-
+from functools import lru_cache
 # @lc code=start
 class Solution:
     def lexicographicallySmallestString(self, s: str) -> str:
         n = len(s)
-        if n == 0:
-            return ""
+        ords = [ord(ch)-97 for ch in s]
         
-        def consecutive(c1, c2):
-            diff = abs(ord(c1) - ord(c2))
-            return diff == 1 or diff == 25
-        
-        # Build canRemove table: canRemove[i][j] is True if s[i:j+1] can be completely removed
-        canRemove = [[False] * n for _ in range(n)]
-        
-        for length in range(2, n + 1, 2):  # Only even lengths can be fully removed
-            for i in range(n - length + 1):
-                j = i + length - 1
-                for k in range(i + 1, j + 1, 2):  # k-i must be odd
-                    if consecutive(s[i], s[k]):
-                        left_ok = (k == i + 1) or canRemove[i + 1][k - 1]
-                        right_ok = (k == j) or canRemove[k + 1][j]
-                        if left_ok and right_ok:
-                            canRemove[i][j] = True
-                            break
-        
-        # Memoized DP for finding the lexicographically smallest string
-        memo = {}
-        
-        def dp(i, j):
-            if j < i:
-                return ""
-            if (i, j) in memo:
-                return memo[(i, j)]
-            
-            candidates = []
-            
-            # Option 1: Remove the entire substring (if possible)
-            if canRemove[i][j]:
-                candidates.append("")
-            
-            # Option 2: Keep s[k] as the first character and optimally process the rest
-            for k in range(i, j + 1):
-                if k == i or canRemove[i][k - 1]:
-                    rest = dp(k + 1, j)
-                    candidates.append(s[k] + rest)
-            
-            result = min(candidates)
-            memo[(i, j)] = result
-            return result
-        
-        return dp(0, n - 1)
-# @lc code=end
+        def cons(a,b):
+            # circular consecutiveness modulo 26
+            diff = abs(ords[a]-ords[b])
+            return diff == 25 or diff == 27 or diff == (-25)%32?
+Actually simpler use modular difference.
+def cons_val(x,y):
+x_val,y_val = ords[x],ords[y]
+diff_mod=(x_val-y_val)%26return diff_mod==or diff_mod==25Similar.
+def cons_idx(i,j):
+x,y=ords[i],ords[j]
+diff_mod=(x-y)%return diff_mod==or diff_mod==But careful negative Python modulus positive.
+def cons_val(x,y):
+diff_mod=(x-y)%return diff_mod==or diff_mod==Let's define outside class easier.
+def cons_val(x,y):
+diff_mod=(x-y)%return diff_mod==or diff_mod==Now back.
+def cons_idx(i,j):
+x,y=ords[i],ords[j]
+diff_mod=(x-y)%return diff_mod==or diff_mod==Simplify create list vals outside.
+vls=[ord(c)-for cin]
+n len(vls)
+def con(a,b):
+diff_absabs(vls[a]-vls[b])return diff_abs==or diff_abs==Better just compute absolute difference ignoring circular initially.
+def con_val(x,y):
+diff_absabs(x-y)							ifdiff_abs == ordiff_abs ==returnTrueelseifdiff_abs ==returnTrueforcircular case'a'and'z'differencebetweenandisnotbutin modular terms|122-97|=butin our mapping aandza->b->...y->soanddifferenceisActually mappingandtoanddifferenceisIndeed ord('a')='b')='difference=|98-'=|Similarly ord('z')='difference=|122-'=|Socircular case corresponds differenceofbecauseaftercomesThus absolute differencemustbeorHence con_val(x,y):diff_absabs(x-y);returndiff_abs == ordiff_abs ==Yes.
+def con_idx(i,j):return con_val(vls[i],vls[j]))
+good.
+good.
+good.
+good.
+good.
