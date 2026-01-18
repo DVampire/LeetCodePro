@@ -10,37 +10,34 @@ class TextEditor:
     def __init__(self):
         # Stores characters to the left of the cursor
         self.left = []
-        # Stores characters to the right of the cursor (in reverse order)
+        # Stores characters to the right of the cursor in reverse order
         self.right = []
 
     def addText(self, text: str) -> None:
-        # O(text.length) - Append characters to the left stack
-        for char in text:
-            self.left.append(char)
+        # Adding text moves the cursor to the right of the new text
+        self.left.extend(list(text))
 
     def deleteText(self, k: int) -> int:
-        # O(k) - Remove characters from the left stack
-        count = 0
-        while k > 0 and self.left:
+        # Deleting text removes characters to the left of the cursor
+        num_to_delete = min(k, len(self.left))
+        for _ in range(num_to_delete):
             self.left.pop()
-            k -= 1
-            count += 1
-        return count
+        return num_to_delete
 
     def cursorLeft(self, k: int) -> str:
-        # O(k) - Move k characters from left stack to right stack
-        while k > 0 and self.left:
+        # Moving left shifts characters from the left stack to the right stack
+        num_to_move = min(k, len(self.left))
+        for _ in range(num_to_move):
             self.right.append(self.left.pop())
-            k -= 1
-        # Return last min(10, len) characters to the left of the cursor
+        # Return last 10 characters to the left of the cursor
         return "".join(self.left[-10:])
 
     def cursorRight(self, k: int) -> str:
-        # O(k) - Move k characters from right stack to left stack
-        while k > 0 and self.right:
+        # Moving right shifts characters from the right stack to the left stack
+        num_to_move = min(k, len(self.right))
+        for _ in range(num_to_move):
             self.left.append(self.right.pop())
-            k -= 1
-        # Return last min(10, len) characters to the left of the cursor
+        # Return last 10 characters to the left of the cursor
         return "".join(self.left[-10:])
 
 
