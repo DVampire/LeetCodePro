@@ -13,60 +13,55 @@ class Solution:
             if p != -1:
                 adj[p].append(i)
         
-        for i in range(n):
-            adj[i].sort()
+        for u in range(n):
+            adj[u].sort()
+            
+        post_order = []
+        start_indices = [0] * n
+        end_indices = [0] * n
         
-        # Post-order traversal to build the string T and find ranges [L, R]
-        T_list = []
-        ranges = [None] * n
-        starts = [0] * n
-        
-        # Iterative DFS to handle large trees and avoid recursion limits
-        stack = [(0, 0)] # (node, state: 0 for pre-order, 1 for post-order)
+        # Iterative post-order traversal to build the DFS string and track ranges
+        stack = [(0, False)]
         while stack:
-            u, state = stack.pop()
-            if state == 0:
-                starts[u] = len(T_list)
-                stack.append((u, 1))
+            u, processed = stack.pop()
+            if processed:
+                post_order.append(s[u])
+                end_indices[u] = len(post_order) - 1
+            else:
+                start_indices[u] = len(post_order)
+                stack.append((u, True))
                 # Push children in reverse order to process them in increasing order
                 for v in reversed(adj[u]):
-                    stack.append((v, 0))
-            else:
-                T_list.append(s[u])
-                ranges[u] = (starts[u], len(T_list) - 1)
+                    stack.append((v, False))
         
-        T = "".join(T_list)
-        
-        # Manacher's Algorithm to find palindromic substrings in O(n)
-        # Transform T into T_prime: "aba" -> "#a#b#a#"
-        T_prime = "#" + "#".join(T) + "#"
-        n_p = len(T_prime)
-        P = [0] * n_p
-        C = R = 0
-        for i in range(n_p):
-            if i < R:
-                P[i] = min(R - i, P[2 * C - i])
+        # Manacher's Algorithm for O(1) palindrome substring checks
+        def get_manacher(S):
+            T = ['#'] * (2 * len(S) + 1)
+            for i, char in enumerate(S):
+                T[2 * i + 1] = char
             
-            # Attempt to expand the palindrome centered at i
-            a, b = i + (P[i] + 1), i - (P[i] + 1)
-            while a < n_p and b >= 0 and T_prime[a] == T_prime[b]:
-                P[i] += 1
-                a += 1
-                b -= 1
+            n_t = len(T)
+            d = [0] * n_t
+            l, r = 0, -1
+            for i in range(n_t):
+                k = 1 if i > r else min(d[l + r - i], r - i + 1)
+                while 0 <= i - k and i + k < n_t and T[i - k] == T[i + k]:
+                    k += 1
+                d[i] = k
+                if i + k - 1 > r:
+                    l = i - k + 1
+                    r = i + k - 1
+            return d
             
-            # Update the center and right boundary
-            if i + P[i] > R:
-                C, R = i, i + P[i]
+        d = get_manacher(post_order)
         
-        # For each node, verify if its substring range in T is a palindrome
         ans = [False] * n
         for i in range(n):
-            L, R_idx = ranges[i]
-            length = R_idx - L + 1
-            # The center of T[L...R] in T_prime is at index L + R + 1
-            center_prime = L + R_idx + 1
-            if P[center_prime] >= length:
+            L = end_indices[i] - start_indices[i] + 1
+            # Map the center of the substring in post_order to its index in the transformed string T
+            mid = start_indices[i] + end_indices[i] + 1
+            # If the radius (d[mid]-1) covers the length L, it is a palindrome
+            if d[mid] - 1 >= L:
                 ans[i] = True
-                
         return ans
 # @lc code=end
