@@ -19,22 +19,26 @@ class Solution:
         last_idx = -1
         min_dist = float('inf')
         
-        prev_val = head.val
+        prev = head
         curr = head.next
-        curr_idx = 1
+        idx = 1
         
         while curr.next:
-            next_val = curr.next.val
-            if (curr.val > prev_val and curr.val > next_val) or (curr.val < prev_val and curr.val < next_val):
-                if first_idx == -1:
-                    first_idx = curr_idx
-                else:
-                    min_dist = min(min_dist, curr_idx - last_idx)
-                last_idx = curr_idx
+            val = curr.val
+            p_val = prev.val
+            n_val = curr.next.val
             
-            prev_val = curr.val
+            # Check if current node is a critical point
+            if (val > p_val and val > n_val) or (val < p_val and val < n_val):
+                if first_idx == -1:
+                    first_idx = idx
+                else:
+                    min_dist = min(min_dist, idx - last_idx)
+                last_idx = idx
+            
+            prev = curr
             curr = curr.next
-            curr_idx += 1
+            idx += 1
             
         if min_dist == float('inf'):
             return [-1, -1]
