@@ -5,41 +5,38 @@
 #
 
 # @lc code=start
-from collections import deque
+import collections
 from typing import List
 
 class Solution:
     def remainingMethods(self, n: int, k: int, invocations: List[List[int]]) -> List[int]:
-        # Build adjacency list
+        # Step 1: Build the adjacency list
         adj = [[] for _ in range(n)]
         for u, v in invocations:
             adj[u].append(v)
-            
-        # Find all suspicious methods using BFS starting from k
+        
+        # Step 2: Find all suspicious methods using BFS
         suspicious = [False] * n
         suspicious[k] = True
-        queue = deque([k])
+        queue = collections.deque([k])
         
         while queue:
-            curr = queue.popleft()
-            for neighbor in adj[curr]:
-                if not suspicious[neighbor]:
-                    suspicious[neighbor] = True
-                    queue.append(neighbor)
-                    
-        # Check if any non-suspicious method invokes a suspicious method
-        can_remove = True
+            u = queue.popleft()
+            for v in adj[u]:
+                if not suspicious[v]:
+                    suspicious[v] = True
+                    queue.append(v)
+        
+        # Step 3: Check if any non-suspicious method invokes a suspicious one
+        is_removable = True
         for u, v in invocations:
-            # If u is not suspicious but v is suspicious, we cannot remove the group
             if not suspicious[u] and suspicious[v]:
-                can_remove = False
+                is_removable = False
                 break
         
-        # If we can remove them, return non-suspicious methods
-        if can_remove:
-            return [i for i in range(n) if not suspicious[i]]
-        else:
-            # Otherwise return all methods
+        # Step 4: Return the remaining methods accordingly
+        if not is_removable:
             return list(range(n))
-
+        
+        return [i for i in range(n) if not suspicious[i]]
 # @lc code=end
