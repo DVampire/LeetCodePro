@@ -5,41 +5,40 @@
 #
 
 # @lc code=start
+from collections import deque
+from typing import List
+
 class Solution:
     def remainingMethods(self, n: int, k: int, invocations: List[List[int]]) -> List[int]:
-        # Build adjacency list for the graph
-        graph = [[] for _ in range(n)]
-        reverse_graph = [[] for _ in range(n)]
+        # Step 1: Build the graph
+        adj = [[] for _ in range(n)]
+        for u, v in invocations:
+            adj[u].append(v)
         
-        for a, b in invocations:
-            graph[a].append(b)
-            reverse_graph[b].append(a)
+        # Step 2: Find all suspicious methods using BFS
+        suspicious = [False] * n
+        suspicious[k] = True
+        queue = deque([k])
         
-        # Find all suspicious methods using DFS from method k
-        suspicious = set()
-        stack = [k]
-        suspicious.add(k)
+        while queue:
+            curr = queue.popleft()
+            for neighbor in adj[curr]:
+                if not suspicious[neighbor]:
+                    suspicious[neighbor] = True
+                    queue.append(neighbor)
         
-        while stack:
-            node = stack.pop()
-            for neighbor in graph[node]:
-                if neighbor not in suspicious:
-                    suspicious.add(neighbor)
-                    stack.append(neighbor)
+        # Step 3: Check if any non-suspicious method invokes a suspicious method
+        can_remove = True
+        for u, v in invocations:
+            # If caller is not suspicious but callee is suspicious
+            if not suspicious[u] and suspicious[v]:
+                can_remove = False
+                break
         
-        # Check if any method outside suspicious set points to a method inside suspicious set
-        for method in range(n):
-            if method not in suspicious:
-                for invoked_method in graph[method]:
-                    if invoked_method in suspicious:
-                        # Cannot remove suspicious methods
-                        return list(range(n))
+        # Step 4: Return the result
+        if not can_remove:
+            return list(range(n))
         
-        # If we can remove, return all methods except suspicious ones
-        result = []
-        for i in range(n):
-            if i not in suspicious:
-                result.append(i)
-        
-        return result
+        return [i for i in range(n) if not suspicious[i]]
+
 # @lc code=end
