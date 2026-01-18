@@ -3,6 +3,7 @@
 #
 # [1367] Linked List in Binary Tree
 #
+
 # @lc code=start
 # Definition for singly-linked list.
 # class ListNode:
@@ -17,30 +18,27 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        if not head:
-            return True
         if not root:
             return False
         
-        # Check if there's a path starting from current node
-        # or check in left or right subtrees
-        return (self.dfs(head, root) or 
-                self.isSubPath(head, root.left) or 
-                self.isSubPath(head, root.right))
-    
-    def dfs(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        # If we've reached the end of the linked list, we found a match
+        # Check if the path starts at the current root
+        if self.checkPath(head, root):
+            return True
+        
+        # Otherwise, check if the path starts in the left or right subtree
+        return self.isSubPath(head, root.left) or self.isSubPath(head, root.right)
+
+    def checkPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
+        # If we reached the end of the linked list, we found a match
         if not head:
             return True
-        # If we've reached the end of the tree path but not the list, no match
+        # If we reached the end of the tree path before the list, no match
         if not root:
             return False
-        
-        # If current values don't match, no match
+        # If values don't match, this path is invalid
         if head.val != root.val:
             return False
         
-        # Continue checking the next node in the list against children in the tree
-        return (self.dfs(head.next, root.left) or 
-                self.dfs(head.next, root.right))
+        # Continue checking the rest of the list in the children
+        return self.checkPath(head.next, root.left) or self.checkPath(head.next, root.right)
 # @lc code=end
