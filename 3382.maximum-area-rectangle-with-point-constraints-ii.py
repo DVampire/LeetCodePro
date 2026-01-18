@@ -5,52 +5,73 @@
 #
 
 # @lc code=start
+from collections import defaultdict
+from bisect import bisect_left
+
+class FenwickTree:
+    def __init__(self, n):
+        self.tree = [0] * (n + 1)
+
+    def update(self, i, delta):
+        i += 1
+        while i < len(self.tree):
+            self.tree[i] += delta
+            i += i & (-i)
+
+    def query(self, i):
+        i += 1
+        s = 0
+        while i > 0:
+            s += self.tree[i]
+            i -= i & (-i)
+        return s
+
+    def query_range(self, left, right):
+        if left > right:
+            return 0
+        return self.query(right) - self.query(left - 1)
+
 class Solution:
     def maxRectangleArea(self, xCoord: List[int], yCoord: List[int]) -> int:
-        # Combine coordinates into a set for O(1) lookup
-        points = set(zip(xCoord, yCoord))
-        n = len(xCoord)
+        points_by_x = defaultdict(list)
+        all_y = set()
+        for x, y in zip(xCoord, yCoord):
+            points_by_x[x].append(y)
+            all_y.add(y)
+        
+        sorted_y = sorted(list(all_y))
+        y_map = {y: i for i, y in enumerate(sorted_y)}
+        
+        sorted_x = sorted(points_by_x.keys())
+        bit = FenwickTree(len(sorted_y))
+        last_seen = {} # (y_low, y_high) -> (x_prev, count_at_x_prev)
         max_area = -1
-        
-        # Try all pairs of points as potential diagonals
-        for i in range(n):
-            for j in range(i+1, n):
-                x1, y1 = xCoord[i], yCoord[i]
-                x2, y2 = xCoord[j], yCoord[j]
+
+        for x in sorted_x:
+            ys = sorted(points_by_x[x])
+            
+            # Check pairs at current x before updating BIT
+            for i in range(len(ys) - 1):
+                y_low, y_high = ys[i], ys[i+1]
+                y_low_idx, y_high_idx = y_map[y_low], y_map[y_high]
                 
-                # Skip if points are on same horizontal or vertical line
-                # (they can't form a diagonal of a rectangle)
-                if x1 == x2 or y1 == y2:
-                    continue
+                # Current count of points in range [y_low, y_high] seen in previous x-coordinates
+                count_before = bit.query_range(y_low_idx, y_high_idx)
                 
-                # Check if the other two corners exist to form a rectangle
-                if (x1, y2) in points and (x2, y1) in points:
-                    # We have a valid rectangle with corners at:
-                    # (x1,y1), (x1,y2), (x2,y1), (x2,y2)
-                    
-                    # Check if any other point lies inside or on the border
-                    valid = True
-                    
-                    # Determine the boundaries of the rectangle
-                    min_x, max_x = min(x1, x2), max(x1, x2)
-                    min_y, max_y = min(y1, y2), max(y1, y2)
-                    
-                    # Check all points to see if any lie inside/on the rectangle
-                    for k in range(n):
-                        x, y = xCoord[k], yCoord[k]
-                        # Skip the four corners of our rectangle
-                        if (x == x1 and y == y1) or (x == x1 and y == y2) or \
-                           (x == x2 and y == y1) or (x == x2 and y == y2):
-                            continue
-                        
-                        # Check if point is inside or on the border
-                        if min_x <= x <= max_x and min_y <= y <= max_y:
-                            valid = False
-                            break
-                    
-                    if valid:
-                        area = abs(x2 - x1) * abs(y2 - y1)
-                        max_area = max(max_area, area)
-        
+                if (y_low, y_high) in last_seen:
+                    prev_x, prev_count = last_seen[(y_low, y_high)]
+                    # If count increased by exactly 2, no points are in between
+                    if count_before == prev_count + 2:
+                        area = (x - prev_x) * (y_high - y_low)
+                        if area > max_area:
+                            max_area = area
+                
+                # Update last_seen with current x and count
+                last_seen[(y_low, y_high)] = (x, count_before)
+            
+            # Now add all points at this x to the BIT
+            for y in ys:
+                bit.update(y_map[y], 1)
+
         return max_area
 # @lc code=end
