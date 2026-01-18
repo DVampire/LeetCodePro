@@ -3,87 +3,75 @@
 #
 # [1206] Design Skiplist
 #
-import random
 
 # @lc code=start
+import random
+
 class Node:
-    def __init__(self, val, levels):
+    __slots__ = 'val', 'right', 'down'
+    def __init__(self, val, right=None, down=None):
         self.val = val
-        # Array to hold forward pointers for each level
-        self.forward = [None] * levels
+        self.right = right
+        self.down = down
 
 class Skiplist:
+
     def __init__(self):
-        self.max_levels = 16
-        self.probability = 0.5
-        # Create head node with value -1 (smaller than any possible input)
-        self.head = Node(-1, self.max_levels)
-    
-    def _random_level(self):
-        """Generate random level for a new node"""
-        level = 1
-        while random.random() < self.probability and level < self.max_levels:
-            level += 1
-        return level
-    
+        # Initialize with a sentinel node representing the top-left of the skiplist
+        self.head = Node(-1)
+
     def search(self, target: int) -> bool:
-        current = self.head
-        
-        # Start from highest level and work down
-        for level in range(self.max_levels - 1, -1, -1):
-            # Move forward while next node is smaller than target
-            while current.forward[level] and current.forward[level].val < target:
-                current = current.forward[level]
-        
-        # Move to the next node at base level
-        current = current.forward[0]
-        
-        # Check if we found the target
-        return current and current.val == target
-    
+        curr = self.head
+        while curr:
+            # Move right as far as possible at the current level
+            while curr.right and curr.right.val < target:
+                curr = curr.right
+            # If found, return True
+            if curr.right and curr.right.val == target:
+                return True
+            # Move down to the next level
+            curr = curr.down
+        return False
+
     def add(self, num: int) -> None:
-        # Array to store predecessors at each level
-        update = [None] * self.max_levels
-        current = self.head
+        # Track the nodes where we move down to insert the new value at multiple levels
+        stack = []
+        curr = self.head
+        while curr:
+            while curr.right and curr.right.val < num:
+                curr = curr.right
+            stack.append(curr)
+            curr = curr.down
         
-        # Find the position to insert at each level
-        for level in range(self.max_levels - 1, -1, -1):
-            while current.forward[level] and current.forward[level].val < num:
-                current = current.forward[level]
-            update[level] = current
+        insert = True
+        down_node = None
+        while insert and stack:
+            prev = stack.pop()
+            # Insert the new node to the right of the predecessor
+            prev.right = Node(num, prev.right, down_node)
+            # Update the down_node for the next level up
+            down_node = prev.right
+            # Decide whether to promote to the next level
+            insert = (random.random() < 0.5)
         
-        # Create new node with random level
-        new_level = self._random_level()
-        new_node = Node(num, new_level)
-        
-        # Insert the new node at each of its levels
-        for level in range(new_level):
-            new_node.forward[level] = update[level].forward[level]
-            update[level].forward[level] = new_node
-    
+        # If we need to add a new level beyond the current height
+        if insert:
+            self.head = Node(-1, Node(num, None, down_node), self.head)
+
     def erase(self, num: int) -> bool:
-        # Array to store predecessors at each level
-        update = [None] * self.max_levels
-        current = self.head
-        
-        # Find the node to delete at each level
-        for level in range(self.max_levels - 1, -1, -1):
-            while current.forward[level] and current.forward[level].val < num:
-                current = current.forward[level]
-            update[level] = current
-        
-        # Move to the node to delete (if it exists)
-        current = current.forward[0]
-        
-        # If node doesn't exist or value doesn't match, return False
-        if not current or current.val != num:
-            return False
-        
-        # Remove the node from all levels where it appears
-        for level in range(len(current.forward)):
-            update[level].forward[level] = current.forward[level]
-        
-        return True
+        curr = self.head
+        found = False
+        while curr:
+            # Move right to find the predecessor of the target value
+            while curr.right and curr.right.val < num:
+                curr = curr.right
+            # If target found at this level, remove it
+            if curr.right and curr.right.val == num:
+                found = True
+                curr.right = curr.right.right
+                # Continue searching/removing in lower levels to remove the whole tower
+            curr = curr.down
+        return found
 
 # Your Skiplist object will be instantiated and called as such:
 # obj = Skiplist()
