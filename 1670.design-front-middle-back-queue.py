@@ -3,35 +3,71 @@
 #
 # [1670] Design Front Middle Back Queue
 #
+
 # @lc code=start
+from collections import deque
+
 class FrontMiddleBackQueue:
+
     def __init__(self):
-        self.queue = []
+        self.left = deque()
+        self.right = deque()
+
+    def _balance(self):
+        # Maintain invariant: 0 <= len(right) - len(left) <= 1
+        if len(self.left) > len(self.right):
+            self.right.appendleft(self.left.pop())
+        elif len(self.right) > len(self.left) + 1:
+            self.left.append(self.right.popleft())
 
     def pushFront(self, val: int) -> None:
-        self.queue.insert(0, val)
+        self.left.appendleft(val)
+        self._balance()
 
     def pushMiddle(self, val: int) -> None:
-        mid = len(self.queue) // 2
-        self.queue.insert(mid, val)
+        if len(self.left) == len(self.right):
+            self.right.appendleft(val)
+        else:
+            self.left.append(val)
 
     def pushBack(self, val: int) -> None:
-        self.queue.append(val)
+        self.right.append(val)
+        self._balance()
 
     def popFront(self) -> int:
-        if not self.queue:
+        if not self.right:
             return -1
-        return self.queue.pop(0)
+        if not self.left:
+            res = self.right.popleft()
+        else:
+            res = self.left.popleft()
+        self._balance()
+        return res
 
     def popMiddle(self) -> int:
-        if not self.queue:
+        if not self.right:
             return -1
-        # For odd length, middle index is len//2; for even length, it's len//2 - 1 (frontmost middle)
-        mid = (len(self.queue) - 1) // 2
-        return self.queue.pop(mid)
+        if len(self.left) == len(self.right):
+            res = self.left.pop()
+        else:
+            res = self.right.popleft()
+        self._balance()
+        return res
 
     def popBack(self) -> int:
-        if not self.queue:
+        if not self.right:
             return -1
-        return self.queue.pop()
+        res = self.right.pop()
+        self._balance()
+        return res
+
+
+# Your FrontMiddleBackQueue object will be instantiated and called as such:
+# obj = FrontMiddleBackQueue()
+# obj.pushFront(val)
+# obj.pushMiddle(val)
+# obj.pushBack(val)
+# param_4 = obj.popFront()
+# param_5 = obj.popMiddle()
+# param_6 = obj.popBack()
 # @lc code=end
