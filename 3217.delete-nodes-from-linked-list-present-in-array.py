@@ -12,23 +12,21 @@
 #         self.next = next
 class Solution:
     def modifiedList(self, nums: List[int], head: Optional[ListNode]) -> Optional[ListNode]:
-        # Convert nums to a set for O(1) lookups
+        # Convert nums to a set for O(1) lookup
         nums_set = set(nums)
-        # Create a dummy node to simplify removal of head if needed
-        dummy = ListNode(0, head)
-        prev = dummy
-        curr = head
         
-        while curr:
-            if curr.val in nums_set:
-                # Skip current node
-                prev.next = curr.next
-                # Move current to next node, prev stays the same
-                curr = curr.next
+        # Use a dummy node to handle deletions at the head easily
+        dummy = ListNode(0)
+        dummy.next = head
+        
+        current = dummy
+        while current.next:
+            if current.next.val in nums_set:
+                # Delete the node by skipping it
+                current.next = current.next.next
             else:
-                # Keep current node, move both pointers
-                prev = curr
-                curr = curr.next
+                # Only move current forward if we didn't delete a node
+                current = current.next
         
         return dummy.next
 # @lc code=end
