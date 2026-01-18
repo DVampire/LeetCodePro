@@ -1,0 +1,1 @@
+The problem was solved using an O(n) approach that identifies maximal strictly increasing subarrays and calculates the maximum possible k by checking both single-block and adjacent-block boundaries.
