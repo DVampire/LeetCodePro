@@ -10,49 +10,60 @@ from typing import List
 class Solution:
     def findSubtreeSizes(self, parent: List[int], s: str) -> List[int]:
         n = len(parent)
-        # Step 1: Build adjacency list for the original tree
+        # Step 1: Build original tree adjacency list
         adj = [[] for _ in range(n)]
         for i in range(1, n):
             adj[parent[i]].append(i)
         
-        # Step 2: Determine new parent for each node using DFS
-        new_parent = list(parent)
+        new_parent = [-1] * n
         last_seen = [-1] * 26
-        history = [-1] * n
-        order = []
         
-        # Iterative DFS to find the closest ancestor with the same character
-        stack = [(0, 0)] # (node, state: 0 for entry, 1 for exit)
+        # Step 2: Iterative DFS to find new parents for all nodes
+        # stack stores (node, is_pre_order, val_to_restore)
+        stack = [(0, True, -1)]
         while stack:
-            u, state = stack.pop()
+            u, is_pre, old_val = stack.pop()
             char_idx = ord(s[u]) - ord('a')
-            if state == 0:
-                # Upon entering node u
-                if last_seen[char_idx] != -1:
-                    new_parent[u] = last_seen[char_idx]
+            
+            if is_pre:
+                # Finding the closest ancestor with the same character
+                if u != 0:
+                    closest = last_seen[char_idx]
+                    new_parent[u] = closest if closest != -1 else parent[u]
                 
-                # Save current state for backtracking and update last_seen
-                history[u] = last_seen[char_idx]
+                # Save current state for restoration in post-order
+                current_char_ancestor = last_seen[char_idx]
                 last_seen[char_idx] = u
-                order.append(u)
+                stack.append((u, False, current_char_ancestor))
                 
-                # Prepare to exit node u after visiting children
-                stack.append((u, 1))
-                # Add children to stack to process them
+                # Add children to stack
                 for v in adj[u]:
-                    stack.append((v, 0))
+                    stack.append((v, True, -1))
             else:
-                # Upon exiting node u, restore last_seen to its previous state
-                last_seen[char_idx] = history[u]
+                # Restore the last_seen value for this character after visiting subtree
+                last_seen[char_idx] = old_val
         
-        # Step 3: Calculate subtree sizes in the new tree using the topological order
-        # Since the new parent was an ancestor in the original tree, the original 
-        # pre-order (stored in 'order') remains a valid topological sort.
-        subtree_sizes = [1] * n
+        # Step 3: Build new tree adjacency list based on new_parent
+        new_adj = [[] for _ in range(n)]
+        for i in range(1, n):
+            new_adj[new_parent[i]].append(i)
+            
+        # Step 4: Calculate subtree sizes iteratively
+        ans = [1] * n
+        order = []
+        traversal_stack = [0]
+        # Standard pre-order to get the processing order
+        while traversal_stack:
+            u = traversal_stack.pop()
+            order.append(u)
+            for v in new_adj[u]:
+                traversal_stack.append(v)
+        
+        # Process nodes in reverse pre-order (post-order)
         for u in reversed(order):
             p = new_parent[u]
             if p != -1:
-                subtree_sizes[p] += subtree_sizes[u]
+                ans[p] += ans[u]
                 
-        return subtree_sizes
+        return ans
 # @lc code=end
