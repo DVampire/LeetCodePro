@@ -8,38 +8,38 @@
 class TextEditor:
 
     def __init__(self):
-        # Stack to store characters to the left of the cursor
+        # Two stacks to represent the text to the left and right of the cursor
         self.left = []
-        # Stack to store characters to the right of the cursor (top is closest to cursor)
         self.right = []
 
     def addText(self, text: str) -> None:
-        # O(len(text)) - Add characters to the left stack
-        self.left.extend(list(text))
+        # Appending text to the left of the cursor
+        for char in text:
+            self.left.append(char)
 
     def deleteText(self, k: int) -> int:
-        # O(k) - Remove characters from the left stack
+        # Deleting up to k characters to the left of the cursor
         count = 0
         while k > 0 and self.left:
             self.left.pop()
-            k -= 1
             count += 1
+            k -= 1
         return count
 
     def cursorLeft(self, k: int) -> str:
-        # O(k) - Move cursor left by shifting characters from left stack to right stack
+        # Moving cursor left: move chars from left stack to right stack
         while k > 0 and self.left:
             self.right.append(self.left.pop())
             k -= 1
-        # Return last min(10, len) characters to the left of the cursor
+        # Return up to 10 characters to the left of the cursor
         return "".join(self.left[-10:])
 
     def cursorRight(self, k: int) -> str:
-        # O(k) - Move cursor right by shifting characters from right stack to left stack
+        # Moving cursor right: move chars from right stack to left stack
         while k > 0 and self.right:
             self.left.append(self.right.pop())
             k -= 1
-        # Return last min(10, len) characters to the left of the cursor
+        # Return up to 10 characters to the left of the cursor
         return "".join(self.left[-10:])
 
 
