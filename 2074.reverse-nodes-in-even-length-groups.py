@@ -12,38 +12,42 @@
 #         self.next = next
 class Solution:
     def reverseEvenLengthGroups(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        if not head:
+            return None
+        
         prev = head
-        group_size = 2
+        group_len = 2
         
         while prev.next:
-            # Count actual nodes in current group
-            node = prev.next
+            # Count the actual number of nodes in the current group
             count = 0
-            while count < group_size and node:
+            curr = prev.next
+            temp = curr
+            while temp and count < group_len:
                 count += 1
-                node = node.next
+                temp = temp.next
             
             if count % 2 == 0:
-                # Reverse the group
-                curr = prev.next
-                reverse_prev = None
+                # If the actual group length is even, reverse the group
+                p = None
+                node = curr
                 for _ in range(count):
-                    nxt = curr.next
-                    curr.next = reverse_prev
-                    reverse_prev = curr
-                    curr = nxt
+                    nxt = node.next
+                    node.next = p
+                    p = node
+                    node = nxt
                 
-                # Reconnect the reversed segment
-                tail = prev.next
-                prev.next = reverse_prev
-                tail.next = curr
-                prev = tail
+                # Reconnect the reversed segment back into the list
+                # prev -> p (new head) ... curr (new tail) -> node (next group)
+                prev.next = p
+                curr.next = node
+                prev = curr
             else:
-                # Skip the group
+                # If the actual group length is odd, skip the group
                 for _ in range(count):
                     prev = prev.next
             
-            group_size += 1
+            group_len += 1
             
         return head
 # @lc code=end
