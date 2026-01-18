@@ -12,42 +12,37 @@
 #         self.next = next
 class Solution:
     def reverseEvenLengthGroups(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        if not head:
-            return None
-        
-        prev = head
-        group_len = 2
-        
-        while prev.next:
-            # Count the actual number of nodes in the current group
+        if not head or not head.next:
+            return head
+
+        prev_group_tail = head
+        curr = head.next
+        expected_group_size = 2
+
+        while curr:
             count = 0
-            curr = prev.next
             temp = curr
-            while temp and count < group_len:
-                count += 1
+            while count < expected_group_size and temp:
                 temp = temp.next
-            
+                count += 1
+
             if count % 2 == 0:
-                # If the actual group length is even, reverse the group
-                p = None
                 node = curr
+                prev = temp
                 for _ in range(count):
                     nxt = node.next
-                    node.next = p
-                    p = node
+                    node.next = prev
+                    prev = node
                     node = nxt
-                
-                # Reconnect the reversed segment back into the list
-                # prev -> p (new head) ... curr (new tail) -> node (next group)
-                prev.next = p
-                curr.next = node
-                prev = curr
+                prev_group_tail.next = prev
+                prev_group_tail = curr
+                curr = temp
             else:
-                # If the actual group length is odd, skip the group
                 for _ in range(count):
-                    prev = prev.next
-            
-            group_len += 1
-            
+                    prev_group_tail = curr
+                    curr = curr.next
+
+            expected_group_size += 1
+
         return head
 # @lc code=end
