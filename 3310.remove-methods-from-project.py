@@ -10,12 +10,12 @@ from typing import List
 
 class Solution:
     def remainingMethods(self, n: int, k: int, invocations: List[List[int]]) -> List[int]:
-        # Step 1: Build the graph
+        # Build adjacency list
         adj = [[] for _ in range(n)]
         for u, v in invocations:
             adj[u].append(v)
-        
-        # Step 2: Find all suspicious methods using BFS
+            
+        # Find all suspicious methods using BFS starting from k
         suspicious = [False] * n
         suspicious[k] = True
         queue = deque([k])
@@ -26,19 +26,20 @@ class Solution:
                 if not suspicious[neighbor]:
                     suspicious[neighbor] = True
                     queue.append(neighbor)
-        
-        # Step 3: Check if any non-suspicious method invokes a suspicious method
+                    
+        # Check if any non-suspicious method invokes a suspicious method
         can_remove = True
         for u, v in invocations:
-            # If caller is not suspicious but callee is suspicious
+            # If u is not suspicious but v is suspicious, we cannot remove the group
             if not suspicious[u] and suspicious[v]:
                 can_remove = False
                 break
         
-        # Step 4: Return the result
-        if not can_remove:
+        # If we can remove them, return non-suspicious methods
+        if can_remove:
+            return [i for i in range(n) if not suspicious[i]]
+        else:
+            # Otherwise return all methods
             return list(range(n))
-        
-        return [i for i in range(n) if not suspicious[i]]
 
 # @lc code=end
