@@ -5,65 +5,60 @@
 #
 
 # @lc code=start
-from typing import List
+import sys
 
 class Solution:
     def findSubtreeSizes(self, parent: List[int], s: str) -> List[int]:
+        # Increase recursion depth to handle deep trees up to 10^5 nodes
+        sys.setrecursionlimit(200000)
+        
         n = len(parent)
-        # Step 1: Build original tree adjacency list
+        # Step 1: Build the original adjacency list
         adj = [[] for _ in range(n)]
         for i in range(1, n):
             adj[parent[i]].append(i)
         
         new_parent = [-1] * n
+        # last_seen stores the nearest ancestor for each character 'a'-'z'
         last_seen = [-1] * 26
         
-        # Step 2: Iterative DFS to find new parents for all nodes
-        # stack stores (node, is_pre_order, val_to_restore)
-        stack = [(0, True, -1)]
-        while stack:
-            u, is_pre, old_val = stack.pop()
-            char_idx = ord(s[u]) - ord('a')
+        # Step 2: DFS to find new parents based on original tree structure
+        def find_new_parents(u):
+            char_idx = ord(s[u]) - 97
             
-            if is_pre:
-                # Finding the closest ancestor with the same character
-                if u != 0:
-                    closest = last_seen[char_idx]
-                    new_parent[u] = closest if closest != -1 else parent[u]
-                
-                # Save current state for restoration in post-order
-                current_char_ancestor = last_seen[char_idx]
-                last_seen[char_idx] = u
-                stack.append((u, False, current_char_ancestor))
-                
-                # Add children to stack
-                for v in adj[u]:
-                    stack.append((v, True, -1))
+            # Find the closest ancestor with the same character
+            ancestor = last_seen[char_idx]
+            if ancestor != -1:
+                new_parent[u] = ancestor
             else:
-                # Restore the last_seen value for this character after visiting subtree
-                last_seen[char_idx] = old_val
+                new_parent[u] = parent[u]
+            
+            # Update last_seen for current character and recurse to children
+            old_val = last_seen[char_idx]
+            last_seen[char_idx] = u
+            for v in adj[u]:
+                find_new_parents(v)
+            # Backtrack: restore last_seen for other branches
+            last_seen[char_idx] = old_val
+            
+        find_new_parents(0)
         
-        # Step 3: Build new tree adjacency list based on new_parent
+        # Step 3: Build the adjacency list for the modified tree
         new_adj = [[] for _ in range(n)]
         for i in range(1, n):
+            # new_parent[i] is the updated parent of node i
             new_adj[new_parent[i]].append(i)
             
-        # Step 4: Calculate subtree sizes iteratively
-        ans = [1] * n
-        order = []
-        traversal_stack = [0]
-        # Standard pre-order to get the processing order
-        while traversal_stack:
-            u = traversal_stack.pop()
-            order.append(u)
-            for v in new_adj[u]:
-                traversal_stack.append(v)
+        subtree_size = [0] * n
         
-        # Process nodes in reverse pre-order (post-order)
-        for u in reversed(order):
-            p = new_parent[u]
-            if p != -1:
-                ans[p] += ans[u]
-                
-        return ans
+        # Step 4: DFS to calculate subtree sizes in the modified tree
+        def calculate_sizes(u):
+            curr_size = 1
+            for v in new_adj[u]:
+                curr_size += calculate_sizes(v)
+            subtree_size[u] = curr_size
+            return curr_size
+            
+        calculate_sizes(0)
+        return subtree_size
 # @lc code=end
