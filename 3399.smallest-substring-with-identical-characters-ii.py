@@ -8,36 +8,50 @@
 class Solution:
     def minLength(self, s: str, numOps: int) -> int:
         n = len(s)
-        # Binary search on the answer
-        def canAchieve(maxLen: int) -> bool:
-            # For each segment of same characters, we want to break it into pieces of length at most maxLen
-            # We need to count how many operations are needed
-            ops = 0
-            i = 0
-            while i < n:
-                j = i
-                while j < n and s[j] == s[i]:
-                    j += 1
-                # s[i..j-1] is a segment of same characters
-                length = j - i
-                if length > maxLen:
-                    # We need to break this segment
-                    # Number of breaks needed = length // (maxLen + 1)
-                    # Because each piece can be at most maxLen long
-                    breaks = (length - 1) // maxLen
-                    ops += breaks
-                i = j
-            return ops <= numOps
         
-        # Binary search for the minimum possible maxLen
-        left, right = 1, n
-        answer = n
-        while left <= right:
-            mid = (left + right) // 2
-            if canAchieve(mid):
-                answer = mid
-                right = mid - 1
+        # Pre-calculate block lengths for efficiency in check(k) where k >= 2
+        blocks = []
+        if n > 0:
+            curr_len = 1
+            for i in range(1, n):
+                if s[i] == s[i-1]:
+                    curr_len += 1
+                else:
+                    blocks.append(curr_len)
+                    curr_len = 1
+            blocks.append(curr_len)
+
+        def check(k: int) -> bool:
+            if k == 1:
+                # Special case for k=1: must be alternating 0101... or 1010...
+                flips0 = 0 # target 0101...
+                flips1 = 0 # target 1010...
+                for i in range(n):
+                    # target0: index i should be i % 2
+                    if int(s[i]) != (i % 2):
+                        flips0 += 1
+                    else:
+                        flips1 += 1
+                return min(flips0, flips1) <= numOps
             else:
-                left = mid + 1
-        return answer
+                # General case for k >= 2: sum of floor(L / (k+1))
+                total_flips = 0
+                for length in blocks:
+                    total_flips += length // (k + 1)
+                return total_flips <= numOps
+
+        # Binary search for the minimum k
+        low = 1
+        high = n
+        ans = n
+        
+        while low <= high:
+            mid = (low + high) // 2
+            if check(mid):
+                ans = mid
+                high = mid - 1
+            else:
+                low = mid + 1
+        
+        return ans
 # @lc code=end
