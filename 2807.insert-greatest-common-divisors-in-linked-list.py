@@ -15,18 +15,23 @@ from typing import Optional
 
 class Solution:
     def insertGreatestCommonDivisors(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        # Start from the head of the list
+        if not head or not head.next:
+            return head
+        
         curr = head
-        # Traverse while there is a current node and a next node (pair exists)
         while curr and curr.next:
-            # Compute the GCD of the current node and the next node's values
+            # Calculate GCD of current node and next node
             gcd_val = math.gcd(curr.val, curr.next.val)
-            # Create a new node with the GCD value, pointing to the original next node
-            new_node = ListNode(gcd_val, curr.next)
-            # Insert the new node after the current node
+            
+            # Create the new node
+            new_node = ListNode(gcd_val)
+            
+            # Insert new_node between curr and curr.next
+            new_node.next = curr.next
             curr.next = new_node
-            # Move to the original next node (skip the newly inserted node)
+            
+            # Move curr to the original next node, which is now new_node.next
             curr = new_node.next
-        # Return the modified head (same as original head)
+            
         return head
 # @lc code=end
