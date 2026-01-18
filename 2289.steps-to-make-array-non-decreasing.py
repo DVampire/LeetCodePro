@@ -4,41 +4,39 @@
 # [2289] Steps to Make Array Non-decreasing
 #
 
+# @lc code=start
 from typing import List
 
-# @lc code=start
 class Solution:
     def totalSteps(self, nums: List[int]) -> int:
-        n = len(nums)
-        # dp[i] stores the number of steps after which nums[i] will be removed.
-        # If never removed, dp[i] remains 0.
-        dp = [0] * n
-        # Stack stores indices of numbers that are potentially decreasing.
-        # It helps find nearest greater element to the left.
+        # The stack will store pairs of (value, steps_to_remove)
         stack = []
+        max_steps = 0
         
-        for i in range(n):
-            # Current number of steps needed before removing current element.
-            cur_steps = 0
-            # Pop smaller or equal elements from the stack.
-            # They cannot block current element from being removed by a larger left neighbor.
-            # Keep track of maximum removal steps among popped elements.
-            while stack and nums[stack[-1]] <= nums[i]:
-                cur_steps = max(cur_steps, dp[stack[-1]])
-                stack.pop()
+        for x in nums:
+            current_steps = 0
+            # While the current element is greater than or equal to the top of the stack,
+            # it means the current element will 'wait' for the top element to be removed.
+            # The time it takes for the current element to be reachable by a larger element
+            # to the left is at least the time taken to remove the elements in between.
+            while stack and stack[-1][0] <= x:
+                # We take the maximum of steps needed to remove the intermediate smaller elements.
+                current_steps = max(current_steps, stack.pop()[1])
             
-            # If there is still a larger element on the left,
-            # current element will be removed one step after all smaller/equal
-            # elements between them are gone.
             if stack:
-                dp[i] = cur_steps + 1
+                # If the stack is not empty, it means there is a larger element to the left.
+                # The current element will be removed 1 step after all intermediate elements
+                # (that were smaller than it) are gone.
+                current_steps += 1
             else:
-                # No larger element on the left => never removed.
-                dp[i] = 0
+                # If the stack is empty, no element to the left is larger than x.
+                # Therefore, x will never be removed.
+                current_steps = 0
             
-            # Push current index onto stack.
-            stack.append(i)
-        
-        # The answer is the maximum number of steps any element takes to be removed.
-        return max(dp)
+            # Update the global maximum steps.
+            max_steps = max(max_steps, current_steps)
+            # Push the current element and its calculated removal time onto the stack.
+            stack.append((x, current_steps))
+            
+        return max_steps
 # @lc code=end
