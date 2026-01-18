@@ -9,52 +9,51 @@ class Solution:
     def minLength(self, s: str, numOps: int) -> int:
         n = len(s)
         
-        # Binary search on the answer
-        def canAchieve(maxLen: int) -> bool:
-            # For each possible substring of length maxLen, check if we can break all longer segments
-            # with at most numOps flips
-            
-            # First, find all maximal segments of identical characters
-            segments = []
-            i = 0
-            while i < n:
-                j = i
-                while j < n and s[j] == s[i]:
-                    j += 1
-                segments.append((i, j - 1))
-                i = j
-            
-            # For a given maxLen, we need to ensure no segment is longer than maxLen
-            # We can reduce a segment of length L to at most maxLen by flipping
-            # ceil((L - maxLen) / 2) characters in optimal positions
-            
-            ops_needed = 0
-            for start, end in segments:
-                length = end - start + 1
-                if length > maxLen:
-                    # Number of operations needed to break this segment
-                    # We place breaks every maxLen characters
-                    # The number of breaks needed is ceil(length / maxLen) - 1
-                    # But it's easier to think: we need to reduce length to maxLen
-                    # We can reduce it by flipping every other character in the excess part
-                    # If length is L and maxLen is M, excess is (L-M)
-                    # We need to flip ceil((L-M)/2) characters
-                    ops_needed += (length - maxLen + 1) // 2
-                    if ops_needed > numOps:
-                        return False
-            return ops_needed <= numOps
-        
-        # Binary search for the minimum possible length
-        left, right = 1, n
-        result = n
-        
-        while left <= right:
-            mid = (left + right) // 2
-            if canAchieve(mid):
-                result = mid
-                right = mid - 1
+        # Pre-calculate segment lengths for k > 1 logic
+        segments = []
+        if n > 0:
+            curr_len = 1
+            for i in range(1, n):
+                if s[i] == s[i-1]:
+                    curr_len += 1
+                else:
+                    segments.append(curr_len)
+                    curr_len = 1
+            segments.append(curr_len)
+
+        def check(k: int) -> bool:
+            if k == 1:
+                # Check alternating patterns 0101... and 1010...
+                count1 = 0 # pattern starts with 0
+                count2 = 0 # pattern starts with 1
+                for i in range(n):
+                    expected1 = '0' if i % 2 == 0 else '1'
+                    if s[i] != expected1:
+                        count1 += 1
+                    
+                    expected2 = '1' if i % 2 == 0 else '0'
+                    if s[i] != expected2:
+                        count2 += 1
+                return min(count1, count2) <= numOps
             else:
-                left = mid + 1
+                # Check segments of identical characters
+                total_flips = 0
+                for length in segments:
+                    total_flips += length // (k + 1)
+                return total_flips <= numOps
+
+        # Binary search for the minimum length k
+        low = 1
+        high = n
+        ans = n
         
-        return result
+        while low <= high:
+            mid = (low + high) // 2
+            if check(mid):
+                ans = mid
+                high = mid - 1
+            else:
+                low = mid + 1
+                
+        return ans
 # @lc code=end
