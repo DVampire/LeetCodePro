@@ -5,67 +5,61 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maximizeSumOfWeights(self, edges: List[List[int]], k: int) -> int:
         n = len(edges) + 1
-        
-        # Build adjacency list with weights
-        graph = [[] for _ in range(n)]
+        adj = [[] for _ in range(n)]
         for u, v, w in edges:
-            graph[u].append((v, w))
-            graph[v].append((u, w))
+            adj[u].append((v, w))
+            adj[v].append((u, w))
         
-        # Memoization for DP results
-        memo = {}
+        # Iterative post-order traversal to avoid recursion depth issues
+        parent = [-1] * n
+        order = []
+        stack = [0]
+        parent[0] = 0
         
-        def dfs(node, parent, parent_edge_used):
-            # State: (node, parent, parent_edge_used)
-            state = (node, parent, parent_edge_used)
-            if state in memo:
-                return memo[state]
-            
-            # Get all children edges (excluding parent edge)
-            children_edges = []
-            for neighbor, weight in graph[node]:
-                if neighbor != parent:
-                    children_edges.append((neighbor, weight))
-            
-            if not children_edges:
-                memo[state] = 0
-                return 0
-            
-            # Calculate all possible combinations
-            # For each child edge, we can either take it or not
-            # If we take it, we recursively solve for that child with parent_edge_used=True
-            
-            # Generate options: (value_if_taken, value_if_not_taken) for each child edge
-            options = []
-            for neighbor, weight in children_edges:
-                # Value if we don't take this edge (weight 0)
-                not_taken = 0 + dfs(neighbor, node, False)
-                # Value if we take this edge
-                taken = weight + dfs(neighbor, node, True)
-                options.append((taken, not_taken))
-            
-            # Now we need to choose at most k edges (or k-1 if parent_edge_used is True)
-            max_edges = k if not parent_edge_used else k - 1
-            max_edges = max(0, max_edges)  # Ensure non-negative
-            
-            # Sort by difference (taken - not_taken) in descending order
-            # This tells us which edges give us the most benefit when taken
-            diffs = [(options[i][0] - options[i][1], i) for i in range(len(options))]
-            diffs.sort(reverse=True)
-            
-            # Calculate base value (all edges not taken)
-            base_value = sum(options[i][1] for i in range(len(options)))
-            
-            # Add the top 'max_edges' differences
-            additional_value = sum(diffs[i][0] for i in range(min(max_edges, len(diffs))))
-            
-            result = base_value + max(0, additional_value)
-            memo[state] = result
-            return result
+        while stack:
+            u = stack.pop()
+            order.append(u)
+            for v, w in adj[u]:
+                if parent[v] == -1 and v != 0:
+                    parent[v] = u
+                    stack.append(v)
         
-        # Start DFS from node 0 with no parent and parent_edge_used=False
-        return dfs(0, -1, False)
+        dp0 = [0] * n
+        dp1 = [0] * n
+        
+        # Process nodes in reverse topological order (bottom-up)
+        for u in reversed(order):
+            base_sum = 0
+            gains = []
+            
+            for v, w in adj[u]:
+                if v == parent[u]:
+                    continue
+                
+                # Base contribution: max sum if edge (u, v) is removed
+                base_sum += dp0[v]
+                
+                # Potential gain if edge (u, v) is kept
+                gain = w + dp1[v] - dp0[v]
+                if gain > 0:
+                    gains.append(gain)
+            
+            # Sort gains in descending order to pick the best ones
+            gains.sort(reverse=True)
+            
+            # Sum of top gains for dp0 (up to k edges to children)
+            top_k_sum = sum(gains[:k])
+            dp0[u] = base_sum + top_k_sum
+            
+            # Sum of top gains for dp1 (up to k-1 edges to children)
+            top_k_minus_1_sum = sum(gains[:k-1])
+            dp1[u] = base_sum + top_k_minus_1_sum
+            
+        return dp0[0]
+
 # @lc code=end
