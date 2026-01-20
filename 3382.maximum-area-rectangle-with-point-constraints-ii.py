@@ -4,53 +4,89 @@
 # [3382] Maximum Area Rectangle With Point Constraints II
 #
 
+from typing import List
+from collections import defaultdict
+from bisect import bisect_left, bisect_right
+
 # @lc code=start
+class MergeSortTree:
+    def __init__(self, ys_lists: List[List[int]]):
+        self.n = len(ys_lists)
+        self.tree = [[] for _ in range(4 * self.n)]
+        self._build(1, 0, self.n - 1, ys_lists)
+
+    def _build(self, node: int, start: int, end: int, ys_lists: List[List[int]]):
+        if start == end:
+            self.tree[node] = ys_lists[start][:]
+            return
+        mid = (start + end) // 2
+        self._build(2 * node, start, mid, ys_lists)
+        self._build(2 * node + 1, mid + 1, end, ys_lists)
+        left = self.tree[2 * node]
+        right = self.tree[2 * node + 1]
+        i = j = 0
+        merged = []
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                merged.append(left[i])
+                i += 1
+            else:
+                merged.append(right[j])
+                j += 1
+        merged.extend(left[i:])
+        merged.extend(right[j:])
+        self.tree[node] = merged
+
+    def query(self, node: int, start: int, end: int, qleft: int, qright: int, ylow: int, yhigh: int) -> int:
+        if qright < start or end < qleft:
+            return 0
+        if qleft <= start and end <= qright:
+            return bisect_right(self.tree[node], yhigh) - bisect_left(self.tree[node], ylow)
+        mid = (start + end) // 2
+        left_count = self.query(2 * node, start, mid, qleft, qright, ylow, yhigh)
+        right_count = self.query(2 * node + 1, mid + 1, end, qleft, qright, ylow, yhigh)
+        return left_count + right_count
+
 class Solution:
     def maxRectangleArea(self, xCoord: List[int], yCoord: List[int]) -> int:
-        # Combine coordinates into a set for O(1) lookup
-        points = set(zip(xCoord, yCoord))
         n = len(xCoord)
-        max_area = -1
-        
-        # Try all pairs of points as potential diagonals
+        ys_dict = defaultdict(list)
         for i in range(n):
-            for j in range(i+1, n):
-                x1, y1 = xCoord[i], yCoord[i]
-                x2, y2 = xCoord[j], yCoord[j]
-                
-                # Skip if points are on same horizontal or vertical line
-                # (they can't form a diagonal of a rectangle)
-                if x1 == x2 or y1 == y2:
+            ys_dict[xCoord[i]].append(yCoord[i])
+        X = sorted(ys_dict.keys())
+        m = len(X)
+        if m < 2:
+            return -1
+        ys_lists = [sorted(ys_dict[X[i]]) for i in range(m)]
+        mst = MergeSortTree(ys_lists)
+        segments = defaultdict(list)
+        for i in range(m):
+            ys = ys_lists[i]
+            for k in range(len(ys) - 1):
+                yb = ys[k]
+                yt = ys[k + 1]
+                segments[(yb, yt)].append(i)
+        max_area = 0
+        for (yb, yt), supp in segments.items():
+            if len(supp) < 2:
+                continue
+            height = yt - yb
+            for t in range(len(supp) - 1):
+                li = supp[t]
+                ri = supp[t + 1]
+                L = li + 1
+                R = ri - 1
+                width = X[ri] - X[li]
+                if L > R:
+                    area = width * height
+                    if area > max_area:
+                        max_area = area
                     continue
-                
-                # Check if the other two corners exist to form a rectangle
-                if (x1, y2) in points and (x2, y1) in points:
-                    # We have a valid rectangle with corners at:
-                    # (x1,y1), (x1,y2), (x2,y1), (x2,y2)
-                    
-                    # Check if any other point lies inside or on the border
-                    valid = True
-                    
-                    # Determine the boundaries of the rectangle
-                    min_x, max_x = min(x1, x2), max(x1, x2)
-                    min_y, max_y = min(y1, y2), max(y1, y2)
-                    
-                    # Check all points to see if any lie inside/on the rectangle
-                    for k in range(n):
-                        x, y = xCoord[k], yCoord[k]
-                        # Skip the four corners of our rectangle
-                        if (x == x1 and y == y1) or (x == x1 and y == y2) or \
-                           (x == x2 and y == y1) or (x == x2 and y == y2):
-                            continue
-                        
-                        # Check if point is inside or on the border
-                        if min_x <= x <= max_x and min_y <= y <= max_y:
-                            valid = False
-                            break
-                    
-                    if valid:
-                        area = abs(x2 - x1) * abs(y2 - y1)
-                        max_area = max(max_area, area)
-        
-        return max_area
+                cnt = mst.query(1, 0, m - 1, L, R, yb, yt)
+                if cnt == 0:
+                    area = width * height
+                    if area > max_area:
+                        max_area = area
+        return max_area if max_area > 0 else -1
+
 # @lc code=end

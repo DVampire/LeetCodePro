@@ -5,60 +5,47 @@
 #
 
 # @lc code=start
+from typing import List
 class Solution:
     def findSubtreeSizes(self, parent: List[int], s: str) -> List[int]:
+        import sys
+        sys.setrecursionlimit(10**5 + 10)
         n = len(parent)
-        
-        # Build initial children list
-        children = [[] for _ in range(n)]
+        adj = [[] for _ in range(n)]
         for i in range(1, n):
-            children[parent[i]].append(i)
-        
-        # New parent array after changes
+            adj[parent[i]].append(i)
         new_parent = parent[:]
-        
-        # For each character, keep track of the path from root
-        char_to_path = {}
-        
-        def dfs(node):
-            char = s[node]
-            
-            # Save the previous state for this character
-            prev_path = char_to_path.get(char, [])
-            
-            # Update the path for this character
-            char_to_path[char] = prev_path + [node]
-            
-            # Process all children
-            for child in children[node]:
-                # Find the closest ancestor with same character
-                if len(char_to_path[char]) >= 2:  # At least one ancestor other than itself
-                    # The closest one is the last one in the path except current node
-                    new_parent[child] = char_to_path[char][-2]
-                dfs(child)
-            
-            # Restore the path for this character (backtrack)
-            char_to_path[char] = prev_path
-        
-        # Start DFS from root (node 0)
-        dfs(0)
-        
-        # Build new children list based on new_parent
-        new_children = [[] for _ in range(n)]
+        path_map = {}
+
+        def dfs(node: int, pmap: dict):
+            if node != 0:
+                y = pmap.get(s[node], None)
+                if y is not None:
+                    new_parent[node] = y
+            old = pmap.get(s[node], None)
+            pmap[s[node]] = node
+            for child in adj[node]:
+                dfs(child, pmap)
+            if old is None:
+                del pmap[s[node]]
+            else:
+                pmap[s[node]] = old
+
+        dfs(0, path_map)
+
+        new_adj = [[] for _ in range(n)]
         for i in range(1, n):
-            new_children[new_parent[i]].append(i)
-        
-        # Calculate subtree sizes
+            p = new_parent[i]
+            new_adj[p].append(i)
+
         answer = [0] * n
-        
-        def calculate_size(node):
-            size = 1  # Count the node itself
-            for child in new_children[node]:
-                size += calculate_size(child)
-            answer[node] = size
-            return size
-        
-        calculate_size(0)
-        
+        def size_dfs(node: int) -> int:
+            sz = 1
+            for child in new_adj[node]:
+                sz += size_dfs(child)
+            answer[node] = sz
+            return sz
+
+        size_dfs(0)
         return answer
 # @lc code=end
