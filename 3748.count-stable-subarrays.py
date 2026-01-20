@@ -5,53 +5,52 @@
 #
 
 # @lc code=start
+from typing import List
+
+
 class Solution:
     def countStableSubarrays(self, nums: List[int], queries: List[List[int]]) -> List[int]:
         n = len(nums)
+        if n == 0:
+            return []
+        left = [0] * n
+        for i in range(1, n):
+            if nums[i - 1] <= nums[i]:
+                left[i] = left[i - 1]
+            else:
+                left[i] = i
+        prefix = [0] * (n + 1)
+        for i in range(n):
+            prefix[i + 1] = prefix[i] + left[i]
         
-        # Build segments of non-decreasing subarrays
-        seg = [0] * n  # seg[i] = segment index containing position i
-        seg_start = [0]  # Start index of each segment
-        seg_end = []     # End index of each segment
-        
-        current_seg = 0
-        for i in range(n - 1):
-            seg[i] = current_seg
-            if nums[i] > nums[i + 1]:  # Breaking point
-                seg_end.append(i)
-                current_seg += 1
-                seg_start.append(i + 1)
-        seg[n - 1] = current_seg
-        seg_end.append(n - 1)
-        
-        num_segments = len(seg_start)
-        
-        # Count of subarrays in a range of length `length`
-        def count_subarrays(length):
-            return length * (length + 1) // 2
-        
-        # Prefix sum of full segment counts
-        prefix_count = [0] * (num_segments + 1)
-        for j in range(num_segments):
-            length = seg_end[j] - seg_start[j] + 1
-            prefix_count[j + 1] = prefix_count[j] + count_subarrays(length)
+        def range_sum(l: int, r: int) -> int:
+            def s(x: int) -> int:
+                return x * (x + 1) // 2
+            return s(r) - s(l - 1)
         
         ans = []
         for l, r in queries:
-            seg_l = seg[l]
-            seg_r = seg[r]
-            
-            if seg_l == seg_r:
-                # Query range is within a single segment
-                ans.append(count_subarrays(r - l + 1))
+            m = r - l + 1
+            triangle = m * (m + 1) // 2
+            # Binary search for j0: smallest j >= l with left[j] > l
+            lo = l
+            hi = r + 1
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if left[mid] > l:
+                    hi = mid
+                else:
+                    lo = mid + 1
+            j0 = lo
+            if j0 > r:
+                res = triangle
             else:
-                # First partial segment
-                first_partial = count_subarrays(seg_end[seg_l] - l + 1)
-                # Last partial segment
-                last_partial = count_subarrays(r - seg_start[seg_r] + 1)
-                # Full segments in between
-                full_count = prefix_count[seg_r] - prefix_count[seg_l + 1]
-                ans.append(first_partial + last_partial + full_count)
-        
+                num_bad = r - j0 + 1
+                sum_left_bad = prefix[r + 1] - prefix[j0]
+                sum_max = l * (m - num_bad) + sum_left_bad
+                sum_jp1 = range_sum(l, r) + m
+                res = sum_jp1 - sum_max
+            ans.append(res)
         return ans
+
 # @lc code=end

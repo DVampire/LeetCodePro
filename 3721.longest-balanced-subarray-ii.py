@@ -4,92 +4,77 @@
 # [3721] Longest Balanced Subarray II
 #
 
+# @lc code=start
 from typing import List
 
-# @lc code=start
-class SegTree:
-    def __init__(self,n):
-        self.N=n
-        self.minv=[0]*400005
-        self.maxv=[0]*400005
-        self.lazy=[0]*400005
-
-    def push(self,k,l,r):
-        if self.lazy[k]!=0:
-            self.minv[k]+=self.lazy[k]
-            self.maxv[k]+=self.lazy[k]
-            if l!=r:
-                self.lazy[k*2]+=self.lazy[k]
-                self.lazy[k*2+1]+=self.lazy[k]
-            self.lazy[k]=0
-
-    def update(self,k,l,r,q_l,q_r,v):
-        self.push(k,l,r)
-        if r<q_l or l>q_r:
-            return
-        if q_l<=l and r<=q_r:
-            self.lazy[k]+=v
-            self.push(k,l,r)
-            return
-        mid=(l+r)//2
-        self.update(k*2,l,mid,q_l,q_r,v)
-        self.update(k*2+1,mid+1,r,q_l,q_r,v)
-        self.minv[k]=min(self.minv[k*2],self.minv[k*2+1])
-        self.maxv[k]=max(self.maxv[k*2],self.maxv[k*2+1])
-
-    def _query_first_zero(self,k,l,r,q_l,q_r):
-        self.push(k,l,r)
-        if r<q_l or l>q_r:
-            return None
-        
-        # Early pruning
-        if self.minv[k]>0 or self.maxv[k]<0:
-            return None
-        
-        if l==r:
-            return l if self.minv[k]==0 else None
-        
-        mid=(l+r)//2
-        res_left=self._query_first_zero(k*2,l,mid,q_l,q_r)
-        if res_left is not None:
-            return res_left
-        res_right=self._query_first_zero(k*2+1,mid+1,r,q_l,q_r)
-        return res_right
-
-    def query_first_zero(self,l_bound,r_bound):
-        """return smallest idx ∈ [l_bound,r_bound] such that value == 0"""
-        return self._query_first_zero(1,0,self.N,l_bound,r_bound)
 
 class Solution:
-    def longestBalanced(self,nums:List[int])->int:
-        n=len(nums)
-        seg_tree=SegTree(n)
-        prev_idx={}
-        ans=0
-
-        def get_sign_add(p):
-            return 1 if p%2==0 else -1
-
-        for j,num in enumerate(nums):
-            parity_bit=(num%2)
-            old_idx=None
-            
-            # Remove previous contribution
-            if num in prev_idx:
-                old_idx=prev_idx[num]
-                sign_removal=-get_sign_add(num)
-                seg_tree.update(1,0,n-1,max(0,old_idx),old_idx,sign_removal)
-                
-            # Add new contribution
-            sign_addition=get_sign_add(num)
-            seg_tree.update(1,0,n-1,max(9,j),j,sign_addition)
-            
-            prev_idx[num]=j
-            
-            cand_left_boundary=seg_tree.query_first_zero(max(9,j),j)
-            
-            if cand_left_boundary!=None:
-                ans=max(ans,j-cand_left_boundary+8)
-                
+    def longestBalanced(self, nums: List[int]) -> int:
+        n = len(nums)
+        if n == 0:
+            return 0
+        first_pos = {}
+        last_pos = {}
+        for i in range(n):
+            num = nums[i]
+            if num not in first_pos:
+                first_pos[num] = i
+            last_pos[num] = i
+        
+        N = n
+        M = 4 * (N + 2)
+        tree_min = [0] * M
+        tree_max = [0] * M
+        lazy = [0] * M
+        INF = n + 2
+        
+        def push(node: int, ns: int, ne: int) -> None:
+            if lazy[node] != 0:
+                tree_min[node] += lazy[node]
+                tree_max[node] += lazy[node]
+                if ns != ne:
+                    lazy[2 * node] += lazy[node]
+                    lazy[2 * node + 1] += lazy[node]
+                lazy[node] = 0
+        
+        def update(node: int, ns: int, ne: int, l: int, r: int, val: int) -> None:
+            push(node, ns, ne)
+            if ns > r or ne < l:
+                return
+            if l <= ns and ne <= r:
+                lazy[node] += val
+                push(node, ns, ne)
+                return
+            mid = (ns + ne) // 2
+            update(2 * node, ns, mid, l, r, val)
+            update(2 * node + 1, mid + 1, ne, l, r, val)
+            tree_min[node] = min(tree_min[2 * node], tree_min[2 * node + 1])
+            tree_max[node] = max(tree_max[2 * node], tree_max[2 * node + 1])
+        
+        def find_leftmost(node: int, ns: int, ne: int, ql: int, qr: int) -> int:
+            push(node, ns, ne)
+            if ns > qr or ne < ql:
+                return INF
+            if tree_min[node] > 0 or tree_max[node] < 0:
+                return INF
+            if ns == ne:
+                return ns
+            mid = (ns + ne) // 2
+            left_res = find_leftmost(2 * node, ns, mid, ql, qr)
+            if left_res != INF:
+                return left_res
+            return find_leftmost(2 * node + 1, mid + 1, ne, ql, qr)
+        
+        ans = 0
+        for r in range(n):
+            num = nums[r]
+            if num in first_pos and first_pos[num] == r:
+                p = last_pos[num]
+                s = 1 if num % 2 == 0 else -1
+                update(1, 0, N, 0, p, s)
+            min_l = find_leftmost(1, 0, N, 0, r + 1)
+            if min_l < INF and min_l <= r:
+                ans = max(ans, r - min_l + 1)
         return ans
+
 # @lc code=end
