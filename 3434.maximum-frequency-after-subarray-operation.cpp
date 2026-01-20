@@ -1,53 +1,37 @@
-#
-# @lc app=leetcode id=3434 lang=cpp
-#
-# [3434] Maximum Frequency After Subarray Operation
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+/*
+ * @lc app=leetcode id=3434 lang=cpp
+ *
+ * [3434] Maximum Frequency After Subarray Operation
+ */
+
+// @lc code=start
 class Solution {
 public:
     int maxFrequency(vector<int>& nums, int k) {
-        int total_k = 0;
-        bool present[52] = {false};
-        for (int x : nums) {
-            if (x == k) total_k++;
-            present[x] = true;
-        }
+        int totalK = 0;
+        for (int x : nums) if (x == k) totalK++;
 
-        int max_freq = total_k;
+        int bestOverallGain = 0;
 
-        // Try to convert each possible value v into k
-        for (int v = 1; v <= 50; ++v) {
-            if (v == k || !present[v]) continue;
+        for (int v = 1; v <= 50; v++) {
+            if (v == k) continue;
 
-            // Kadane's algorithm to find max subarray sum
-            // where value v contributes +1 and value k contributes -1
-            int current_sum = 0;
-            int max_diff = 0;
-
+            int cur = 0, best = 0;
             for (int x : nums) {
-                if (x == v) {
-                    current_sum += 1;
-                } else if (x == k) {
-                    current_sum -= 1;
-                }
-                
-                if (current_sum < 0) {
-                    current_sum = 0;
-                }
-                
-                if (current_sum > max_diff) {
-                    max_diff = current_sum;
-                }
+                int w = 0;
+                if (x == v) w = 1;
+                else if (x == k) w = -1;
+
+                cur = max(0, cur + w);
+                best = max(best, cur);
             }
-            
-            if (total_k + max_diff > max_freq) {
-                max_freq = total_k + max_diff;
-            }
+            bestOverallGain = max(bestOverallGain, best);
         }
 
-        return max_freq;
+        return totalK + bestOverallGain;
     }
 };
-# @lc code=end
+// @lc code=end
