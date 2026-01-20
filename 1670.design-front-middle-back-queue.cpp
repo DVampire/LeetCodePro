@@ -1,5 +1,3 @@
-#include <deque>
-
 #
 # @lc app=leetcode id=1670 lang=cpp
 #
@@ -7,12 +5,14 @@
 #
 
 # @lc code=start
+#include <deque>
+
 class FrontMiddleBackQueue {
 private:
     std::deque<int> left;
     std::deque<int> right;
 
-    // Maintain invariant: left.size() == right.size() OR right.size() == left.size() + 1
+    // Keeps the invariant: left.size() <= right.size() <= left.size() + 1
     void balance() {
         if (left.size() > right.size()) {
             right.push_front(left.back());
@@ -33,13 +33,11 @@ public:
     }
     
     void pushMiddle(int val) {
-        if (left.size() < right.size()) {
-            left.push_back(val);
-        } else {
+        if (left.size() == right.size()) {
             right.push_front(val);
+        } else {
+            left.push_back(val);
         }
-        // No balance needed: if sizes were equal, right is now +1. 
-        // If right was +1, they are now equal.
     }
     
     void pushBack(int val) {
@@ -48,40 +46,39 @@ public:
     }
     
     int popFront() {
-        if (right.empty()) return -1;
-        int val;
+        if (left.empty() && right.empty()) return -1;
+        int res;
         if (left.empty()) {
-            val = right.front();
+            res = right.front();
             right.pop_front();
         } else {
-            val = left.front();
+            res = left.front();
             left.pop_front();
         }
         balance();
-        return val;
+        return res;
     }
     
     int popMiddle() {
-        if (right.empty()) return -1;
-        int val;
+        if (left.empty() && right.empty()) return -1;
+        int res;
         if (left.size() == right.size()) {
-            val = left.back();
+            res = left.back();
             left.pop_back();
         } else {
-            val = right.front();
+            res = right.front();
             right.pop_front();
         }
-        // No balance needed: if sizes were equal, right is now +1. 
-        // If right was +1, they are now equal.
-        return val;
+        balance();
+        return res;
     }
     
     int popBack() {
         if (right.empty()) return -1;
-        int val = right.back();
+        int res = right.back();
         right.pop_back();
         balance();
-        return val;
+        return res;
     }
 };
 

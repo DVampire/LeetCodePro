@@ -1,3 +1,6 @@
+#include <vector>
+#include <cstdlib>
+
 #
 # @lc app=leetcode id=1206 lang=cpp
 #
@@ -5,15 +8,12 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <cstdlib>
-
 class Skiplist {
+private:
     struct Node {
         int val;
-        int level;
         Node* next[16];
-        Node(int v, int lv) : val(v), level(lv) {
+        Node(int v) : val(v) {
             for (int i = 0; i < 16; ++i) next[i] = nullptr;
         }
     };
@@ -22,16 +22,16 @@ class Skiplist {
     const int MAX_LEVEL = 16;
 
     int randomLevel() {
-        int lv = 1;
-        while (lv < MAX_LEVEL && (rand() % 2 == 0)) {
-            lv++;
+        int lvl = 1;
+        while (lvl < MAX_LEVEL && (rand() % 2 == 0)) {
+            lvl++;
         }
-        return lv;
+        return lvl;
     }
 
 public:
     Skiplist() {
-        head = new Node(-1, MAX_LEVEL);
+        head = new Node(-1);
     }
     
     bool search(int target) {
@@ -55,9 +55,9 @@ public:
             update[i] = curr;
         }
         
-        int lv = randomLevel();
-        Node* newNode = new Node(num, lv);
-        for (int i = 0; i < lv; ++i) {
+        int lvl = randomLevel();
+        Node* newNode = new Node(num);
+        for (int i = 0; i < lvl; ++i) {
             newNode->next[i] = update[i]->next[i];
             update[i]->next[i] = newNode;
         }
@@ -74,15 +74,12 @@ public:
         }
         
         curr = curr->next[0];
-        if (!curr || curr->val != num) {
-            return false;
-        }
+        if (!curr || curr->val != num) return false;
         
-        for (int i = 0; i < curr->level; ++i) {
+        for (int i = 0; i < MAX_LEVEL; ++i) {
             if (update[i]->next[i] != curr) break;
             update[i]->next[i] = curr->next[i];
         }
-        
         delete curr;
         return true;
     }

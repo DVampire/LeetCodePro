@@ -24,52 +24,50 @@ using namespace std;
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        // A critical point needs a previous and a next node, 
-        // so the list must have at least 3 nodes.
+        // If list has fewer than 3 nodes, no critical points can exist
         if (!head || !head->next || !head->next->next) {
             return {-1, -1};
         }
 
-        int firstIndex = -1;
-        int prevIndex = -1;
-        int minDist = INT_MAX;
-
+        int firstCriticalIndex = -1;
+        int prevCriticalIndex = -1;
+        int lastCriticalIndex = -1;
+        int minDistance = INT_MAX;
+        
         ListNode* prev = head;
         ListNode* curr = head->next;
-        int currentIndex = 1;
+        int index = 1;
 
         while (curr->next != nullptr) {
-            ListNode* nextNode = curr->next;
-            bool isMax = (curr->val > prev->val && curr->val > nextNode->val);
-            bool isMin = (curr->val < prev->val && curr->val < nextNode->val);
+            int prevVal = prev->val;
+            int currVal = curr->val;
+            int nextVal = curr->next->val;
 
-            if (isMax || isMin) {
-                if (firstIndex == -1) {
-                    // First critical point found
-                    firstIndex = currentIndex;
+            // Check if current node is a local maxima or minima
+            if ((currVal > prevVal && currVal > nextVal) || (currVal < prevVal && currVal < nextVal)) {
+                if (firstCriticalIndex == -1) {
+                    firstCriticalIndex = index;
                 } else {
-                    // Calculate distance from the previous critical point
-                    minDist = min(minDist, currentIndex - prevIndex);
+                    // Update minimum distance between consecutive critical points
+                    minDistance = min(minDistance, index - prevCriticalIndex);
                 }
-                // Update the last seen critical point index
-                prevIndex = currentIndex;
+                lastCriticalIndex = index;
+                prevCriticalIndex = index;
             }
 
-            // Move pointers forward
+            // Move to next node
             prev = curr;
-            curr = nextNode;
-            currentIndex++;
+            curr = curr->next;
+            index++;
         }
 
-        // If minDist was never updated, we found fewer than 2 critical points
-        if (minDist == INT_MAX) {
+        // If fewer than two critical points were found
+        if (firstCriticalIndex == lastCriticalIndex) {
             return {-1, -1};
         }
 
-        // Max distance is always between the first and the last critical point
-        int maxDist = prevIndex - firstIndex;
-        
-        return {minDist, maxDist};
+        int maxDistance = lastCriticalIndex - firstCriticalIndex;
+        return {minDistance, maxDistance};
     }
 };
 # @lc code=end

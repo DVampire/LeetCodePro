@@ -28,31 +28,24 @@
  */
 class Solution {
 public:
-    /**
-     * Helper function to check if the linked list starting at 'head' 
-     * matches a downward path starting exactly at 'node'.
-     */
-    bool checkPath(ListNode* head, TreeNode* node) {
-        // If we reached the end of the list, we found a match.
-        if (head == nullptr) return true;
-        // If we reached the end of a tree branch but the list isn't finished.
-        if (node == nullptr) return false;
-        // If the values don't match, this path is invalid.
-        if (head->val != node->val) return false;
-        
-        // Recursively check left and right children for the next list node.
-        return checkPath(head->next, node->left) || checkPath(head->next, node->right);
-    }
-
     bool isSubPath(ListNode* head, TreeNode* root) {
-        // If the tree is empty, no path can exist.
-        if (root == nullptr) return false;
-
+        if (!root) return false;
         // Check if the path starts at the current root, 
         // or if it exists in the left or right subtrees.
-        return checkPath(head, root) || 
-               isSubPath(head, root->left) || 
-               isSubPath(head, root->right);
+        return isMatch(head, root) || isSubPath(head, root->left) || isSubPath(head, root->right);
+    }
+
+private:
+    bool isMatch(ListNode* head, TreeNode* root) {
+        // If we reached the end of the list, we found a match.
+        if (!head) return true;
+        // If we reached a leaf in the tree but the list isn't finished, no match.
+        if (!root) return false;
+        // If values don't match, this path is invalid.
+        if (head->val != root->val) return false;
+        
+        // Continue matching the next list element in either the left or right child.
+        return isMatch(head->next, root->left) || isMatch(head->next, root->right);
     }
 };
 # @lc code=end
