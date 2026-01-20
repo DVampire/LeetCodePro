@@ -8,44 +8,52 @@
 class Solution:
     def minLength(self, s: str, numOps: int) -> int:
         n = len(s)
-        orig = [int(c) for c in s]
         
-        def can_achieve(k: int) -> bool:
-            INF = 10**9
-            dp = [[[INF] * 2 for _ in range(k + 2)] for _ in range(n + 1)]
+        def check(length):
+            if length == 1:
+                # Check cost to make 010101...
+                cost1 = 0
+                for i in range(n):
+                    if i % 2 == 0:
+                        if s[i] != '0': cost1 += 1
+                    else:
+                        if s[i] != '1': cost1 += 1
+                
+                # Check cost to make 101010...
+                cost2 = 0
+                for i in range(n):
+                    if i % 2 == 0:
+                        if s[i] != '1': cost2 += 1
+                    else:
+                        if s[i] != '0': cost2 += 1
+                
+                return min(cost1, cost2) <= numOps
             
-            for c in [0, 1]:
-                cost = 1 if orig[0] != c else 0
-                dp[1][1][c] = cost
+            # For length >= 2, we calculate flips needed for each consecutive block
+            # A block of size L needs L // (length + 1) flips to ensure no sub-block > length
+            ops_needed = 0
+            i = 0
+            while i < n:
+                j = i
+                while j < n and s[j] == s[i]:
+                    j += 1
+                
+                run_length = j - i
+                ops_needed += run_length // (length + 1)
+                i = j
             
-            for i in range(1, n):
-                for prev_len in range(1, k + 1):
-                    for prev_c in [0, 1]:
-                        if dp[i][prev_len][prev_c] == INF:
-                            continue
-                        for new_c in [0, 1]:
-                            cost = 1 if orig[i] != new_c else 0
-                            if new_c == prev_c:
-                                new_len = prev_len + 1
-                                if new_len > k:
-                                    continue
-                            else:
-                                new_len = 1
-                            dp[i + 1][new_len][new_c] = min(dp[i + 1][new_len][new_c], dp[i][prev_len][prev_c] + cost)
-            
-            min_cost = INF
-            for ln in range(1, k + 1):
-                for c in [0, 1]:
-                    min_cost = min(min_cost, dp[n][ln][c])
-            return min_cost <= numOps
-        
+            return ops_needed <= numOps
+
         left, right = 1, n
-        while left < right:
+        ans = n
+        
+        while left <= right:
             mid = (left + right) // 2
-            if can_achieve(mid):
-                right = mid
+            if check(mid):
+                ans = mid
+                right = mid - 1
             else:
                 left = mid + 1
-        return left
-
+                
+        return ans
 # @lc code=end
