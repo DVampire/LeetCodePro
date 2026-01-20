@@ -10,23 +10,33 @@
 #     def __init__(self, val=0, next=None):
 #         self.val = val
 #         self.next = next
+import math
+
 class Solution:
     def insertGreatestCommonDivisors(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        def gcd(a: int, b: int) -> int:
-            while b:
-                a, b = b, a % b
-            return a
-        
+        # If the list has 0 or 1 node, no insertion is needed.
         if not head or not head.next:
             return head
         
-        prev = head
-        curr = head.next
-        while curr:
-            new_node = ListNode(gcd(prev.val, curr.val))
-            new_node.next = curr
-            prev.next = new_node
-            prev = curr
-            curr = curr.next
+        current = head
+        # Iterate while there is a next node to form a pair
+        while current and current.next:
+            val1 = current.val
+            val2 = current.next.val
+            
+            # Calculate GCD
+            gcd_val = math.gcd(val1, val2)
+            
+            # Create new node with GCD value
+            new_node = ListNode(gcd_val)
+            
+            # Insert new_node between current and current.next
+            new_node.next = current.next
+            current.next = new_node
+            
+            # Move current pointer to the next original node
+            # We skip the node we just inserted
+            current = new_node.next
+            
         return head
 # @lc code=end

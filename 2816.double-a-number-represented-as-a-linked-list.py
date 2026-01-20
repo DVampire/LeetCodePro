@@ -12,27 +12,22 @@
 #         self.next = next
 class Solution:
     def doubleIt(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        def reverse_ll(node: Optional[ListNode]) -> Optional[ListNode]:
-            prev = None
-            while node:
-                nxt = node.next
-                node.next = prev
-                prev = node
-                node = nxt
-            return prev
+        # If the head is greater than 4, doubling it will result in a carry
+        # that requires a new node at the front.
+        if head.val > 4:
+            head = ListNode(0, head)
         
-        rev = reverse_ll(head)
-        cur = rev
-        carry = 0
-        tail = None
-        while cur:
-            val = cur.val * 2 + carry
-            cur.val = val % 10
-            carry = val // 10
-            tail = cur
-            cur = cur.next
-        if carry:
-            tail.next = ListNode(carry)
-        return reverse_ll(rev)
-        
+        current = head
+        while current:
+            # Double the current value and take modulo 10
+            current.val = (current.val * 2) % 10
+            
+            # Check if the next node will generate a carry
+            # A carry is generated if the next node's value is > 4 (since 5*2=10)
+            if current.next and current.next.val > 4:
+                current.val += 1
+            
+            current = current.next
+            
+        return head
 # @lc code=end
