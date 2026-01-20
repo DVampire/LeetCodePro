@@ -4,75 +4,123 @@
 # [3435] Frequencies of Shortest Supersequences
 #
 
-from typing import List
-from collections import deque
-
 # @lc code=start
+from typing import List
+import collections
+
 class Solution:
     def supersequences(self, words: List[str]) -> List[List[int]]:
         all_chars = set()
         for w in words:
             all_chars.update(w)
-        letters = sorted(all_chars)
-        K = len(letters)
-        if K == 0:
+        char_list = sorted(all_chars)
+        m = len(char_list)
+        if m == 0:
             return []
-        char_to_idx = {c: i for i, c in enumerate(letters)}
-        words_idx = [[char_to_idx[c] for c in w] for w in words]
-        MAXN = 32
-        adj = [[] for _ in range(MAXN)]
-        min_L = float('inf')
-        candidates: List[List[int]] = []
-        for choice in range(1 << K):
-            # clear adj
-            for i in range(2 * K):
-                adj[i].clear()
-            num_doubles = 0
-            for i in range(K):
-                if choice & (1 << i):
-                    adj[2 * i].append(2 * i + 1)
-                    num_doubles += 1
-            this_L = K + num_doubles
-            # cross edges
-            for x, y in words_idx:
-                fx = 2 * x
-                ly = 2 * y + 1 if (choice & (1 << y)) else 2 * y
-                adj[fx].append(ly)
-            # num_included
-            num_included = K + num_doubles
-            # indeg
-            indeg = [0] * (2 * K)
-            for u in range(2 * K):
-                for v in adj[u]:
-                    indeg[v] += 1
-            # Kahn
-            q = deque()
-            for u in range(2 * K):
-                is_inc = (u % 2 == 0) or bool(choice & (1 << (u // 2)))
-                if is_inc and indeg[u] == 0:
-                    q.append(u)
+        ch_to_id = {ch: i for i, ch in enumerate(char_list)}
+        has_edge = [[False] * m for _ in range(m)]
+        for w in words:
+            x = ch_to_id[w[0]]
+            y = ch_to_id[w[1]]
+            has_edge[x][y] = True
+        min_req = [0] * m
+        neigh = [0] * m
+        for x in range(m):
+            has_self = has_edge[x][x]
+            has_out = False
+            has_in = False
+            for j in range(m):
+                if has_edge[x][j]:
+                    neigh[x] |= (1 << j)
+                    has_out = True
+                if has_edge[j][x]:
+                    has_in = True
+            if has_self:
+                min_req[x] = 2
+            elif has_out or has_in:
+                min_req[x] = 1
+        # precompute popcount
+        MAX = 1 << m
+        pop = [0] * MAX
+        for i in range(1, MAX):
+            pop[i] = pop[i >> 1] + (i & 1)
+        # precompute is_dag
+        is_dag = [False] * MAX
+        for smask in range(MAX):
+            indeg = [0] * m
+            for x in range(m):
+                if (smask & (1 << x)) == 0:
+                    continue
+                adj = neigh[x] & smask
+                for y in range(m):
+                    if adj & (1 << y):
+                        indeg[y] += 1
+            q = collections.deque()
+            for y in range(m):
+                if (smask & (1 << y)) and indeg[y] == 0:
+                    q.append(y)
             count = 0
             while q:
-                u = q.popleft()
+                x = q.popleft()
                 count += 1
-                for v in adj[u]:
-                    indeg[v] -= 1
-                    if indeg[v] == 0:
-                        is_inc_v = (v % 2 == 0) or bool(choice & (1 << (v // 2)))
-                        if is_inc_v:
-                            q.append(v)
-            if count == num_included:
-                # valid
+                adj = neigh[x] & smask
+                for y in range(m):
+                    if adj & (1 << y):
+                        indeg[y] -= 1
+                        if indeg[y] == 0:
+                            q.append(y)
+            is_dag[smask] = (count == pop[smask])
+        # find min_L
+        min_L = float('inf')
+        for dmask in range(MAX):
+            if not is_dag[dmask]:
+                continue
+            feasible = True
+            for c in range(m):
+                if dmask & (1 << c):
+                    if min_req[c] > 1:
+                        feasible = False
+                        break
+            if not feasible:
+                continue
+            num_singles = pop[dmask]
+            num_forced_out = 0
+            for c in range(m):
+                if (dmask & (1 << c)) == 0 and min_req[c] >= 1:
+                    num_forced_out += 1
+            L = num_singles + 2 * num_forced_out
+            if L < min_L:
+                min_L = L
+        # collect freqs at min_L
+        freq_set = set()
+        a_ord = ord('a')
+        for dmask in range(MAX):
+            if not is_dag[dmask]:
+                continue
+            feasible = True
+            for c in range(m):
+                if dmask & (1 << c):
+                    if min_req[c] > 1:
+                        feasible = False
+                        break
+            if not feasible:
+                continue
+            num_singles = pop[dmask]
+            num_forced_out = 0
+            for c in range(m):
+                if (dmask & (1 << c)) == 0 and min_req[c] >= 1:
+                    num_forced_out += 1
+            L = num_singles + 2 * num_forced_out
+            if L == min_L:
                 freq = [0] * 26
-                for i in range(K):
-                    cnt = 2 if (choice & (1 << i)) else 1
-                    ci = ord(letters[i]) - ord('a')
-                    freq[ci] = cnt
-                if this_L < min_L:
-                    min_L = this_L
-                    candidates = [freq]
-                elif this_L == min_L:
-                    candidates.append(freq)
-        return candidates
+                for c in range(m):
+                    ch_idx = ord(char_list[c]) - a_ord
+                    if dmask & (1 << c):
+                        freq[ch_idx] = 1
+                    elif min_req[c] >= 1:
+                        freq[ch_idx] = 2
+                freq_set.add(tuple(freq))
+        ans = [list(t) for t in freq_set]
+        return ans
 
 # @lc code=end
