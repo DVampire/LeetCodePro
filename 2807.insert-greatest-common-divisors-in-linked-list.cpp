@@ -26,20 +26,15 @@ public:
 
         ListNode* curr = head;
         while (curr != nullptr && curr->next != nullptr) {
-            int v1 = curr->val;
-            int v2 = curr->next->val;
+            int commonDivisor = std::gcd(curr->val, curr->next->val);
             
-            // Calculate GCD using std::gcd (available in <numeric> since C++17)
-            int commonDivisor = std::gcd(v1, v2);
+            // Create a new node with the GCD and point it to the next node
+            ListNode* newNode = new ListNode(commonDivisor, curr->next);
             
-            // Create the new node
-            ListNode* newNode = new ListNode(commonDivisor);
-            
-            // Insert newNode between curr and curr->next
-            newNode->next = curr->next;
+            // Link current node to the new node
             curr->next = newNode;
             
-            // Skip the newly inserted node and move to the next original node
+            // Advance curr to the node after the newly inserted node
             curr = newNode->next;
         }
 

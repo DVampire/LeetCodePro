@@ -15,27 +15,31 @@
  *     ListNode(int x, ListNode *next) : val(x), next(next) {}
  * };
  */
-#include <unordered_set>
 #include <vector>
+#include <unordered_set>
 
 using namespace std;
 
 class Solution {
 public:
     ListNode* modifiedList(vector<int>& nums, ListNode* head) {
-        // Use a hash set for O(1) lookups
-        unordered_set<int> st(nums.begin(), nums.end());
+        // Convert vector to unordered_set for O(1) lookups
+        unordered_set<int> numSet(nums.begin(), nums.end());
         
-        // Use a dummy node to handle head removal easily
-        ListNode dummy(0, head);
+        // Create a dummy node to simplify head deletion logic
+        ListNode dummy(0);
+        dummy.next = head;
         ListNode* curr = &dummy;
         
+        // Traverse the list
         while (curr->next != nullptr) {
-            if (st.count(curr->next->val)) {
-                // The next node's value is in nums, so skip it
+            if (numSet.count(curr->next->val)) {
+                // If the next node's value is in nums, skip it
+                ListNode* temp = curr->next;
                 curr->next = curr->next->next;
+                // In a real environment, you might delete temp here: delete temp;
             } else {
-                // The next node's value is not in nums, move forward
+                // Otherwise, move current pointer forward
                 curr = curr->next;
             }
         }
