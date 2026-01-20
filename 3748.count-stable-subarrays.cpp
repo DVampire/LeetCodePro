@@ -5,60 +5,73 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     vector<long long> countStableSubarrays(vector<int>& nums, vector<vector<int>>& queries) {
         int n = nums.size();
-        if (n == 0) return {};
-
-        // g[i] is the smallest index such that nums[g[i]...i] is non-decreasing
-        vector<int> g(n);
-        g[0] = 0;
-        for (int i = 1; i < n; ++i) {
-            if (nums[i] >= nums[i - 1]) {
-                g[i] = g[i - 1];
-            } else {
-                g[i] = i;
+        // B stores indices i such that nums[i] > nums[i+1]
+        // These are the split points where stable segments break.
+        vector<int> B;
+        for (int i = 0; i < n - 1; ++i) {
+            if (nums[i] > nums[i+1]) {
+                B.push_back(i);
             }
         }
 
-        // Prefix sums of g to answer range sum queries on g
-        vector<long long> prefG(n + 1, 0);
-        for (int i = 0; i < n; ++i) {
-            prefG[i + 1] = prefG[i] + (long long)g[i];
+        int m = B.size();
+        // P stores prefix sums of squared lengths of full segments ending at B[i].
+        // The segment corresponding to B[i] spans from B[i-1] + 1 to B[i].
+        vector<long long> P(m);
+        for (int i = 0; i < m; ++i) {
+            long long prev_b = (i == 0) ? -1 : B[i-1];
+            long long len = B[i] - prev_b;
+            long long sq = len * len;
+            P[i] = (i == 0) ? sq : (P[i-1] + sq);
         }
 
-        int q = queries.size();
-        vector<long long> ans(q);
-        for (int i = 0; i < q; ++i) {
-            int L = queries[i][0];
-            int R = queries[i][1];
+        vector<long long> ans;
+        ans.reserve(queries.size());
 
-            // Since g is non-decreasing, find the largest k in [L, R] such that g[k] <= L
-            // This is equivalent to finding the first index > L and subtracting 1
-            auto it = upper_bound(g.begin() + L, g.begin() + R + 1, L);
-            int k = (int)(it - g.begin()) - 1;
-
-            // Total = sum_{j=L}^R (j - max(L, g[j]) + 1)
-            // Total = sum_{j=L}^R (j + 1) - sum_{j=L}^R max(L, g[j])
+        for (const auto& q : queries) {
+            int L = q[0];
+            int R = q[1];
             
-            // S1 = sum_{j=L}^R (j + 1)
-            long long num_terms = (long long)R - L + 1;
-            long long S1 = num_terms * (L + R + 2) / 2;
+            // Find first bad index >= L. This is the first split inside [L, R].
+            auto it_L = lower_bound(B.begin(), B.end(), L);
+            int idx_L = distance(B.begin(), it_L);
 
-            // S2 = sum_{j=L}^R max(L, g[j])
-            // For j in [L, k], g[j] <= L, so max(L, g[j]) = L
-            // For j in [k+1, R], g[j] > L, so max(L, g[j]) = g[j]
-            long long S2 = (long long)(k - L + 1) * L + (prefG[R + 1] - prefG[k + 1]);
+            // Find last bad index < R. This is the last split inside [L, R].
+            // We search for R and go back one step.
+            auto it_R_bound = lower_bound(B.begin(), B.end(), R);
+            int idx_R = distance(B.begin(), it_R_bound) - 1;
 
-            ans[i] = S1 - S2;
+            // If no split points in [L, R-1], the whole range is stable.
+            if (idx_L > idx_R) {
+                long long len = R - L + 1;
+                ans.push_back(len * (len + 1) / 2);
+            } else {
+                // Calculate sum of squares of lengths of stable pieces.
+                // 1. Left piece: [L, B[idx_L]]
+                long long left_len = B[idx_L] - L + 1;
+                
+                // 2. Right piece: [B[idx_R] + 1, R]
+                long long right_len = R - B[idx_R];
+                
+                // 3. Middle pieces: Defined by bad indices from idx_L + 1 to idx_R.
+                // Their squared lengths are stored in P.
+                long long mid_sq_sum = 0;
+                if (idx_R > idx_L) {
+                    mid_sq_sum = P[idx_R] - P[idx_L];
+                }
+
+                long long total_sq = left_len * left_len + right_len * right_len + mid_sq_sum;
+                long long total_len = R - L + 1;
+                
+                // Sum 1..k = k(k+1)/2 = (k^2 + k)/2
+                // Sum over all segments = (Sum(len^2) + Sum(len)) / 2
+                ans.push_back((total_sq + total_len) / 2);
+            }
         }
-
         return ans;
     }
 };

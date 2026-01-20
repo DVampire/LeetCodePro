@@ -1,66 +1,67 @@
-#include <vector>
-#include <cmath>
+#
+# @lc app=leetcode id=3757 lang=cpp
+#
+# [3757] Number of Effective Subsequences
+#
 
-using namespace std;
-
+# @lc code=start
 class Solution {
 public:
     int countEffective(vector<int>& nums) {
         int n = nums.size();
-        int S = 0;
-        for (int x : nums) S |= x;
-        
-        if (S == 0) return 0;
+        int total_or = 0;
+        for (int x : nums) total_or |= x;
 
-        const int MOD = 1e9 + 7;
-        
-        // Find the number of bits needed to cover S
-        int max_bits = 0;
-        if (S > 0) {
-            max_bits = 32 - __builtin_clz(S);
-        }
-        int W = 1 << max_bits;
-
-        // freq[mask] will eventually store the number of elements in nums that are submasks of 'mask'
-        vector<int> freq(W, 0);
-        for (int x : nums) freq[x]++;
+        // The maximum value is 10^6, so 2^20 is sufficient (approx 10^6).
+        const int LIMIT = 1 << 20;
+        vector<int> count_submask(LIMIT, 0);
+        for (int x : nums) count_submask[x]++;
 
         // SOS DP (Sum Over Subsets)
-        for (int i = 0; i < max_bits; ++i) {
-            for (int mask = 0; mask < W; ++mask) {
+        // After this, count_submask[mask] will store the number of elements in nums 
+        // that are submasks of 'mask'.
+        for (int i = 0; i < 20; ++i) {
+            for (int mask = 0; mask < LIMIT; ++mask) {
                 if (mask & (1 << i)) {
-                    freq[mask] += freq[mask ^ (1 << i)];
+                    count_submask[mask] += count_submask[mask ^ (1 << i)];
                 }
             }
         }
 
-        // Precompute powers of 2
-        vector<int> pow2(n + 1);
+        long long MOD = 1e9 + 7;
+        
+        // Precompute powers of 2 modulo MOD
+        vector<long long> pow2(n + 1);
         pow2[0] = 1;
         for (int i = 1; i <= n; ++i) {
-            pow2[i] = (pow2[i - 1] * 2LL) % MOD;
+            pow2[i] = (pow2[i - 1] * 2) % MOD;
         }
 
-        // Inclusion-Exclusion Principle
-        // We want to find the number of subsets R such that OR(R) is a proper submask of S.
-        // This is equivalent to finding the size of the union of sets A_k,
-        // where A_k is the set of subsets R such that bit k is not set in OR(R).
-        long long ans = 0;
-        int s_pop = __builtin_popcount(S);
+        long long K = 0;
+        int total_set_bits = __builtin_popcount(total_or);
 
-        // Iterate over all submasks t of S
-        for (int t = S; ; t = (t - 1) & S) {
-            if (t != S) {
-                int k_pop = s_pop - __builtin_popcount(t);
-                if (k_pop % 2 == 1) {
-                    ans = (ans + pow2[freq[t]]) % MOD;
+        // Inclusion-Exclusion Principle (PIE)
+        // We want to count subsets B such that OR(B) == total_or.
+        // Formula: Sum_{mask <= total_or} (-1)^(|total_or| - |mask|) * 2^(count of nums subset of mask)
+        for (int mask = 0; mask < LIMIT; ++mask) {
+            // We only care about masks that are submasks of total_or
+            if ((mask & total_or) == mask) {
+                long long ways = pow2[count_submask[mask]];
+                int mask_set_bits = __builtin_popcount(mask);
+                
+                if ((total_set_bits - mask_set_bits) % 2 == 1) {
+                    K = (K - ways + MOD) % MOD;
                 } else {
-                    ans = (ans - pow2[freq[t]] + MOD) % MOD;
+                    K = (K + ways) % MOD;
                 }
             }
-            if (t == 0) break;
         }
 
-        return (int)ans;
+        // The answer is Total Subsequences - Subsets with OR equal to total_or
+        long long total_subsequences = pow2[n];
+        long long ans = (total_subsequences - K + MOD) % MOD;
+        
+        return ans;
     }
 };
+# @lc code=end
