@@ -1,3 +1,5 @@
+#include <deque>
+
 #
 # @lc app=leetcode id=1670 lang=cpp
 #
@@ -5,14 +7,12 @@
 #
 
 # @lc code=start
-#include <deque>
-
 class FrontMiddleBackQueue {
 private:
     std::deque<int> left;
     std::deque<int> right;
 
-    // Maintain invariant: left.size() <= right.size() <= left.size() + 1
+    // Maintain invariant: left.size() == right.size() OR right.size() == left.size() + 1
     void balance() {
         if (left.size() > right.size()) {
             right.push_front(left.back());
@@ -33,11 +33,13 @@ public:
     }
     
     void pushMiddle(int val) {
-        if (left.size() == right.size()) {
-            right.push_front(val);
-        } else {
+        if (left.size() < right.size()) {
             left.push_back(val);
+        } else {
+            right.push_front(val);
         }
+        // No balance needed: if sizes were equal, right is now +1. 
+        // If right was +1, they are now equal.
     }
     
     void pushBack(int val) {
@@ -46,7 +48,7 @@ public:
     }
     
     int popFront() {
-        if (left.empty() && right.empty()) return -1;
+        if (right.empty()) return -1;
         int val;
         if (left.empty()) {
             val = right.front();
@@ -60,7 +62,7 @@ public:
     }
     
     int popMiddle() {
-        if (left.empty() && right.empty()) return -1;
+        if (right.empty()) return -1;
         int val;
         if (left.size() == right.size()) {
             val = left.back();
@@ -69,7 +71,8 @@ public:
             val = right.front();
             right.pop_front();
         }
-        // Invariant is naturally maintained by logic
+        // No balance needed: if sizes were equal, right is now +1. 
+        // If right was +1, they are now equal.
         return val;
     }
     
