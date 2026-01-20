@@ -5,59 +5,64 @@
 #
 
 # @lc code=start
+import math
+
 class Solution:
     def maxSubstringLength(self, s: str, k: int) -> bool:
-        if k == 0:
-            return True
-        
         n = len(s)
-        
-        # Precompute character frequencies in the entire string
-        total_count = [0] * 26
-        for char in s:
-            total_count[ord(char) - ord('a')] += 1
-        
-        # Find all special substrings
-        special_intervals = []
-        
-        # For each possible substring
-        for i in range(n):
-            # Character count in current substring
-            substring_count = [0] * 26
-            for j in range(i, n):
-                # Add current character to substring count
-                substring_count[ord(s[j]) - ord('a')] += 1
-                
-                # Check if this substring is special
-                # A substring is special if every character in it appears only within this substring
-                is_special = True
-                for c in range(26):
-                    # If character appears in substring but also appears outside
-                    if substring_count[c] > 0 and substring_count[c] != total_count[c]:
-                        is_special = False
-                        break
-                
-                # Also, substring cannot be the entire string
-                if is_special and (j - i + 1) < n:
-                    special_intervals.append((i, j))
-        
-        # Now we need to find maximum number of disjoint intervals we can select
-        if not special_intervals:
+        if n == 0:
             return k == 0
-        
-        # Sort intervals by end position for greedy selection
-        special_intervals.sort(key=lambda x: x[1])
-        
-        # Greedily select disjoint intervals
-        count = 0
-        last_end = -1
-        
-        for start, end in special_intervals:
-            if start > last_end:  # No overlap
-                count += 1
-                last_end = end
-                if count >= k:
-                    return True
-        
-        return count >= k
+        L = [-1] * 26
+        R = [-1] * 26
+        for i in range(n):
+            c = ord(s[i]) - ord('a')
+            if L[c] == -1:
+                L[c] = i
+        for i in range(n - 1, -1, -1):
+            c = ord(s[i]) - ord('a')
+            if R[c] == -1:
+                R[c] = i
+        starts = [L[c] for c in range(26) if L[c] != -1]
+        LB = [0] * n
+        RB = [0] * n
+        for i in range(n):
+            c = ord(s[i]) - ord('a')
+            LB[i] = L[c]
+            RB[i] = R[c]
+        # Sparse table for min LB
+        logn = int(math.log2(n)) + 1 if n > 0 else 1
+        st_min = [[0] * logn for _ in range(n)]
+        st_max = [[0] * logn for _ in range(n)]
+        for i in range(n):
+            st_min[i][0] = LB[i]
+            st_max[i][0] = RB[i]
+        for j in range(1, logn):
+            for i in range(n - (1 << j) + 1):
+                st_min[i][j] = min(st_min[i][j - 1], st_min[i + (1 << (j - 1))][j - 1])
+                st_max[i][j] = max(st_max[i][j - 1], st_max[i + (1 << (j - 1))][j - 1])
+        def query_min(left: int, right: int) -> int:
+            if left > right:
+                return float('inf')
+            length = right - left + 1
+            k = int(math.log2(length))
+            return min(st_min[left][k], st_min[right - (1 << k) + 1][k])
+        def query_max(left: int, right: int) -> int:
+            if left > right:
+                return float('-inf')
+            length = right - left + 1
+            k = int(math.log2(length))
+            return max(st_max[left][k], st_max[right - (1 << k) + 1][k])
+        dp = [0] * (n + 1)
+        for i in range(1, n + 1):
+            dp[i] = dp[i - 1]
+            endd = i - 1
+            for j in starts:
+                if j > endd:
+                    continue
+                minlb = query_min(j, endd)
+                maxrb = query_max(j, endd)
+                if minlb >= j and maxrb <= endd and not (j == 0 and endd == n - 1):
+                    dp[i] = max(dp[i], dp[j] + 1)
+        return dp[n] >= k
+
 # @lc code=end
