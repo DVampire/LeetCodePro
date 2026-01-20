@@ -15,35 +15,34 @@ class Solution {
 public:
     int totalSteps(vector<int>& nums) {
         int n = nums.size();
-        int ans = 0;
-        // Stack stores pairs of {value, steps_to_remove}
-        stack<pair<int, int>> s;
-        
+        // dp[i] stores the number of steps to remove nums[i]
+        vector<int> dp(n, 0);
+        stack<int> st;
+        int maxSteps = 0;
+
         for (int i = 0; i < n; ++i) {
-            int current_steps = 0;
-            // While current element is greater than or equal to the top of the stack,
-            // it means the current element 'survives' longer than the top element.
-            // We need to account for the time it took to remove those elements.
-            while (!s.empty() && nums[i] >= s.top().first) {
-                current_steps = max(current_steps, s.top().second);
-                s.pop();
+            int curMax = 0;
+            // While the current element is greater than or equal to the top of the stack,
+            // it means the current element 'blocks' the top element or comes after it.
+            // The top element (and anything smaller before it) must be resolved.
+            // We take the max steps from the elements we pop.
+            while (!st.empty() && nums[st.top()] <= nums[i]) {
+                curMax = max(curMax, dp[st.top()]);
+                st.pop();
+            }
+
+            // If the stack is not empty, it means there is a previous element strictly greater than nums[i].
+            // nums[i] will be removed by that element.
+            // It takes 1 step + the max steps of any smaller elements between them.
+            if (!st.empty()) {
+                dp[i] = curMax + 1;
+                maxSteps = max(maxSteps, dp[i]);
             }
             
-            // If the stack is empty, there's no element to the left larger than nums[i].
-            // So nums[i] will never be removed.
-            if (s.empty()) {
-                current_steps = 0;
-            } else {
-                // Otherwise, it is eventually removed by the element currently at the top.
-                // It takes one more step than the maximum steps of elements removed between them.
-                current_steps++;
-            }
-            
-            ans = max(ans, current_steps);
-            s.push({nums[i], current_steps});
+            st.push(i);
         }
-        
-        return ans;
+
+        return maxSteps;
     }
 };
 # @lc code=end

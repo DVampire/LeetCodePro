@@ -21,7 +21,7 @@
  *     int val;
  *     TreeNode *left;
  *     TreeNode *right;
- *     TreeNode() : val(0), left(nullptr), right(nullptr) {} 
+ *     TreeNode() : val(0), left(nullptr), right(nullptr) {}
  *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
  *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
  * };
@@ -30,21 +30,22 @@ class Solution {
 public:
     bool isSubPath(ListNode* head, TreeNode* root) {
         if (!root) return false;
-        // Check if the path starts at the current root, or search in left/right subtrees
-        return checkPath(head, root) || isSubPath(head, root->left) || isSubPath(head, root->right);
+        // Check if the path starts at the current root, or in the left subtree, or in the right subtree
+        return dfs(head, root) || isSubPath(head, root->left) || isSubPath(head, root->right);
     }
 
 private:
-    bool checkPath(ListNode* head, TreeNode* node) {
-        // If we've reached the end of the linked list, we found a match
+    // Helper function to check if the linked list path matches starting from the current tree node
+    bool dfs(ListNode* head, TreeNode* node) {
+        // If we reached the end of the linked list, we found a match
         if (!head) return true;
-        // If we reach a null tree node but the list isn't finished, no match
+        // If we reached the end of the tree path without finishing the list, no match
         if (!node) return false;
         // If values don't match, this path is invalid
         if (head->val != node->val) return false;
         
-        // Continue checking the next node in the list in both children of the tree node
-        return checkPath(head->next, node->left) || checkPath(head->next, node->right);
+        // Continue matching the next list node with either left or right child
+        return dfs(head->next, node->left) || dfs(head->next, node->right);
     }
 };
 # @lc code=end

@@ -1,5 +1,3 @@
-#include <deque>
-
 #
 # @lc app=leetcode id=1670 lang=cpp
 #
@@ -7,17 +5,20 @@
 #
 
 # @lc code=start
+#include <deque>
+
 class FrontMiddleBackQueue {
 private:
     std::deque<int> left;
     std::deque<int> right;
 
-    // Maintain invariant: left.size() <= right.size() <= left.size() + 1
+    // Helper function to maintain balance: 
+    // We want left.size() == right.size() or left.size() == right.size() + 1
     void balance() {
-        if (left.size() > right.size()) {
+        if (left.size() > right.size() + 1) {
             right.push_front(left.back());
             left.pop_back();
-        } else if (right.size() > left.size() + 1) {
+        } else if (left.size() < right.size()) {
             left.push_back(right.front());
             right.pop_front();
         }
@@ -34,11 +35,15 @@ public:
     }
     
     void pushMiddle(int val) {
-        if (left.size() == right.size()) {
-            right.push_front(val);
-        } else {
-            left.push_back(val);
+        // If sizes are equal, the new element belongs to left (becoming the new middle)
+        // If left > right, we move the current middle (left.back) to right, then add to left.
+        if (left.size() > right.size()) {
+            right.push_front(left.back());
+            left.pop_back();
         }
+        left.push_back(val);
+        // No explicit balance needed as we handled the shift manually, 
+        // but calling it is safe.
     }
     
     void pushBack(int val) {
@@ -47,9 +52,12 @@ public:
     }
     
     int popFront() {
-        if (right.empty()) return -1;
+        if (left.empty() && right.empty()) return -1;
         int val;
         if (left.empty()) {
+            // This case happens if only right has elements (shouldn't happen with our balance invariant unless total size is 0, handled above)
+            // However, strictly speaking if left is empty, right must be empty too based on invariant.
+            // But for safety/logic flow:
             val = right.front();
             right.pop_front();
         } else {
@@ -61,23 +69,25 @@ public:
     }
     
     int popMiddle() {
-        if (right.empty()) return -1;
-        int val;
-        if (left.size() == right.size()) {
-            val = left.back();
-            left.pop_back();
-        } else {
-            val = right.front();
-            right.pop_front();
-        }
+        if (left.empty() && right.empty()) return -1;
+        // The middle element is always at left.back() due to our invariant
+        // (left.size() >= right.size())
+        int val = left.back();
+        left.pop_back();
         balance();
         return val;
     }
     
     int popBack() {
-        if (right.empty()) return -1;
-        int val = right.back();
-        right.pop_back();
+        if (left.empty() && right.empty()) return -1;
+        int val;
+        if (right.empty()) {
+            val = left.back();
+            left.pop_back();
+        } else {
+            val = right.back();
+            right.pop_back();
+        }
         balance();
         return val;
     }
