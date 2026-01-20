@@ -3,7 +3,6 @@
 #
 # [2058] Find the Minimum and Maximum Number of Nodes Between Critical Points
 #
-
 # @lc code=start
 /**
  * Definition for singly-linked list.
@@ -18,46 +17,35 @@
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        // Need at least 3 nodes to have a critical point (prev, curr, next)
-        if (!head || !head->next || !head->next->next) {
-            return {-1, -1};
-        }
+        if (!head || !head->next || !head->next->next) return {-1, -1};
 
         ListNode* prev = head;
-        ListNode* curr = head->next;
-        int currentIndex = 1; // Index of curr (head is 0)
-        
-        int firstCriticalIndex = -1;
-        int lastCriticalIndex = -1;
-        int minDistance = INT_MAX;
+        ListNode* cur = head->next;
+        int idx = 2; // 1-based index of cur
 
-        // Iterate until curr is the last node (curr->next is null)
-        while (curr->next) {
-            ListNode* next = curr->next;
-            
-            // Check for local maxima or local minima
-            if ((curr->val > prev->val && curr->val > next->val) || 
-                (curr->val < prev->val && curr->val < next->val)) {
-                
-                if (firstCriticalIndex == -1) {
-                    firstCriticalIndex = currentIndex;
-                } else {
-                    minDistance = min(minDistance, currentIndex - lastCriticalIndex);
-                }
-                lastCriticalIndex = currentIndex;
+        int firstCrit = -1;
+        int prevCrit = -1;
+        int minDist = INT_MAX;
+
+        while (cur && cur->next) {
+            ListNode* nxt = cur->next;
+            bool isMax = (cur->val > prev->val) && (cur->val > nxt->val);
+            bool isMin = (cur->val < prev->val) && (cur->val < nxt->val);
+
+            if (isMax || isMin) {
+                if (firstCrit == -1) firstCrit = idx;
+                if (prevCrit != -1) minDist = min(minDist, idx - prevCrit);
+                prevCrit = idx;
             }
 
-            prev = curr;
-            curr = next;
-            currentIndex++;
+            prev = cur;
+            cur = nxt;
+            idx++;
         }
 
-        if (minDistance == INT_MAX) {
-            return {-1, -1};
-        }
-
-        int maxDistance = lastCriticalIndex - firstCriticalIndex;
-        return {minDistance, maxDistance};
+        if (firstCrit == -1 || prevCrit == firstCrit) return {-1, -1};
+        int maxDist = prevCrit - firstCrit;
+        return {minDist, maxDist};
     }
 };
 # @lc code=end

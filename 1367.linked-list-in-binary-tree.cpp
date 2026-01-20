@@ -1,9 +1,10 @@
+#include <vector>
+
 #
 # @lc app=leetcode id=1367 lang=cpp
 #
 # [1367] Linked List in Binary Tree
 #
-
 # @lc code=start
 /**
  * Definition for singly-linked list.
@@ -29,23 +30,34 @@
 class Solution {
 public:
     bool isSubPath(ListNode* head, TreeNode* root) {
-        if (!root) return false;
-        // Check if the path starts at the current root, or in the left subtree, or in the right subtree
-        return dfs(head, root) || isSubPath(head, root->left) || isSubPath(head, root->right);
-    }
+        std::vector<int> pat;
+        for (ListNode* p = head; p; p = p->next) pat.push_back(p->val);
+        int m = (int)pat.size();
 
-private:
-    // Helper function to check if the linked list path matches starting from the current tree node
-    bool dfs(ListNode* head, TreeNode* node) {
-        // If we reached the end of the linked list, we found a match
-        if (!head) return true;
-        // If we reached the end of the tree path without finishing the list, no match
-        if (!node) return false;
-        // If values don't match, this path is invalid
-        if (head->val != node->val) return false;
-        
-        // Continue matching the next list node with either left or right child
-        return dfs(head->next, node->left) || dfs(head->next, node->right);
+        // Build KMP LPS array
+        std::vector<int> lps(m, 0);
+        for (int i = 1, len = 0; i < m; ) {
+            if (pat[i] == pat[len]) {
+                lps[i++] = ++len;
+            } else if (len > 0) {
+                len = lps[len - 1];
+            } else {
+                lps[i++] = 0;
+            }
+        }
+
+        // DFS with KMP state
+        auto dfs = [&](auto&& self, TreeNode* node, int j) -> bool {
+            if (!node) return false;
+
+            while (j > 0 && node->val != pat[j]) j = lps[j - 1];
+            if (node->val == pat[j]) ++j;
+            if (j == m) return true;
+
+            return self(self, node->left, j) || self(self, node->right, j);
+        };
+
+        return dfs(dfs, root, 0);
     }
 };
 # @lc code=end
