@@ -3,6 +3,7 @@
 #
 # [1367] Linked List in Binary Tree
 #
+
 # @lc code=start
 # Definition for singly-linked list.
 # class ListNode:
@@ -17,30 +18,19 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        if not head:
-            return True
-        if not root:
-            return False
+        def check(node: Optional[TreeNode], ln: Optional[ListNode]) -> bool:
+            if not ln:
+                return True
+            if not node or node.val != ln.val:
+                return False
+            return check(node.left, ln.next) or check(node.right, ln.next)
         
-        # Check if there's a path starting from current node
-        # or check in left or right subtrees
-        return (self.dfs(head, root) or 
-                self.isSubPath(head, root.left) or 
-                self.isSubPath(head, root.right))
-    
-    def dfs(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        # If we've reached the end of the linked list, we found a match
-        if not head:
-            return True
-        # If we've reached the end of the tree path but not the list, no match
-        if not root:
-            return False
+        def dfs(node: Optional[TreeNode]) -> bool:
+            if not node:
+                return False
+            if check(node, head):
+                return True
+            return dfs(node.left) or dfs(node.right)
         
-        # If current values don't match, no match
-        if head.val != root.val:
-            return False
-        
-        # Continue checking the next node in the list against children in the tree
-        return (self.dfs(head.next, root.left) or 
-                self.dfs(head.next, root.right))
+        return dfs(root)
 # @lc code=end

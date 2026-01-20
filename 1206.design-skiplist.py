@@ -1,89 +1,64 @@
+import random
+
 #
 # @lc app=leetcode id=1206 lang=python3
 #
 # [1206] Design Skiplist
 #
-import random
 
 # @lc code=start
-class Node:
-    def __init__(self, val, levels):
-        self.val = val
-        # Array to hold forward pointers for each level
-        self.forward = [None] * levels
-
 class Skiplist:
+
+    MAX_LVL = 16
+    P = 0.5
+
+    class Node:
+        def __init__(self, val: int, max_lvl: int):
+            self.val = val
+            self.next = [None] * max_lvl
+
     def __init__(self):
-        self.max_levels = 16
-        self.probability = 0.5
-        # Create head node with value -1 (smaller than any possible input)
-        self.head = Node(-1, self.max_levels)
-    
-    def _random_level(self):
-        """Generate random level for a new node"""
-        level = 1
-        while random.random() < self.probability and level < self.max_levels:
-            level += 1
-        return level
-    
+        self.head = self.Node(float('-inf'), self.MAX_LVL)
+
+    def _random_level(self) -> int:
+        lvl = 1
+        while random.random() < self.P and lvl < self.MAX_LVL:
+            lvl += 1
+        return lvl
+
     def search(self, target: int) -> bool:
-        current = self.head
-        
-        # Start from highest level and work down
-        for level in range(self.max_levels - 1, -1, -1):
-            # Move forward while next node is smaller than target
-            while current.forward[level] and current.forward[level].val < target:
-                current = current.forward[level]
-        
-        # Move to the next node at base level
-        current = current.forward[0]
-        
-        # Check if we found the target
-        return current and current.val == target
-    
+        cur = self.head
+        for lvl in range(self.MAX_LVL - 1, -1, -1):
+            while cur.next[lvl] is not None and cur.next[lvl].val < target:
+                cur = cur.next[lvl]
+        return cur.next[0] is not None and cur.next[0].val == target
+
     def add(self, num: int) -> None:
-        # Array to store predecessors at each level
-        update = [None] * self.max_levels
-        current = self.head
-        
-        # Find the position to insert at each level
-        for level in range(self.max_levels - 1, -1, -1):
-            while current.forward[level] and current.forward[level].val < num:
-                current = current.forward[level]
-            update[level] = current
-        
-        # Create new node with random level
-        new_level = self._random_level()
-        new_node = Node(num, new_level)
-        
-        # Insert the new node at each of its levels
-        for level in range(new_level):
-            new_node.forward[level] = update[level].forward[level]
-            update[level].forward[level] = new_node
-    
+        lvl = self._random_level()
+        new_node = self.Node(num, self.MAX_LVL)
+        cur = self.head
+        for i in range(self.MAX_LVL - 1, -1, -1):
+            while cur.next[i] is not None and cur.next[i].val < num:
+                cur = cur.next[i]
+            if i < lvl:
+                new_node.next[i] = cur.next[i]
+                cur.next[i] = new_node
+
     def erase(self, num: int) -> bool:
-        # Array to store predecessors at each level
-        update = [None] * self.max_levels
-        current = self.head
-        
-        # Find the node to delete at each level
-        for level in range(self.max_levels - 1, -1, -1):
-            while current.forward[level] and current.forward[level].val < num:
-                current = current.forward[level]
-            update[level] = current
-        
-        # Move to the node to delete (if it exists)
-        current = current.forward[0]
-        
-        # If node doesn't exist or value doesn't match, return False
-        if not current or current.val != num:
+        cur = self.head
+        update = [None] * self.MAX_LVL
+        for lvl in range(self.MAX_LVL - 1, -1, -1):
+            while cur.next[lvl] is not None and cur.next[lvl].val < num:
+                cur = cur.next[lvl]
+            update[lvl] = cur
+        if update[0].next[0] is None or update[0].next[0].val != num:
             return False
-        
-        # Remove the node from all levels where it appears
-        for level in range(len(current.forward)):
-            update[level].forward[level] = current.forward[level]
-        
+        node = update[0].next[0]
+        for lvl in range(self.MAX_LVL):
+            if update[lvl].next[lvl] == node:
+                update[lvl].next[lvl] = node.next[lvl]
         return True
+
 
 # Your Skiplist object will be instantiated and called as such:
 # obj = Skiplist()
