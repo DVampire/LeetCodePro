@@ -6,61 +6,46 @@
 
 # @lc code=start
 from typing import List
-from collections import deque
 
 class Solution:
     def subtreeInversionSum(self, edges: List[List[int]], nums: List[int], k: int) -> int:
         n = len(nums)
-        
-        # Build adjacency list
         adj = [[] for _ in range(n)]
-        for u, v in edges:
-            adj[u].append(v)
-            adj[v].append(u)
+        for a, b in edges:
+            adj[a].append(b)
+            adj[b].append(a)
         
-        # Build tree structure using BFS from root
-        children = [[] for _ in range(n)]
-        visited = [False] * n
-        queue = deque([0])
-        visited[0] = True
-        bfs_order = []
+        self.dp = [[0] * k for _ in range(n)]
+        self.nums = nums
+        self.k = k
         
-        while queue:
-            node = queue.popleft()
-            bfs_order.append(node)
-            for neighbor in adj[node]:
-                if not visited[neighbor]:
-                    visited[neighbor] = True
-                    children[node].append(neighbor)
-                    queue.append(neighbor)
+        def dfs(u: int, par: int) -> None:
+            children = [v for v in adj[u] if v != par]
+            for c in children:
+                dfs(c, u)
+            
+            for m in range(self.k):
+                # Not inverting u
+                m_child_no = max(0, m - 1)
+                sum_child_no = 0
+                for c in children:
+                    sum_child_no += self.dp[c][m_child_no]
+                contrib_no = self.nums[u] + sum_child_no
+                
+                max_val = contrib_no
+                
+                # Inverting u, only if m == 0
+                if m == 0:
+                    m_child_yes = max(0, self.k - 1)
+                    sum_child_yes = 0
+                    for c in children:
+                        sum_child_yes += self.dp[c][m_child_yes]
+                    contrib_yes = -self.nums[u] - sum_child_yes
+                    max_val = max(contrib_no, contrib_yes)
+                
+                self.dp[u][m] = max_val
         
-        # Process in reverse BFS order (leaves first)
-        process_order = bfs_order[::-1]
-        
-        # DP table: dp[node][d][flip]
-        # d: distance to closest inverted ancestor (0 to k, k means can invert)
-        # flip: 0 or 1 (parity of inversions from ancestors)
-        dp = [[[0, 0] for _ in range(k + 1)] for _ in range(n)]
-        
-        for node in process_order:
-            for d in range(k + 1):
-                for flip in range(2):
-                    sign = -1 if flip else 1
-                    new_d = min(d + 1, k)
-                    
-                    # Option 1: Don't invert this node
-                    result1 = sign * nums[node]
-                    for child in children[node]:
-                        result1 += dp[child][new_d][flip]
-                    
-                    # Option 2: Invert this node (only if d >= k)
-                    if d >= k:
-                        result2 = -sign * nums[node]
-                        for child in children[node]:
-                            result2 += dp[child][1][1 - flip]
-                        dp[node][d][flip] = max(result1, result2)
-                    else:
-                        dp[node][d][flip] = result1
-        
-        return dp[0][k][0]
+        dfs(0, -1)
+        return self.dp[0][0]
+
 # @lc code=end

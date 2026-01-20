@@ -5,50 +5,38 @@
 #
 
 # @lc code=start
-from functools import cache
 from typing import List
 
 class Solution:
     def minTravelTime(self, l: int, n: int, k: int, position: List[int], time: List[int]) -> int:
-        # Precompute prefix sums of time
-        prefix = [0] * (n + 1)
-        for i in range(n):
-            prefix[i + 1] = prefix[i] + time[i]
-        
-        def S(a, b):
-            # Sum of time[a] to time[b] (inclusive)
-            if a > b:
-                return 0
-            return prefix[b + 1] - prefix[a]
-        
-        target_kept = n - k
         INF = 10**18
-        
-        @cache
-        def dp(prev, curr, kept):
-            # prev: previous kept sign index (-1 if none)
-            # curr: current kept sign index
-            # kept: number of signs kept so far (including curr)
-            
-            if kept == target_kept:
-                # We've kept enough signs, curr must be n-1
-                return 0 if curr == n - 1 else INF
-            
-            # Remaining signs to add
-            remaining_to_add = target_kept - kept
-            # next sign must leave room for remaining_to_add - 1 more signs after it
-            max_next = n - remaining_to_add
-            
-            result = INF
-            for next_sign in range(curr + 1, max_next + 1):
-                # Cost of segment from curr to next_sign
-                # Uses accumulated time at curr = sum(time[prev+1], ..., time[curr])
-                seg_cost = (position[next_sign] - position[curr]) * S(prev + 1, curr)
-                future_cost = dp(curr, next_sign, kept + 1)
-                result = min(result, seg_cost + future_cost)
-            
-            return result
-        
-        return dp(-1, 0, 1)
-        
+        dp = [[[INF] * 101 for _ in range(k + 1)] for _ in range(n)]
+        prefix = [0] * (n + 1)
+        for i in range(1, n + 1):
+            prefix[i] = prefix[i - 1] + time[i - 1]
+        dp[0][0][time[0]] = 0
+        for i in range(1, n):
+            for prev in range(i):
+                num_remove = i - prev - 1
+                sum_t = prefix[i + 1] - prefix[prev + 1]
+                if sum_t > 100:
+                    continue
+                dist = position[i] - position[prev]
+                for r_prev in range(k + 1):
+                    for t_prev in range(101):
+                        if dp[prev][r_prev][t_prev] == INF:
+                            continue
+                        r_new = r_prev + num_remove
+                        if r_new > k:
+                            continue
+                        added = dist * t_prev
+                        new_cost = dp[prev][r_prev][t_prev] + added
+                        if new_cost < dp[i][r_new][sum_t]:
+                            dp[i][r_new][sum_t] = new_cost
+        ans = INF
+        for t in range(101):
+            if dp[n - 1][k][t] < ans:
+                ans = dp[n - 1][k][t]
+        return ans
+
 # @lc code=end
