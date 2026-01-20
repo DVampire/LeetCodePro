@@ -4,86 +4,75 @@
 # [3435] Frequencies of Shortest Supersequences
 #
 
+from typing import List
+from collections import deque
+
 # @lc code=start
 class Solution:
     def supersequences(self, words: List[str]) -> List[List[int]]:
-        from collections import deque, defaultdict
-        
-        # Convert words to a set for faster lookup
-        word_set = set(words)
-        n = len(words)
-        
-        # We'll use BFS to find all shortest supersequences
-        # State: (mask of covered words, character frequency tuple, current string)
-        queue = deque([(0, tuple([0]*26), "")])
-        visited = set()
-        visited.add((0, tuple([0]*26)))
-        
-        # To store results: set of frequency tuples
-        result_freqs = set()
-        target_mask = (1 << n) - 1  # All words covered
-        min_length = float('inf')
-        
-        while queue:
-            mask, freq_tuple, current_str = queue.popleft()
-            
-            # If we've found a solution and current length exceeds min_length, stop
-            if mask == target_mask:
-                if len(current_str) < min_length:
-                    min_length = len(current_str)
-                    result_freqs.clear()
-                    result_freqs.add(freq_tuple)
-                elif len(current_str) == min_length:
-                    result_freqs.add(freq_tuple)
-                continue
-            
-            # If current length already equals or exceeds min_length, skip
-            if len(current_str) >= min_length and min_length != float('inf'):
-                continue
-            
-            # Try adding each character a-z
-            for c in 'abcdefghijklmnopqrstuvwxyz':
-                new_str = current_str + c
-                new_freq = list(freq_tuple)
-                new_freq[ord(c) - ord('a')] += 1
-                new_freq_tuple = tuple(new_freq)
-                
-                # Check which words are now satisfied
-                new_mask = mask
-                for i, word in enumerate(words):
-                    if (mask >> i) & 1:  # Already covered
-                        continue
-                    if self.is_subsequence(word, new_str):
-                        new_mask |= (1 << i)
-                
-                # If this state hasn't been visited
-                state_key = (new_mask, new_freq_tuple)
-                if state_key not in visited:
-                    visited.add(state_key)
-                    queue.append((new_mask, new_freq_tuple, new_str))
-        
-        # Convert to canonical form by sorting to eliminate permutations
-        canonical_results = set()
-        for freq in result_freqs:
-            canonical_results.add(tuple(sorted(freq, reverse=True)))
-        
-        # Map back to original frequency format
-        final_results = set()
-        freq_to_canonical = {}
-        
-        for freq in result_freqs:
-            canonical = tuple(sorted(freq, reverse=True))
-            if canonical not in freq_to_canonical:
-                freq_to_canonical[canonical] = freq
-                final_results.add(freq)
-        
-        return [list(freq) for freq in final_results]
-    
-    def is_subsequence(self, word, string):
-        # Check if word is a subsequence of string
-        i = 0  # pointer for word
-        for char in string:
-            if i < len(word) and char == word[i]:
-                i += 1
-        return i == len(word)
+        all_chars = set()
+        for w in words:
+            all_chars.update(w)
+        letters = sorted(all_chars)
+        K = len(letters)
+        if K == 0:
+            return []
+        char_to_idx = {c: i for i, c in enumerate(letters)}
+        words_idx = [[char_to_idx[c] for c in w] for w in words]
+        MAXN = 32
+        adj = [[] for _ in range(MAXN)]
+        min_L = float('inf')
+        candidates: List[List[int]] = []
+        for choice in range(1 << K):
+            # clear adj
+            for i in range(2 * K):
+                adj[i].clear()
+            num_doubles = 0
+            for i in range(K):
+                if choice & (1 << i):
+                    adj[2 * i].append(2 * i + 1)
+                    num_doubles += 1
+            this_L = K + num_doubles
+            # cross edges
+            for x, y in words_idx:
+                fx = 2 * x
+                ly = 2 * y + 1 if (choice & (1 << y)) else 2 * y
+                adj[fx].append(ly)
+            # num_included
+            num_included = K + num_doubles
+            # indeg
+            indeg = [0] * (2 * K)
+            for u in range(2 * K):
+                for v in adj[u]:
+                    indeg[v] += 1
+            # Kahn
+            q = deque()
+            for u in range(2 * K):
+                is_inc = (u % 2 == 0) or bool(choice & (1 << (u // 2)))
+                if is_inc and indeg[u] == 0:
+                    q.append(u)
+            count = 0
+            while q:
+                u = q.popleft()
+                count += 1
+                for v in adj[u]:
+                    indeg[v] -= 1
+                    if indeg[v] == 0:
+                        is_inc_v = (v % 2 == 0) or bool(choice & (1 << (v // 2)))
+                        if is_inc_v:
+                            q.append(v)
+            if count == num_included:
+                # valid
+                freq = [0] * 26
+                for i in range(K):
+                    cnt = 2 if (choice & (1 << i)) else 1
+                    ci = ord(letters[i]) - ord('a')
+                    freq[ci] = cnt
+                if this_L < min_L:
+                    min_L = this_L
+                    candidates = [freq]
+                elif this_L == min_L:
+                    candidates.append(freq)
+        return candidates
+
 # @lc code=end

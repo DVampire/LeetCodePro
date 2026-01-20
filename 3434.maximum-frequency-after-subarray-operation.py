@@ -5,28 +5,25 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maxFrequency(self, nums: List[int], k: int) -> int:
         n = len(nums)
-        max_freq = 1
-        
-        # Since values are small (1-50), we can try each possible target value
-        for target in range(1, 51):
-            # Use sliding window to find maximum length subarray that can be made equal to target
-            left = 0
-            total_operations = 0
-            
-            for right in range(n):
-                # Operations needed to make nums[right] equal to target
-                total_operations += abs(nums[right] - target)
-                
-                # Shrink window if operations exceed k
-                while total_operations > k:
-                    total_operations -= abs(nums[left] - target)
-                    left += 1
-                
-                # Update maximum frequency
-                max_freq = max(max_freq, right - left + 1)
-        
-        return max_freq
+        total_k = nums.count(k)
+        max_gain = 0
+        for t in range(1, 51):
+            # Kadane on the fly
+            if n == 0:
+                continue
+            score = (1 if nums[0] == t else 0) - (1 if nums[0] == k else 0)
+            max_ending = score
+            max_so_far = score
+            for i in range(1, n):
+                score = (1 if nums[i] == t else 0) - (1 if nums[i] == k else 0)
+                max_ending = max(score, max_ending + score)
+                max_so_far = max(max_so_far, max_ending)
+            max_gain = max(max_gain, max_so_far)
+        return total_k + max_gain
+
 # @lc code=end
