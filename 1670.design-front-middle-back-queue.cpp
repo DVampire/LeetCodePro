@@ -9,10 +9,9 @@
 
 class FrontMiddleBackQueue {
 private:
-    std::deque<int> left;
-    std::deque<int> right;
+    std::deque<int> left, right;
 
-    // Keeps the invariant: left.size() <= right.size() <= left.size() + 1
+    // Maintain invariant: left.size() <= right.size() <= left.size() + 1
     void balance() {
         if (left.size() > right.size()) {
             right.push_front(left.back());
@@ -25,6 +24,7 @@ private:
 
 public:
     FrontMiddleBackQueue() {
+        
     }
     
     void pushFront(int val) {
@@ -46,7 +46,7 @@ public:
     }
     
     int popFront() {
-        if (left.empty() && right.empty()) return -1;
+        if (right.empty()) return -1;
         int res;
         if (left.empty()) {
             res = right.front();
@@ -60,7 +60,7 @@ public:
     }
     
     int popMiddle() {
-        if (left.empty() && right.empty()) return -1;
+        if (right.empty()) return -1;
         int res;
         if (left.size() == right.size()) {
             res = left.back();
