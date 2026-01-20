@@ -4,56 +4,44 @@
 # [3725] Count Ways to Choose Coprime Integers from Rows
 #
 
+# @lc code=start
+from math import gcd
+from collections import Counter
 from typing import List
 
-# @lc code=start
 class Solution:
     def countCoprime(self, mat: List[List[int]]) -> int:
         MOD = 10**9 + 7
-        MAX = 150
-        m = len(mat)
         
-        # Precompute frequency for each row
-        freq = [[0] * (MAX + 1) for _ in range(m)]
-        for r in range(m):
-            for x in mat[r]:
-                freq[r][x] += 1
+        # Initialize dp with the first row
+        # dp[g] stores the number of ways to have a running GCD of g
+        dp = [0] * 151
         
-        # Compute Möbius function
-        mu = [0] * (MAX + 1)
-        vis = [False] * (MAX + 1)
-        mu[1] = 1
-        primes = []
-        for i in range(2, MAX + 1):
-            if not vis[i]:
-                primes.append(i)
-                mu[i] = -1
-            for j in range(len(primes)):
-                p = primes[j]
-                if i * p > MAX:
-                    break
-                vis[i * p] = True
-                if i % p == 0:
-                    mu[i * p] = 0
-                    break
-                else:
-                    mu[i * p] = -mu[i]
-        
-        # Compute sum mu[d] * H(d)
-        ans = 0
-        for d in range(1, MAX + 1):
-            if mu[d] == 0:
-                continue
-            prod = 1
-            for r in range(m):
-                cnt = 0
-                mul = d
-                while mul <= MAX:
-                    cnt += freq[r][mul]
-                    mul += d
-                prod = (prod * cnt) % MOD
-            ans = (ans + mu[d] * prod) % MOD
-        
-        return (ans + MOD) % MOD
+        row_counts = Counter(mat[0])
+        for val, count in row_counts.items():
+            dp[val] = (dp[val] + count) % MOD
+            
+        # Process subsequent rows
+        for i in range(1, len(mat)):
+            new_dp = [0] * 151
+            row_counts = Counter(mat[i])
+            
+            # We only need to iterate through existing GCDs in dp
+            # Since values are small (<=150), we can just iterate 1..150
+            # Optimization: collect current valid gcds to avoid iterating 150 times if sparse
+            current_gcds = [g for g in range(1, 151) if dp[g] > 0]
+            
+            if not current_gcds:
+                return 0
+                
+            for g in current_gcds:
+                ways = dp[g]
+                for val, count in row_counts.items():
+                    new_g = gcd(g, val)
+                    new_dp[new_g] = (new_dp[new_g] + ways * count) % MOD
+            
+            dp = new_dp
+            
+        return dp[1]
 
 # @lc code=end
