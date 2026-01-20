@@ -1,139 +1,95 @@
-#
-# @lc app=leetcode id=3327 lang=cpp
-#
-# [3327] Check if DFS Strings Are Palindromes
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+// @lc app=leetcode id=3327 lang=cpp
+//
+// [3327] Check if DFS Strings Are Palindromes
+//
+
+// @lc code=start
 class Solution {
-public:
-    vector<int> tin, tout;
-    string dfsStr;
-    int timer;
-    vector<vector<int>> adj;
+    struct RH {
+        long long mod, base;
+        vector<long long> pwr, pref;
 
-    // Hashing parameters
-    using ll = long long;
-    const ll M1 = 1e9 + 7;
-    const ll B1 = 31;
-    const ll M2 = 1e9 + 9;
-    const ll B2 = 37;
-
-    vector<ll> pow1, pow2;
-    vector<ll> h1, h2;       // Forward hashes
-    vector<ll> rh1, rh2;     // Reverse hashes
-
-    void dfs(int u, const string& s) {
-        tin[u] = timer;
-        for (int v : adj[u]) {
-            dfs(v, s);
-        }
-        dfsStr += s[u];
-        tout[u] = timer;
-        timer++;
-    }
-
-    void buildHashes(int n) {
-        pow1.resize(n + 1);
-        pow2.resize(n + 1);
-        h1.resize(n + 1, 0);
-        h2.resize(n + 1, 0);
-        rh1.resize(n + 1, 0);
-        rh2.resize(n + 1, 0);
-
-        pow1[0] = 1; pow2[0] = 1;
-        for (int i = 1; i <= n; ++i) {
-            pow1[i] = (pow1[i - 1] * B1) % M1;
-            pow2[i] = (pow2[i - 1] * B2) % M2;
-        }
-
-        // Forward hash for dfsStr
-        for (int i = 0; i < n; ++i) {
-            h1[i + 1] = (h1[i] * B1 + (dfsStr[i] - 'a' + 1)) % M1;
-            h2[i + 1] = (h2[i] * B2 + (dfsStr[i] - 'a' + 1)) % M2;
-        }
-
-        // Reverse hash for dfsStr (effectively hashing reversed string)
-        // We can compute hash of reverse(dfsStr) or just compute hashes from right to left
-        // Let's compute prefix hashes of the reversed string `revStr`
-        string revStr = dfsStr;
-        reverse(revStr.begin(), revStr.end());
-        
-        for (int i = 0; i < n; ++i) {
-            rh1[i + 1] = (rh1[i] * B1 + (revStr[i] - 'a' + 1)) % M1;
-            rh2[i + 1] = (rh2[i] * B2 + (revStr[i] - 'a' + 1)) % M2;
-        }
-    }
-
-    // Get hash of substring dfsStr[L...R] (0-indexed, inclusive)
-    pair<ll, ll> getHash(int L, int R) {
-        // Length is R - L + 1
-        // Hash is h[R+1] - h[L] * B^(len)
-        ll len = R - L + 1;
-        ll v1 = (h1[R + 1] - h1[L] * pow1[len]) % M1;
-        if (v1 < 0) v1 += M1;
-        ll v2 = (h2[R + 1] - h2[L] * pow2[len]) % M2;
-        if (v2 < 0) v2 += M2;
-        return {v1, v2};
-    }
-
-    // Get hash of substring revStr[L...R]
-    pair<ll, ll> getRevHash(int L, int R) {
-        ll len = R - L + 1;
-        ll v1 = (rh1[R + 1] - rh1[L] * pow1[len]) % M1;
-        if (v1 < 0) v1 += M1;
-        ll v2 = (rh2[R + 1] - rh2[L] * pow2[len]) % M2;
-        if (v2 < 0) v2 += M2;
-        return {v1, v2};
-    }
-
-    vector<bool> findAnswer(vector<int>& parent, string s) {
-        int n = parent.size();
-        adj.resize(n);
-        for (int i = 1; i < n; ++i) {
-            adj[parent[i]].push_back(i);
-        }
-        // Children must be visited in increasing order
-        // Since we iterate 1 to n-1 and push, and indices are increasing, 
-        // usually adjacency lists might not be sorted if input order varies, 
-        // but here i is increasing. However, parent[i] is arbitrary.
-        // We need to sort children for each node.
-        for(int i=0; i<n; ++i) {
-            sort(adj[i].begin(), adj[i].end());
-        }
-
-        tin.resize(n);
-        tout.resize(n);
-        timer = 0;
-        dfsStr.reserve(n);
-        
-        dfs(0, s);
-
-        buildHashes(n);
-
-        vector<bool> ans(n);
-        for (int i = 0; i < n; ++i) {
-            // The substring corresponding to node i in dfsStr is from index tin[i] to tout[i]
-            int L = tin[i];
-            int R = tout[i];
-            
-            // We need to check if dfsStr[L...R] is a palindrome.
-            // This is equivalent to checking if hash(dfsStr[L...R]) == hash(reverse(dfsStr[L...R]))
-            // reverse(dfsStr[L...R]) corresponds to a substring in revStr.
-            // dfsStr index i maps to revStr index n - 1 - i.
-            // So dfsStr[L...R] reversed maps to revStr[n - 1 - R ... n - 1 - L].
-            
-            int rL = n - 1 - R;
-            int rR = n - 1 - L;
-            
-            if (getHash(L, R) == getRevHash(rL, rR)) {
-                ans[i] = true;
-            } else {
-                ans[i] = false;
+        RH(long long mod_, long long base_, const string &t) : mod(mod_), base(base_) {
+            int n = (int)t.size();
+            pwr.assign(n + 1, 1);
+            pref.assign(n + 1, 0);
+            for (int i = 0; i < n; i++) {
+                pwr[i + 1] = (long long)((__int128)pwr[i] * base % mod);
+                long long v = (t[i] - 'a' + 1);
+                pref[i + 1] = (long long)((((__int128)pref[i] * base) + v) % mod);
             }
         }
-        
+
+        long long get(int l, int r) const { // inclusive
+            long long res = (pref[r + 1] - (long long)((__int128)pref[l] * pwr[r - l + 1] % mod)) % mod;
+            if (res < 0) res += mod;
+            return res;
+        }
+    };
+
+public:
+    vector<bool> findAnswer(vector<int>& parent, string s) {
+        int n = (int)parent.size();
+        vector<vector<int>> children(n);
+        for (int i = 1; i < n; i++) children[parent[i]].push_back(i);
+        for (int i = 0; i < n; i++) sort(children[i].begin(), children[i].end());
+
+        // Iterative postorder DFS from root=0.
+        vector<int> sub(n, 0), tout(n, -1);
+        vector<int> order; order.reserve(n);
+
+        struct Frame { int x; int idx; };
+        vector<Frame> st;
+        st.reserve(n);
+        st.push_back({0, 0});
+        sub[0] = 1;
+
+        while (!st.empty()) {
+            auto &f = st.back();
+            int x = f.x;
+            if (f.idx < (int)children[x].size()) {
+                int y = children[x][f.idx++];
+                st.push_back({y, 0});
+                sub[y] = 1;
+            } else {
+                st.pop_back();
+                tout[x] = (int)order.size();
+                order.push_back(x);
+                if (!st.empty()) {
+                    sub[st.back().x] += sub[x];
+                }
+            }
+        }
+
+        // Build postorder string T
+        string T; T.resize(n);
+        for (int i = 0; i < n; i++) T[i] = s[order[i]];
+        string R = T;
+        reverse(R.begin(), R.end());
+
+        const long long MOD1 = 1000000007LL;
+        const long long MOD2 = 1000000009LL;
+        const long long BASE = 911382323LL;
+
+        RH h1(MOD1, BASE, T), h2(MOD2, BASE, T);
+        RH rh1(MOD1, BASE, R), rh2(MOD2, BASE, R);
+
+        vector<bool> ans(n, false);
+        for (int i = 0; i < n; i++) {
+            int r = tout[i];
+            int len = sub[i];
+            int l = r - len + 1;
+
+            int rl = n - 1 - r;
+            int rr = n - 1 - l;
+
+            bool ok = (h1.get(l, r) == rh1.get(rl, rr)) && (h2.get(l, r) == rh2.get(rl, rr));
+            ans[i] = ok;
+        }
         return ans;
     }
 };
-# @lc code=end
+// @lc code=end

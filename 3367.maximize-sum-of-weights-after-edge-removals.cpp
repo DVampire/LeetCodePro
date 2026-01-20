@@ -1,59 +1,78 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+/*
+ * @lc app=leetcode id=3367 lang=cpp
+ *
+ * [3367] Maximize Sum of Weights after Edge Removals
+ */
+
+// @lc code=start
 class Solution {
 public:
     long long maximizeSumOfWeights(vector<vector<int>>& edges, int k) {
-        int n = edges.size() + 1;
-        vector<vector<pair<int, int>>> adj(n);
-        for (const auto& e : edges) {
-            adj[e[0]].push_back({e[1], e[2]});
-            adj[e[1]].push_back({e[0], e[2]});
+        int n = (int)edges.size() + 1;
+        vector<vector<pair<int,int>>> g(n);
+        g.reserve(n);
+        for (auto &e : edges) {
+            int u = e[0], v = e[1], w = e[2];
+            g[u].push_back({v, w});
+            g[v].push_back({u, w});
         }
 
-        return dfs(0, -1, k, adj).first;
-    }
+        vector<int> parent(n, -1);
+        vector<int> order;
+        order.reserve(n);
 
-private:
-    pair<long long, long long> dfs(int u, int p, int k, const vector<vector<pair<int, int>>>& adj) {
-        long long base_sum = 0;
-        vector<long long> deltas;
-
-        for (const auto& edge : adj[u]) {
-            int v = edge.first;
-            int w = edge.second;
-            if (v == p) continue;
-
-            pair<long long, long long> child_res = dfs(v, u, k, adj);
-            
-            // child_res.first is dp[v][0]: max weight if edge (u,v) is NOT kept
-            // child_res.second is dp[v][1]: max weight if edge (u,v) IS kept (excluding w)
-            
-            base_sum += child_res.first;
-            
-            // Calculate the gain if we switch from removing (u, v) to keeping (u, v)
-            long long gain = child_res.second + w - child_res.first;
-            
-            if (gain > 0) {
-                deltas.push_back(gain);
+        // Build parent and traversal order iteratively
+        vector<int> st;
+        st.reserve(n);
+        st.push_back(0);
+        parent[0] = -2;
+        while (!st.empty()) {
+            int u = st.back();
+            st.pop_back();
+            order.push_back(u);
+            for (auto [v, w] : g[u]) {
+                if (v == parent[u]) continue;
+                if (parent[v] != -1) continue;
+                parent[v] = u;
+                st.push_back(v);
             }
         }
+        parent[0] = -1;
 
-        // Sort gains in descending order to pick the best ones greedily
-        sort(deltas.rbegin(), deltas.rend());
+        vector<long long> dp0(n, 0), dp1(n, 0);
 
-        long long dp0 = base_sum;
-        long long dp1 = base_sum;
-        
-        int m = deltas.size();
-        
-        // For dp0, we can take at most k children
-        for (int i = 0; i < m && i < k; ++i) {
-            dp0 += deltas[i];
+        // Post-order DP
+        for (int i = n - 1; i >= 0; --i) {
+            int u = order[i];
+            long long base = 0;
+            vector<long long> gains;
+            gains.reserve(g[u].size());
+
+            for (auto [v, w] : g[u]) {
+                if (v == parent[u]) continue;
+                base += dp0[v];
+                long long gain = (long long)w + dp1[v] - dp0[v];
+                if (gain > 0) gains.push_back(gain);
+            }
+
+            sort(gains.begin(), gains.end(), greater<long long>());
+            int m = (int)gains.size();
+            vector<long long> pref(m + 1, 0);
+            for (int j = 0; j < m; ++j) pref[j + 1] = pref[j] + gains[j];
+
+            int cap0 = k;
+            int cap1 = k - 1;
+            if (cap0 < 0) cap0 = 0;
+            if (cap1 < 0) cap1 = 0;
+
+            dp0[u] = base + pref[min(cap0, m)];
+            dp1[u] = base + pref[min(cap1, m)];
         }
-        
-        // For dp1, we can take at most k-1 children
-        for (int i = 0; i < m && i < k - 1; ++i) {
-            dp1 += deltas[i];
-        }
-        
-        return {dp0, dp1};
+
+        return dp0[0];
     }
 };
+// @lc code=end
