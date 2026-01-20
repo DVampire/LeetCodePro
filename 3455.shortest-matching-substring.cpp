@@ -5,83 +5,161 @@
 #
 
 # @lc code=start
+#include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <algorithm>
-#include <numeric>
 
 using namespace std;
 
 class Solution {
 public:
-    vector<int> findOccurrences(const string& text, const string& pattern) {
-        int n_p = pattern.size();
-        int n_s = text.size();
-        if (n_p == 0) {
-            vector<int> res(n_s + 1);
-            iota(res.begin(), res.end(), 0);
-            return res;
-        }
+    // KMP Algorithm to find all occurrences of pattern pat in text txt
+    vector<int> kmpSearch(const string& txt, const string& pat) {
+        vector<int> result;
+        if (pat.empty()) return result;
+        
+        int n = txt.length();
+        int m = pat.length();
+        if (m > n) return result;
 
-        string combined = pattern + "#" + text;
-        int m = combined.size();
-        vector<int> z(m);
-        int l = 0, r = 0;
-        for (int i = 1; i < m; i++) {
-            if (i <= r) z[i] = min(r - i + 1, z[i - l]);
-            while (i + z[i] < m && combined[z[i]] == combined[i + z[i]]) z[i]++;
-            if (i + z[i] - 1 > r) {
-                l = i;
-                r = i + z[i] - 1;
+        // Compute LPS array
+        vector<int> lps(m);
+        int len = 0;
+        lps[0] = 0;
+        int i = 1;
+        while (i < m) {
+            if (pat[i] == pat[len]) {
+                len++;
+                lps[i] = len;
+                i++;
+            } else {
+                if (len != 0) {
+                    len = lps[len - 1];
+                } else {
+                    lps[i] = 0;
+                    i++;
+                }
             }
         }
 
-        vector<int> res;
-        for (int i = n_p + 1; i < m; i++) {
-            if (z[i] == n_p) {
-                res.push_back(i - (n_p + 1));
+        // Search
+        int j = 0; // index for pat
+        i = 0; // index for txt
+        while (i < n) {
+            if (pat[j] == txt[i]) {
+                j++;
+                i++;
+            }
+            if (j == m) {
+                result.push_back(i - j);
+                j = lps[j - 1];
+            } else if (i < n && pat[j] != txt[i]) {
+                if (j != 0)
+                    j = lps[j - 1];
+                else
+                    i = i + 1;
             }
         }
-        return res;
+        return result;
     }
 
     int shortestMatchingSubstring(string s, string p) {
-        size_t firstStar = p.find('*');
-        size_t secondStar = p.find('*', firstStar + 1);
-
-        string p1 = p.substr(0, firstStar);
-        string p2 = p.substr(firstStar + 1, secondStar - firstStar - 1);
-        string p3 = p.substr(secondStar + 1);
-
-        vector<int> V1 = findOccurrences(s, p1);
-        vector<int> V2 = findOccurrences(s, p2);
-        vector<int> V3 = findOccurrences(s, p3);
-
-        if (V1.empty() || V2.empty() || V3.empty()) return -1;
-
-        int min_len = 2e9;
-        int i_ptr = 0;
-        int k_ptr = 0;
-
-        for (int j : V2) {
-            // Find largest i in V1 such that i <= j - p1.size()
-            while (i_ptr < V1.size() && V1[i_ptr] <= j - (int)p1.size()) {
-                i_ptr++;
+        // Split p by '*'
+        vector<string> parts;
+        string temp = "";
+        for (char c : p) {
+            if (c == '*') {
+                parts.push_back(temp);
+                temp = "";
+            } else {
+                temp += c;
             }
-            if (i_ptr == 0) continue;
-            int i = V1[i_ptr - 1];
+        }
+        parts.push_back(temp);
 
-            // Find smallest k in V3 such that k >= j + p2.size()
-            while (k_ptr < V3.size() && V3[k_ptr] < j + (int)p2.size()) {
-                k_ptr++;
+        // parts[0] is s1, parts[1] is s2, parts[2] is s3
+        string s1 = parts[0];
+        string s2 = parts[1];
+        string s3 = parts[2];
+
+        vector<int> p1 = kmpSearch(s, s1);
+        vector<int> p2 = kmpSearch(s, s2);
+        vector<int> p3 = kmpSearch(s, s3);
+
+        // If any non-empty part is not found, return -1
+        if (!s1.empty() && p1.empty()) return -1;
+        if (!s2.empty() && p2.empty()) return -1;
+        if (!s3.empty() && p3.empty()) return -1;
+
+        int minLen = 2e9;
+        bool found = false;
+
+        if (s2.empty()) {
+            // Pattern is s1**s3 -> s1*s3
+            if (s1.empty() && s3.empty()) return 0;
+            if (s1.empty()) return s3.length();
+            if (s3.empty()) return s1.length();
+
+            // Both s1 and s3 non-empty
+            for (int k : p3) {
+                // Find largest i in p1 such that i + s1.len <= k
+                // We want to maximize i to minimize length (k + s3.len) - i
+                // upper_bound returns first element > value. 
+                // We want element <= value. So prev(upper_bound)
+                int target = k - (int)s1.length();
+                auto it = upper_bound(p1.begin(), p1.end(), target);
+                if (it != p1.begin()) {
+                    int i = *prev(it);
+                    int currentLen = (k + (int)s3.length()) - i;
+                    if (currentLen < minLen) {
+                        minLen = currentLen;
+                        found = true;
+                    }
+                }
             }
-            if (k_ptr == V3.size()) continue;
-            int k = V3[k_ptr];
+        } else {
+            // s2 is not empty. Pattern is s1*s2*s3
+            // We iterate over occurrences of s2
+            for (int j : p2) {
+                // 1. Find best start for s1
+                int i = -1;
+                if (s1.empty()) {
+                    i = j;
+                } else {
+                    int target = j - (int)s1.length();
+                    auto it = upper_bound(p1.begin(), p1.end(), target);
+                    if (it != p1.begin()) {
+                        i = *prev(it);
+                    }
+                }
 
-            min_len = min(min_len, (k + (int)p3.size()) - i);
+                if (i == -1) continue; // No valid s1 found for this s2
+
+                // 2. Find best end for s3
+                int k = -1;
+                if (s3.empty()) {
+                    k = j + (int)s2.length();
+                } else {
+                    int target = j + (int)s2.length();
+                    auto it = lower_bound(p3.begin(), p3.end(), target);
+                    if (it != p3.end()) {
+                        k = *it;
+                    }
+                }
+
+                if (k == -1) continue; // No valid s3 found for this s2
+
+                int currentLen = (k + (int)s3.length()) - i;
+                if (currentLen < minLen) {
+                    minLen = currentLen;
+                    found = true;
+                }
+            }
         }
 
-        return (min_len > (int)s.size()) ? -1 : min_len;
+        return found ? minLen : -1;
     }
 };
 # @lc code=end

@@ -5,48 +5,46 @@
 #
 
 # @lc code=start
-#include <string>
-#include <vector>
-
 class Solution {
 public:
-    long long countSubstrings(std::string s) {
-        long long total = 0;
-        // cnt[d][rem] stores the number of substrings ending at the previous index 
-        // that have a remainder 'rem' when divided by 'd'.
-        long long cnt[10][10] = {0};
-
+    long long countSubstrings(string s) {
+        long long ans = 0;
+        // dp[m][r] stores the number of substrings ending at the previous position
+        // that have a remainder r when divided by m.
+        // m ranges from 1 to 9. r ranges from 0 to m-1.
+        long long dp[10][10] = {0};
+        
         for (char c : s) {
             int digit = c - '0';
-            long long next_cnt[10][10] = {0};
-
-            // For every possible non-zero last digit divisor d (1-9)
-            for (int d = 1; d <= 9; ++d) {
-                // Update existing substring remainders by appending the current digit
-                for (int rem = 0; rem < d; ++rem) {
-                    if (cnt[d][rem] > 0) {
-                        int next_rem = (rem * 10 + digit) % d;
-                        next_cnt[d][next_rem] += cnt[d][rem];
+            long long next_dp[10][10] = {0};
+            
+            for (int m = 1; m <= 9; ++m) {
+                // Extend existing substrings ending at the previous position
+                for (int r = 0; r < m; ++r) {
+                    if (dp[m][r] > 0) {
+                        int new_rem = (r * 10 + digit) % m;
+                        next_dp[m][new_rem] += dp[m][r];
                     }
                 }
-                // Add the current digit itself as a new substring starting at this index
-                next_cnt[d][digit % d]++;
+                // Start a new substring with the current digit itself
+                next_dp[m][digit % m]++;
             }
-
-            // If the current digit is non-zero, it acts as a divisor for substrings ending here
-            if (digit > 0) {
-                total += next_cnt[digit][0];
-            }
-
-            // Move next_cnt to cnt for the next iteration
-            for (int d = 1; d <= 9; ++d) {
-                for (int rem = 0; rem < d; ++rem) {
-                    cnt[d][rem] = next_cnt[d][rem];
+            
+            // Update the DP table for the next iteration
+            for (int m = 1; m <= 9; ++m) {
+                for (int r = 0; r < m; ++r) {
+                    dp[m][r] = next_dp[m][r];
                 }
             }
+            
+            // If the current digit is non-zero, we count how many substrings
+            // ending at this position are divisible by this digit.
+            if (digit != 0) {
+                ans += dp[digit][0];
+            }
         }
-
-        return total;
+        
+        return ans;
     }
 };
 # @lc code=end

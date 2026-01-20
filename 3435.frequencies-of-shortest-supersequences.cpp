@@ -1,8 +1,3 @@
-#include <vector>
-#include <string>
-#include <unordered_map>
-#include <algorithm>
-
 #
 # @lc app=leetcode id=3435 lang=cpp
 #
@@ -13,64 +8,136 @@
 class Solution {
 public:
     vector<vector<int>> supersequences(vector<string>& words) {
-        std::unordered_map<char, int> char_to_id;
-        std::vector<char> id_to_char;
-        
-        // Identify unique characters
-        for (const std::string& w : words) {
+        // Step 1: Map unique characters to IDs 0..N-1
+        vector<int> char_to_id(26, -1);
+        vector<char> id_to_char;
+        int n = 0;
+        for (const string& w : words) {
             for (char c : w) {
-                if (char_to_id.find(c) == char_to_id.end()) {
-                    char_to_id[c] = id_to_char.size();
+                if (char_to_id[c - 'a'] == -1) {
+                    char_to_id[c - 'a'] = n++;
                     id_to_char.push_back(c);
                 }
             }
         }
 
-        int n = id_to_char.size();
-        std::vector<int> adj(n, 0);
-        for (const std::string& w : words) {
-            int u = char_to_id[w[0]];
-            int v = char_to_id[w[1]];
-            adj[u] |= (1 << v);
+        // Step 2: Build the graph and identify mandatory doubled chars (self-loops)
+        // adj[i] contains j if there is a word "uv" where u->i, v->j
+        // We only care about edges between distinct characters for the DAG check.
+        vector<vector<int>> adj(n);
+        int req_mask = 0;
+        
+        // To avoid duplicate edges which slow down checking
+        vector<vector<bool>> has_edge(n, vector<bool>(n, false));
+
+        for (const string& w : words) {
+            int u = char_to_id[w[0] - 'a'];
+            int v = char_to_id[w[1] - 'a'];
+            if (u == v) {
+                req_mask |= (1 << u);
+            } else {
+                if (!has_edge[u][v]) {
+                    adj[u].push_back(v);
+                    has_edge[u][v] = true;
+                }
+            }
         }
 
-        // DP to find all masks that form a DAG
-        std::vector<bool> is_dag(1 << n, false);
-        is_dag[0] = true;
-        int max_dag_size = 0;
+        vector<vector<int>> results;
+        int min_popcount = 30; // Initialize with a value larger than max possible (16)
 
-        for (int mask = 1; mask < (1 << n); ++mask) {
-            for (int i = 0; i < n; ++i) {
-                if ((mask >> i) & 1) {
-                    // A vertex i can be the last in the topological sort if it has no outgoing edges to the mask
-                    if ((adj[i] & mask) == 0 && is_dag[mask ^ (1 << i)]) {
-                        is_dag[mask] = true;
-                        break;
+        // We iterate through all subsets of vertices that we choose to DOUBLE.
+        // Let S be the mask of doubled vertices.
+        // S must include req_mask.
+        // The vertices NOT in S (U = full_mask ^ S) must form a DAG.
+        
+        // We can group masks by popcount to find shortest ones first.
+        // Or just iterate 0..2^N, check validity, and keep track of min_popcount.
+        
+        int limit = 1 << n;
+        // Group masks by popcount for efficiency? 
+        // Since N <= 16, iterating all 65536 is fast. We can just store valid ones and filter min size later.
+        // Or better: iterate size k from popcount(req_mask) to n.
+        
+        // Let's iterate all masks, check validity. If valid, update global min and store.
+        
+        for (int mask = 0; mask < limit; ++mask) {
+            // Constraint: Must double self-loop chars
+            if ((mask & req_mask) != req_mask) continue;
+
+            int current_popcount = 0;
+            // __builtin_popcount is efficient
+            current_popcount = __builtin_popcount(mask);
+
+            if (current_popcount > min_popcount) continue;
+
+            // Check if U = (nodes NOT in mask) forms a DAG
+            // Nodes in U are those where (mask >> i) & 1 == 0
+            
+            // Simple Topological Sort / Cycle Check on induced subgraph of U
+            // We can use Kahn's algorithm or DFS.
+            // Since N is small, let's use a simple DFS or in-degree check.
+            
+            // Let's implement Kahn's algorithm for the subgraph
+            vector<int> in_degree(n, 0);
+            int nodes_in_u_count = 0;
+            
+            for(int i=0; i<n; ++i) {
+                if (!((mask >> i) & 1)) {
+                    nodes_in_u_count++;
+                    for (int neighbor : adj[i]) {
+                        if (!((mask >> neighbor) & 1)) {
+                            in_degree[neighbor]++;
+                        }
                     }
                 }
             }
-            if (is_dag[mask]) {
-                max_dag_size = std::max(max_dag_size, (int)__builtin_popcount(mask));
+            
+            vector<int> q;
+            for(int i=0; i<n; ++i) {
+                if (!((mask >> i) & 1)) {
+                    if (in_degree[i] == 0) {
+                        q.push_back(i);
+                    }
+                }
             }
-        }
-
-        // Collect all frequency distributions for the minimum SCS length
-        std::vector<std::vector<int>> result;
-        for (int mask = 0; mask < (1 << n); ++mask) {
-            if (is_dag[mask] && __builtin_popcount(mask) == max_dag_size) {
-                std::vector<int> freq(26, 0);
-                for (int i = 0; i < n; ++i) {
+            
+            int visited_count = 0;
+            int head = 0;
+            while(head < q.size()){
+                int u = q[head++];
+                visited_count++;
+                for(int v : adj[u]) {
+                    if (!((mask >> v) & 1)) {
+                        in_degree[v]--;
+                        if (in_degree[v] == 0) {
+                            q.push_back(v);
+                        }
+                    }
+                }
+            }
+            
+            if (visited_count == nodes_in_u_count) {
+                // It is a DAG
+                if (current_popcount < min_popcount) {
+                    min_popcount = current_popcount;
+                    results.clear();
+                }
+                // Construct the frequency array
+                vector<int> freq(26, 0);
+                for(int i=0; i<n; ++i) {
+                    char c = id_to_char[i];
                     if ((mask >> i) & 1) {
-                        freq[id_to_char[i] - 'a'] = 1;
+                        freq[c - 'a'] = 2;
                     } else {
-                        freq[id_to_char[i] - 'a'] = 2;
+                        freq[c - 'a'] = 1;
                     }
                 }
-                result.push_back(freq);
+                results.push_back(freq);
             }
         }
 
-        return result;
+        return results;
     }
 };
 # @lc code=end

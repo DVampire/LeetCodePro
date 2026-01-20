@@ -5,80 +5,104 @@
 #
 
 # @lc code=start
-#include <iostream>
-#include <string>
-#include <vector>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     int maxDifference(string s, int k) {
         int n = s.length();
-        int max_diff = -1e9;
+        int max_diff = -2e9; // Initialize with a very small number
+        bool found = false;
 
-        // Precompute prefix sums for all digits '0'-'4'
-        vector<vector<int>> pref(5, vector<int>(n, 0));
-        for (int d = 0; d < 5; ++d) {
-            int count = 0;
-            for (int i = 0; i < n; ++i) {
-                if (s[i] == (char)(d + '0')) count++;
-                pref[d][i] = count;
-            }
-        }
-
-        // Iterate over all pairs of distinct digits (a, b)
-        // a: odd frequency, b: even frequency
-        for (int a = 0; a < 5; ++a) {
-            for (int b = 0; b < 5; ++b) {
+        string chars = "01234";
+        
+        // Iterate over all permutations of pairs (a, b)
+        for (char a : chars) {
+            for (char b : chars) {
                 if (a == b) continue;
-
-                // min_f[parity_a][parity_b] stores the minimum (pref_a - pref_b)
-                // encountered so far for a given parity of prefix counts.
-                vector<vector<int>> min_f(2, vector<int>(2, 1e9));
-                int last_b = -1;
-                int ptr = -1;
-
-                for (int j = 0; j < n; ++j) {
-                    if (s[j] == (char)(b + '0')) {
-                        last_b = j;
+                
+                // min_vals[parity_a][parity_b]
+                // Stores the minimum prefix_diff encountered so far for a specific parity combination
+                int min_vals[2][2];
+                for(int i=0; i<2; ++i) 
+                    for(int j=0; j<2; ++j) 
+                        min_vals[i][j] = 1e9;
+                        
+                // History stores the state at each prefix index 0..n
+                struct State {
+                    int diff;
+                    int pa_parity;
+                    int pb_parity;
+                };
+                vector<State> history(n + 1);
+                history[0] = {0, 0, 0};
+                
+                int curr_diff = 0;
+                int curr_pa = 0;
+                int curr_pb = 0;
+                int last_b_idx = -1; // Index in s (0-based) of the last 'b' seen
+                int l_ptr = 0; // Pointer to the next prefix index to add to min_vals
+                
+                for (int i = 0; i < n; ++i) {
+                    // Update state with character s[i]
+                    if (s[i] == a) {
+                        curr_diff++;
+                        curr_pa++;
+                    } else if (s[i] == b) {
+                        curr_diff--;
+                        curr_pb++;
+                        last_b_idx = i;
                     }
-
-                    // We need x <= j - k AND P_b(j) - P_b(x) > 0.
-                    // P_b(j) - P_b(x) > 0 is satisfied if x < last_b.
-                    // So we update min_f for all ptr <= min(j - k, last_b - 1).
-                    while (ptr <= j - k && ptr < last_b) {
-                        int cur_pa, cur_pb, cur_diff;
-                        if (ptr == -1) {
-                            cur_pa = 0; cur_pb = 0; cur_diff = 0;
-                        } else {
-                            cur_pa = pref[a][ptr] % 2;
-                            cur_pb = pref[b][ptr] % 2;
-                            cur_diff = pref[a][ptr] - pref[b][ptr];
+                    
+                    // Current prefix index corresponds to substring s[0...i], length i+1
+                    // We store this state at history[i+1]
+                    int R = i + 1;
+                    history[R] = {curr_diff, curr_pa % 2, curr_pb % 2};
+                    
+                    // Determine the range of valid L indices.
+                    // 1. Length constraint: R - L >= k  =>  L <= R - k
+                    // 2. Count(b) > 0 constraint: Pb[R] - Pb[L] > 0.
+                    //    Since Pb is non-decreasing, and only increases at indices where s[x] == b,
+                    //    Pb[R] includes the count of s[last_b_idx].
+                    //    We need L such that Pb[L] < Pb[R].
+                    //    This is satisfied if L <= last_b_idx. (Prefix index L corresponds to sum before s[L])
+                    //    Actually, prefix L sums s[0...L-1]. Prefix last_b_idx sums s[0...last_b_idx-1].
+                    //    Prefix last_b_idx+1 sums s[0...last_b_idx].
+                    //    Pb[last_b_idx+1] > Pb[last_b_idx].
+                    //    Pb[R] >= Pb[last_b_idx+1].
+                    //    We need Pb[L] < Pb[R].
+                    //    If L <= last_b_idx, then Pb[L] <= Pb[last_b_idx] < Pb[last_b_idx+1] <= Pb[R].
+                    //    So the condition is L <= last_b_idx.
+                    
+                    int limit = min(R - k, last_b_idx);
+                    
+                    // Update min_vals with all newly available valid L indices
+                    while (l_ptr <= limit) {
+                        int p_a = history[l_ptr].pa_parity;
+                        int p_b = history[l_ptr].pb_parity;
+                        int val = history[l_ptr].diff;
+                        if (val < min_vals[p_a][p_b]) {
+                            min_vals[p_a][p_b] = val;
                         }
-                        min_f[cur_pa][cur_pb] = min(min_f[cur_pa][cur_pb], cur_diff);
-                        ptr++;
+                        l_ptr++;
                     }
-
-                    // Current parities at index j
-                    int pa = pref[a][j] % 2;
-                    int pb = pref[b][j] % 2;
-                    int diff = pref[a][j] - pref[b][j];
-
-                    // We need: (pa - target_pa) % 2 == 1  => target_pa = 1 - pa
-                    //          (pb - target_pb) % 2 == 0  => target_pb = pb
-                    int target_pa = 1 - pa;
-                    int target_pb = pb;
-
-                    if (min_f[target_pa][target_pb] != 1e9) {
-                        max_diff = max(max_diff, diff - min_f[target_pa][target_pb]);
+                    
+                    // Check if we can form a valid substring ending at R
+                    // We need count(a) to be odd => parity diff != 0
+                    int target_pa = 1 - (curr_pa % 2);
+                    // We need count(b) to be even => parity diff == 0
+                    int target_pb = curr_pb % 2;
+                    
+                    if (min_vals[target_pa][target_pb] != 1e9) {
+                        int diff = curr_diff - min_vals[target_pa][target_pb];
+                        if (!found || diff > max_diff) {
+                            max_diff = diff;
+                            found = true;
+                        }
                     }
                 }
             }
         }
-
-        return max_diff;
+        
+        return found ? max_diff : -1;
     }
 };
 # @lc code=end
