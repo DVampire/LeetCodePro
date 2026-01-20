@@ -4,97 +4,72 @@
 # [3501] Maximize Active Section with Trade II
 #
 
+from typing import List
+import bisect
+
 # @lc code=start
 class Solution:
     def maxActiveSectionsAfterTrade(self, s: str, queries: List[List[int]]) -> List[int]:
         n = len(s)
-        
-        # Precompute prefix sums of '1's
-        prefix_ones = [0] * (n + 1)
+        prefix = [0] * (n + 1)
         for i in range(n):
-            prefix_ones[i + 1] = prefix_ones[i] + (1 if s[i] == '1' else 0)
+            prefix[i + 1] = prefix[i] + (1 if s[i] == '1' else 0)
         
-        def count_ones(l, r):
-            return prefix_ones[r + 1] - prefix_ones[l]
+        islands = []
+        i = 0
+        while i < n:
+            if s[i] == '1':
+                start = i
+                while i < n and s[i] == '1':
+                    i += 1
+                end = i - 1
+                # full left 0s
+                fl = 0
+                pos = start - 1
+                while pos >= 0 and s[pos] == '0':
+                    fl += 1
+                    pos -= 1
+                # full right 0s
+                fr = 0
+                pos = end + 1
+                while pos < n and s[pos] == '0':
+                    fr += 1
+                    pos += 1
+                islands.append((start, end, fl, fr))
+            else:
+                i += 1
         
-        def solve_query(l, r):
-            # Augment with '1' at both ends
-            # The augmented '1's don't contribute to the count
-            
-            # Count initial active sections in substring
-            initial_count = count_ones(l, r)
-            
-            # If substring is all '1's or all '0's, no trade improves it
-            if initial_count == (r - l + 1) or initial_count == 0:
-                return initial_count
-            
-            # Create the augmented string: '1' + s[l:r+1] + '1'
-            # But we work with indices in original string
-            # The augmented string has length (r - l + 1) + 2
-            
-            augmented_length = (r - l + 1) + 2
-            
-            # Find all segments of '1's and '0's in augmented string
-            # We simulate the augmented string: 1 + s[l..r] + 1
-            
-            # Parse the augmented string into segments
-            segments = []  # list of (char, count)
-            
-            # First '1'
-            segments.append(('1', 1))
-            
-            # Process s[l..r]
-            if l <= r:
-                i = l
-                while i <= r:
-                    char = s[i]
-                    count = 0
-                    j = i
-                    while j <= r and s[j] == char:
-                        count += 1
-                        j += 1
-                    segments.append((char, count))
-                    i = j
-            
-            # Last '1'
-            segments.append(('1', 1))
-            
-            # Count initial active sections in augmented string (excluding augmented '1's)
-            initial_active = count_ones(l, r)
-            
-            max_active = initial_active
-            
-            # Try all possible trades
-            # Find segments of '1's that are surrounded by '0's
-            for i in range(1, len(segments) - 1):
-                if segments[i][0] == '1':
-                    # Check if this segment of '1's is surrounded by '0's
-                    if segments[i-1][0] == '0' and segments[i+1][0] == '0':
-                        # This segment of '1's can be converted to '0's
-                        ones_count = segments[i][1]
-                        
-                        # Create new segments after converting this segment to '0's
-                        # Merge with adjacent '0' segments
-                        new_segments = segments[:i-1] + [('0', segments[i-1][1] + ones_count + segments[i+1][1])] + segments[i+2:]
-                        
-                        # Now find best segment of '0's to convert to '1's
-                        best_gain = 0
-                        for j in range(1, len(new_segments) - 1):
-                            if new_segments[j][0] == '0':
-                                # This segment of '0's can be converted to '1's
-                                zeros_count = new_segments[j][1]
-                                gain = zeros_count
-                                best_gain = max(best_gain, gain)
-                        
-                        # The new count of active sections
-                        new_active = initial_active - ones_count + best_gain
-                        max_active = max(max_active, new_active)
-            
-            return max_active
+        m = len(islands)
+        if m == 0:
+            return [prefix[ri + 1] - prefix[li] for li, ri in queries]
         
-        result = []
-        for l, r in queries:
-            result.append(solve_query(l, r))
+        starts = [island[0] for island in islands]
+        ends = [island[1] for island in islands]
         
-        return result
+        answer = []
+        for li, ri in queries:
+            orig = prefix[ri + 1] - prefix[li]
+            if ri - li < 2:
+                answer.append(orig)
+                continue
+            
+            # first j: starts[j] >= li+1
+            j = bisect.bisect_left(starts, li + 1)
+            # last k: ends[k] <= ri-1
+            k = bisect.bisect_right(ends, ri - 1) - 1
+            
+            if j > k:
+                answer.append(orig)
+                continue
+            
+            maxp = 0
+            for ii in range(j, k + 1):
+                st, en, fl, fr = islands[ii]
+                dl = st - li
+                dr = ri - en
+                p = min(fl, dl) + min(fr, dr)
+                if p > maxp:
+                    maxp = p
+            answer.append(orig + maxp)
+        return answer
 # @lc code=end
