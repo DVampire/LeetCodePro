@@ -1,66 +1,52 @@
-#
-# @lc app=leetcode id=2296 lang=cpp
-#
-# [2296] Design a Text Editor
-#
-
-# @lc code=start
-#include <string>
-#include <algorithm>
-#include <iostream>
-
+#include <bits/stdc++.h>
 using namespace std;
 
+/*
+ * @lc app=leetcode id=2296 lang=cpp
+ *
+ * [2296] Design a Text Editor
+ */
+
+// @lc code=start
 class TextEditor {
-private:
-    string left;
-    string right;
+    string left;   // text to the left of cursor (normal order)
+    string right;  // text to the right of cursor (reverse order, cursor-adjacent at back)
+
+    string last10Left() {
+        int n = (int)left.size();
+        int start = max(0, n - 10);
+        return left.substr(start);
+    }
 
 public:
-    TextEditor() {
-        // Initializes with empty text
-    }
-    
+    TextEditor() : left(""), right("") {}
+
     void addText(string text) {
-        // Appends text to where the cursor is (end of 'left')
         left += text;
     }
-    
+
     int deleteText(int k) {
-        // Deletes k characters to the left of the cursor
-        int count = min((int)left.size(), k);
-        left.resize(left.size() - count);
-        return count;
+        int del = min(k, (int)left.size());
+        left.resize(left.size() - del);
+        return del;
     }
-    
+
     string cursorLeft(int k) {
-        // Moves cursor left k times
-        // Move characters from 'left' end to 'right' end
-        int count = min((int)left.size(), k);
-        for (int i = 0; i < count; ++i) {
+        int move = min(k, (int)left.size());
+        while (move--) {
             right.push_back(left.back());
             left.pop_back();
         }
-        return getLeftString();
+        return last10Left();
     }
-    
+
     string cursorRight(int k) {
-        // Moves cursor right k times
-        // Move characters from 'right' end to 'left' end
-        int count = min((int)right.size(), k);
-        for (int i = 0; i < count; ++i) {
+        int move = min(k, (int)right.size());
+        while (move--) {
             left.push_back(right.back());
             right.pop_back();
         }
-        return getLeftString();
-    }
-
-private:
-    string getLeftString() {
-        // Returns the last min(10, len) characters to the left of the cursor
-        int len = left.size();
-        int start = max(0, len - 10);
-        return left.substr(start);
+        return last10Left();
     }
 };
 
@@ -72,4 +58,4 @@ private:
  * string param_3 = obj->cursorLeft(k);
  * string param_4 = obj->cursorRight(k);
  */
-# @lc code=end
+// @lc code=end

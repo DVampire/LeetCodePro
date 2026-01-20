@@ -1,3 +1,5 @@
+#include <numeric>
+
 #
 # @lc app=leetcode id=2807 lang=cpp
 #
@@ -15,34 +17,16 @@
  *     ListNode(int x, ListNode *next) : val(x), next(next) {}
  * };
  */
-#include <numeric> // for std::gcd
-
 class Solution {
 public:
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
-        if (!head || !head->next) {
-            return head;
+        ListNode* cur = head;
+        while (cur && cur->next) {
+            int g = std::gcd(cur->val, cur->next->val);
+            ListNode* ins = new ListNode(g, cur->next);
+            cur->next = ins;
+            cur = ins->next; // move to next original node
         }
-        
-        ListNode* curr = head;
-        while (curr != nullptr && curr->next != nullptr) {
-            int val1 = curr->val;
-            int val2 = curr->next->val;
-            
-            // Calculate GCD
-            int gcdVal = std::gcd(val1, val2);
-            
-            // Create new node
-            ListNode* newNode = new ListNode(gcdVal);
-            
-            // Insert node
-            newNode->next = curr->next;
-            curr->next = newNode;
-            
-            // Move to the next pair (skip the node we just inserted)
-            curr = newNode->next;
-        }
-        
         return head;
     }
 };
