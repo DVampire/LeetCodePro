@@ -8,7 +8,6 @@
 #include <vector>
 #include <stack>
 #include <algorithm>
-#include <utility>
 
 using namespace std;
 
@@ -17,29 +16,31 @@ public:
     int totalSteps(vector<int>& nums) {
         int n = nums.size();
         int ans = 0;
-        // Stack stores pairs of {value, steps_to_be_removed}
-        stack<pair<int, int>> st;
+        // Stack stores pairs of {value, steps_to_remove}
+        stack<pair<int, int>> s;
         
         for (int i = 0; i < n; ++i) {
             int current_steps = 0;
-            // Pop elements that this current element 'protects' or 'stops'
-            // from being eaten by elements further to the left.
-            while (!st.empty() && st.top().first <= nums[i]) {
-                current_steps = max(current_steps, st.top().second);
-                st.pop();
+            // While current element is greater than or equal to the top of the stack,
+            // it means the current element 'survives' longer than the top element.
+            // We need to account for the time it took to remove those elements.
+            while (!s.empty() && nums[i] >= s.top().first) {
+                current_steps = max(current_steps, s.top().second);
+                s.pop();
             }
             
-            // If the stack is empty, no element to the left is greater than nums[i].
-            // Otherwise, the element at the top will eventually eat nums[i].
-            if (st.empty()) {
+            // If the stack is empty, there's no element to the left larger than nums[i].
+            // So nums[i] will never be removed.
+            if (s.empty()) {
                 current_steps = 0;
             } else {
-                // It takes one more step than the time taken to clear elements in between.
-                current_steps = current_steps + 1;
+                // Otherwise, it is eventually removed by the element currently at the top.
+                // It takes one more step than the maximum steps of elements removed between them.
+                current_steps++;
             }
             
             ans = max(ans, current_steps);
-            st.push({nums[i], current_steps});
+            s.push({nums[i], current_steps});
         }
         
         return ans;
