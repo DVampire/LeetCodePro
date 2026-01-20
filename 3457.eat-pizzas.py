@@ -12,14 +12,12 @@ class Solution:
         pizzas.sort(reverse=True)
         n = len(pizzas)
         k = n // 4
-        odd_days = (k + 1) // 2
-        even_days = k // 2
-        m = odd_days + 2 * even_days
-        sum_top = sum(pizzas[:m])
-        sacrificed = 0
-        start = odd_days
-        for i in range(even_days):
-            sacrificed += pizzas[start + 2 * i]
-        return sum_top - sacrificed
+        num_odd = (k + 1) // 2
+        num_even = k // 2
+        total = sum(pizzas[:num_odd])
+        pos = num_odd
+        for i in range(num_even):
+            total += pizzas[pos + 2 * i + 1]
+        return total
 
 # @lc code=end

@@ -4,50 +4,69 @@
 # [3425] Longest Special Path
 #
 
+from typing import List
+import sys
+from collections import defaultdict
+
 # @lc code=start
 class Solution:
     def longestSpecialPath(self, edges: List[List[int]], nums: List[int]) -> List[int]:
-        from collections import defaultdict
+        sys.setrecursionlimit(10**5 + 10)
+        n = len(nums)
+        adj = [[] for _ in range(n)]
+        for u, v, w in edges:
+            adj[u].append((v, w))
+            adj[v].append((u, w))
         
-        # Build adjacency list
-        graph = defaultdict(list)
-        for u, v, length in edges:
-            graph[u].append((v, length))
-            graph[v].append((u, length))
+        self.max_len_here = [0] * n
+        self.nodes_here = [1] * n
+        self.left = 0
+        self.path = []
+        self.prefix = []
+        self.pos_lists = defaultdict(list)
         
-        # Global variables to track results
-        max_length = 0
-        min_nodes_for_max = float('inf')
+        def dfs(curr: int, par: int, edge_w: int) -> None:
+            self.path.append(curr)
+            if self.prefix:
+                self.prefix.append(self.prefix[-1] + edge_w)
+            else:
+                self.prefix.append(0)
+            idx = len(self.path) - 1
+            val = nums[curr]
+            
+            new_left = self.left
+            if val in self.pos_lists and self.pos_lists[val]:
+                prev_idx = self.pos_lists[val][-1]
+                if prev_idx >= new_left:
+                    new_left = prev_idx + 1
+            
+            old_left = self.left
+            self.left = new_left
+            
+            self.pos_lists[val].append(idx)
+            
+            this_len = self.prefix[-1] - self.prefix[self.left]
+            this_nodes = idx - self.left + 1
+            self.max_len_here[curr] = this_len
+            self.nodes_here[curr] = this_nodes
+            
+            for neigh, w in adj[curr]:
+                if neigh != par:
+                    dfs(neigh, curr, w)
+            
+            self.pos_lists[val].pop()
+            if not self.pos_lists[val]:
+                del self.pos_lists[val]
+            self.left = old_left
+            
+            self.prefix.pop()
+            self.path.pop()
         
-        # DFS function
-        def dfs(node, parent, path_values, current_length, node_count):
-            nonlocal max_length, min_nodes_for_max
-            
-            # Check if current node value already exists in path
-            if nums[node] in path_values:
-                # Cannot extend path further from here
-                return
-            
-            # Add current node to path
-            path_values.add(nums[node])
-            
-            # Update global results if needed
-            if current_length > max_length:
-                max_length = current_length
-                min_nodes_for_max = node_count
-            elif current_length == max_length:
-                min_nodes_for_max = min(min_nodes_for_max, node_count)
-            
-            # Recurse on children
-            for child, edge_length in graph[node]:
-                if child != parent:  # Prevent going back to parent in undirected graph
-                    dfs(child, node, path_values, current_length + edge_length, node_count + 1)
-            
-            # Backtrack: remove current node value from path_values
-            path_values.remove(nums[node])
+        dfs(0, -1, 0)
         
-        # Start DFS from root (node 0) with empty path values set
-        dfs(0, -1, set(), 0, 1)
+        global_max = max(self.max_len_here)
+        min_nodes = min(self.nodes_here[i] for i in range(n) if self.max_len_here[i] == global_max)
         
-        return [max_length, min_nodes_for_max]
+        return [global_max, min_nodes]
+        
 # @lc code=end

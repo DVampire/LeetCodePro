@@ -5,88 +5,70 @@
 #
 
 # @lc code=start
-class SegTree:
-    def __init__(self, size):
-        self.size = size
-        self.tree = [10**18] * (4 * size)
-
-    def update(self, pos, val):
-        self._update(1, 0, self.size - 1, pos, val)
-
-    def _update(self, node, start, end, pos, val):
-        if start == end:
-            self.tree[node] = min(self.tree[node], val)
-            return
-        mid = (start + end) // 2
-        if pos <= mid:
-            self._update(2 * node, start, mid, pos, val)
-        else:
-            self._update(2 * node + 1, mid + 1, end, pos, val)
-        self.tree[node] = min(self.tree[2 * node], self.tree[2 * node + 1])
-
-    def query(self, left, right):
-        if right < 0:
-            return 10**18
-        return self._query(1, 0, self.size - 1, left, right)
-
-    def _query(self, node, start, end, left, right):
-        if right < start or end < left:
-            return 10**18
-        if left <= start and end <= right:
-            return self.tree[node]
-        mid = (start + end) // 2
-        return min(self._query(2 * node, start, mid, left, right),
-                   self._query(2 * node + 1, mid + 1, end, left, right))
-
-
 class Solution:
     def maxDifference(self, s: str, k: int) -> int:
         n = len(s)
         prefix = [[0] * (n + 1) for _ in range(5)]
         for i in range(n):
             c = int(s[i])
-            for ch in range(5):
-                prefix[ch][i + 1] = prefix[ch][i]
+            for j in range(5):
+                prefix[j][i + 1] = prefix[j][i]
             prefix[c][i + 1] += 1
-
-        ans = -(10**9)
-        MAXN = 30010
-        INF = 10**18
-
+        ans = float('-inf')
         for a in range(5):
             for b in range(5):
                 if a == b:
                     continue
-                pa_a = [prefix[a][i] % 2 for i in range(n + 1)]
-                pa_b = [prefix[b][i] % 2 for i in range(n + 1)]
-                val = [prefix[a][i] - prefix[b][i] for i in range(n + 1)]
-
-                segs = {}
-                for paap in (0, 1):
-                    for pbp in (0, 1):
-                        segs[(paap, pbp)] = SegTree(MAXN)
-
-                local_max = -(10**9)
-                for j in range(n + 1):
-                    if j >= k:
-                        opp = 1 - pa_a[j]
-                        p = pa_b[j]
-                        ts = (opp, p)
-                        max_fb = prefix[b][j] - 2
-                        if max_fb >= 0:
-                            minv = segs[ts].query(0, max_fb)
-                            if minv < INF:
-                                local_max = max(local_max, val[j] - minv)
-
-                    m = j - k + 1
-                    if m >= 0:
-                        ts_m = (pa_a[m], pa_b[m])
-                        fb_m = prefix[b][m]
-                        segs[ts_m].update(fb_m, val[m])
-
-                if local_max > -(10**9):
-                    ans = max(ans, local_max)
-
-        return ans if ans > -(10**9) else -1
+                pa = prefix[a]
+                pb = prefix[b]
+                groups = [[] for _ in range(4)]
+                for i in range(n + 1):
+                    par_a = pa[i] % 2
+                    par_b = pb[i] % 2
+                    gidx = par_a * 2 + par_b
+                    st = pa[i] - pb[i]
+                    groups[gidx].append((i, st, pb[i]))
+                prefix_mins = []
+                for gidx in range(4):
+                    lst = groups[gidx]
+                    if not lst:
+                        prefix_mins.append([])
+                        continue
+                    pm = [0] * len(lst)
+                    pm[0] = lst[0][1]
+                    for j in range(1, len(lst)):
+                        pm[j] = min(pm[j - 1], lst[j][1])
+                    prefix_mins.append(pm)
+                for endd in range(k, n + 1):
+                    if pb[endd] < 2:
+                        continue
+                    p_a_e = pa[endd] % 2
+                    p_b_e = pb[endd] % 2
+                    t_pa = 1 - p_a_e
+                    t_pb = p_b_e
+                    gidx = t_pa * 2 + t_pb
+                    lst = groups[gidx]
+                    if not lst:
+                        continue
+                    pm = prefix_mins[gidx]
+                    pos_max = endd - k
+                    pb_max = pb[endd] - 2
+                    # binary search for largest index satisfying conditions
+                    l, r = 0, len(lst) - 1
+                    res_idx = -1
+                    while l <= r:
+                        m = (l + r) // 2
+                        pos_m, pb_m = lst[m][0], lst[m][2]
+                        if pos_m <= pos_max and pb_m <= pb_max:
+                            res_idx = m
+                            l = m + 1
+                        else:
+                            r = m - 1
+                    if res_idx != -1:
+                        min_st = pm[res_idx]
+                        cand = (pa[endd] - pb[endd]) - min_st
+                        if cand > ans:
+                            ans = cand
+        return ans if ans != float('-inf') else -1
 
 # @lc code=end

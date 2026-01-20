@@ -8,24 +8,22 @@
 class Solution:
     def countSubstrings(self, s: str) -> int:
         n = len(s)
-        freq = [[0] * 10 for _ in range(10)]
         ans = 0
-        for i in range(n):
-            dig = ord(s[i]) - ord('0')
-            if dig > 0:
-                dd = dig
-                count = 1
-                for m in range(dd):
-                    if (m * 10 + dig) % dd == 0:
-                        count += freq[dd][m]
-                ans += count
-            for dd in range(1, 10):
-                new_freq = [0] * 10
-                for m in range(dd):
-                    nm = (m * 10 + dig) % dd
-                    new_freq[nm] += freq[dd][m]
-                ns = dig % dd
-                new_freq[ns] += 1
-                freq[dd] = new_freq[:]
+        freqs = [[0] * dd for dd in range(1, 10)]
+        for j in range(n):
+            digit = int(s[j])
+            for ddi in range(9):
+                dd = ddi + 1
+                f = freqs[ddi]
+                new_f = [0] * dd
+                for rem in range(dd):
+                    newr = (rem * 10 + digit) % dd
+                    new_f[newr] += f[rem]
+                single_r = digit % dd
+                new_f[single_r] += 1
+                if digit == dd:
+                    ans += new_f[0]
+                freqs[ddi] = new_f
         return ans
+
 # @lc code=end

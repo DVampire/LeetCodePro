@@ -7,107 +7,108 @@
 # @lc code=start
 class Solution:
     def minCostGoodCaption(self, caption: str) -> str:
+        INF = 10**9 + 7
         n = len(caption)
-        if n == 0:
-            return ""
-        INF = float('inf')
-        suf_dp = [[[INF] * 26 for _ in range(3)] for _ in range(n + 1)]
+        ords = [ord(ch) - ord('a') for ch in caption]
+        
+        dp = [[[INF] * 26 for _ in range(4)] for _ in range(n + 1)]
         for c in range(26):
-            suf_dp[n][2][c] = 0
-        for i in range(n - 1, -1, -1):
-            for typ in range(3):
-                for prev_c in range(26):
-                    min_cost = INF
+            dp[0][0][c] = 0
+        
+        for i in range(n):
+            for pk in range(4):
+                for pc in range(26):
+                    if dp[i][pk][pc] == INF:
+                        continue
                     for d in range(26):
-                        cost = abs(ord(caption[i]) - (ord('a') + d))
+                        cost = abs(ords[i] - d)
+                        nc = dp[i][pk][pc] + cost
                         valid = False
-                        nt = -1
-                        nc = -1
-                        if typ == 0:
-                            if d == prev_c:
-                                nt = 1
-                                nc = prev_c
-                                valid = True
-                        elif typ == 1:
-                            if d == prev_c:
-                                nt = 2
-                                nc = prev_c
-                                valid = True
-                        else:  # typ == 2
-                            if d == prev_c:
-                                nt = 2
-                                nc = prev_c
-                                valid = True
-                            else:
-                                nt = 0
-                                nc = d
-                                valid = True
+                        nk = -1
+                        ncc = -1
+                        if pk == 0:
+                            valid = True
+                            nk = 1
+                            ncc = d
+                        elif d == pc:
+                            valid = True
+                            nk = min(3, pk + 1)
+                            ncc = pc
+                        elif pk == 3:
+                            valid = True
+                            nk = 1
+                            ncc = d
                         if valid:
-                            min_cost = min(min_cost, cost + suf_dp[i + 1][nt][nc])
-                    suf_dp[i][typ][prev_c] = min_cost
-        # Initial empty state at i=0
-        suf_0 = INF
-        for d in range(26):
-            cost = abs(ord(caption[0]) - (ord('a') + d))
-            suf_0 = min(suf_0, cost + suf_dp[1][0][d])
-        if suf_0 == INF:
+                            dp[i + 1][nk][ncc] = min(dp[i + 1][nk][ncc], nc)
+        
+        suff = [[[INF] * 26 for _ in range(4)] for _ in range(n + 1)]
+        for c in range(26):
+            suff[n][3][c] = 0
+        
+        for i in range(n - 1, -1, -1):
+            for pk in range(4):
+                for pc in range(26):
+                    for d in range(26):
+                        cost = abs(ords[i] - d)
+                        valid = False
+                        nk = -1
+                        ncc = -1
+                        if pk == 0:
+                            valid = True
+                            nk = 1
+                            ncc = d
+                        elif d == pc:
+                            valid = True
+                            nk = min(3, pk + 1)
+                            ncc = pc
+                        elif pk == 3:
+                            valid = True
+                            nk = 1
+                            ncc = d
+                        if valid and suff[i + 1][nk][ncc] < INF:
+                            suff[i][pk][pc] = min(suff[i][pk][pc], cost + suff[i + 1][nk][ncc])
+        
+        min_cost = INF
+        for c in range(26):
+            min_cost = min(min_cost, dp[n][3][c])
+        if min_cost == INF:
             return ""
-        # Reconstruct lex smallest
-        res = [''] * n
-        current_i = 0
-        # Start with empty
-        found = False
-        for d in range(26):
-            cost_add = abs(ord(caption[0]) - (ord('a') + d))
-            remaining = suf_dp[1][0][d]
-            if remaining != INF and cost_add + remaining == suf_0:
-                res[0] = chr(ord('a') + d)
-                current_typ = 0
-                current_c = d
-                current_i = 1
-                found = True
-                break
-        if not found:
-            return ""
-        # Continue
-        while current_i < n:
-            typ = current_typ
-            prev_c = current_c
+        
+        # Build lex smallest
+        res = []
+        curr_i = 0
+        curr_k = 0
+        curr_c = 0  # dummy
+        curr_cost = 0
+        while curr_i < n:
             found = False
             for d in range(26):
-                cost_add = abs(ord(caption[current_i]) - (ord('a') + d))
+                cost_add = abs(ords[curr_i] - d)
+                tent_cost = curr_cost + cost_add
                 valid = False
-                nt = -1
-                nc = -1
-                if typ == 0:
-                    if d == prev_c:
-                        nt = 1
-                        nc = prev_c
-                        valid = True
-                elif typ == 1:
-                    if d == prev_c:
-                        nt = 2
-                        nc = prev_c
-                        valid = True
-                else:  # typ == 2
-                    if d == prev_c:
-                        nt = 2
-                        nc = prev_c
-                        valid = True
-                    else:
-                        nt = 0
-                        nc = d
-                        valid = True
-                if valid:
-                    remaining = suf_dp[current_i + 1][nt][nc]
-                    if remaining != INF and cost_add + remaining == suf_dp[current_i][typ][prev_c]:
-                        res[current_i] = chr(ord('a') + d)
-                        current_typ = nt
-                        current_c = nc
-                        current_i += 1
-                        found = True
-                        break
+                nk = -1
+                ncc = -1
+                if curr_k == 0:
+                    valid = True
+                    nk = 1
+                    ncc = d
+                elif d == curr_c:
+                    valid = True
+                    nk = min(3, curr_k + 1)
+                    ncc = curr_c
+                elif curr_k == 3:
+                    valid = True
+                    nk = 1
+                    ncc = d
+                if valid and tent_cost + suff[curr_i + 1][nk][ncc] == min_cost:
+                    res.append(chr(ord('a') + d))
+                    curr_k = nk
+                    curr_c = ncc
+                    curr_cost = tent_cost
+                    curr_i += 1
+                    found = True
+                    break
             if not found:
-                return ""
+                return ""  # should not happen
         return ''.join(res)
 # @lc code=end
