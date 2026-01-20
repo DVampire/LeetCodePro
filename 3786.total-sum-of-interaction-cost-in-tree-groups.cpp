@@ -5,71 +5,55 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <numeric>
-
-using namespace std;
-
 class Solution {
 public:
     long long interactionCosts(int n, vector<vector<int>>& edges, vector<int>& group) {
+        // Adjacency list for the tree
         vector<vector<int>> adj(n);
         for (const auto& edge : edges) {
             adj[edge[0]].push_back(edge[1]);
             adj[edge[1]].push_back(edge[0]);
         }
 
-        // Group nodes by their group ID
-        vector<int> group_counts(21, 0);
+        // Total count of nodes for each group
+        // Groups are 1-indexed up to 20, so size 21 is enough
+        vector<int> totalGroupCounts(21, 0);
         for (int g : group) {
-            group_counts[g]++;
+            totalGroupCounts[g]++;
         }
 
-        long long total_cost = 0;
+        long long totalCost = 0;
 
-        // Since group IDs are small (1 to 20), we can process each group independently
-        for (int g = 1; g <= 20; ++g) {
-            if (group_counts[g] < 2) continue;
+        // DFS to compute subtree group counts and accumulate costs
+        // Returns a vector of size 21 where index g is the count of nodes with group g in the subtree
+        auto dfs = [&](auto&& self, int u, int p) -> vector<int> {
+            vector<int> subtreeCounts(21, 0);
+            subtreeCounts[group[u]] = 1;
 
-            int target_group = g;
-            int total_in_group = group_counts[g];
-            
-            // DFS to count nodes of the target group in subtrees and calculate edge contributions
-            // Using a simple iterative DFS or recursive with a helper
-            vector<int> subtree_count(n, 0);
-            vector<int> parent(n, -1);
-            vector<int> order;
-            vector<int> stack = {0};
-            parent[0] = -2; // root marker
-
-            while(!stack.empty()) {
-                int u = stack.back();
-                stack.pop_back();
-                order.push_back(u);
-                for (int v : adj[u]) {
-                    if (parent[v] == -1) {
-                        parent[v] = u;
-                        stack.push_back(v);
+            for (int v : adj[u]) {
+                if (v == p) continue;
+                
+                vector<int> childCounts = self(self, v, u);
+                
+                // For the edge (u, v), calculate contribution for each group
+                for (int g = 1; g <= 20; ++g) {
+                    if (totalGroupCounts[g] > 0) {
+                        // Contribution = (nodes of group g in subtree v) * (nodes of group g outside subtree v)
+                        long long countInSubtree = childCounts[g];
+                        long long countOutside = totalGroupCounts[g] - countInSubtree;
+                        totalCost += countInSubtree * countOutside;
+                        
+                        // Merge child counts into current subtree counts
+                        subtreeCounts[g] += childCounts[g];
                     }
                 }
             }
+            return subtreeCounts;
+        };
 
-            // Process in post-order to accumulate subtree counts
-            for (int i = n - 1; i >= 0; --i) {
-                int u = order[i];
-                if (group[u] == target_group) {
-                    subtree_count[u]++;
-                }
-                if (parent[u] >= 0) {
-                    subtree_count[parent[u]] += subtree_count[u];
-                    // Contribution of edge (u, parent[u])
-                    long long count_u = subtree_count[u];
-                    total_cost += count_u * (total_in_group - count_u);
-                }
-            }
-        }
+        dfs(dfs, 0, -1);
 
-        return total_cost;
+        return totalCost;
     }
 };
 # @lc code=end

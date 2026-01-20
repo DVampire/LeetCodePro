@@ -5,61 +5,53 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <cmath>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     long long minMoves(vector<int>& balance) {
+        long long totalSum = 0;
+        int negIdx = -1;
         int n = balance.size();
-        long long total_sum = 0;
-        int sink_index = -1;
 
-        // Identify if there is a negative balance and check total sum
         for (int i = 0; i < n; ++i) {
-            total_sum += balance[i];
+            totalSum += balance[i];
             if (balance[i] < 0) {
-                sink_index = i;
+                negIdx = i;
             }
         }
 
-        // If total sum is negative, it's impossible to balance
-        if (total_sum < 0) {
-            return -1;
+        if (totalSum < 0) return -1;
+        if (negIdx == -1) return 0;
+
+        long long needed = -((long long)balance[negIdx]);
+        long long moves = 0;
+        int l = (negIdx - 1 + n) % n;
+        int r = (negIdx + 1) % n;
+        long long dist = 1;
+
+        while (needed > 0) {
+            // Take from left neighbor
+            long long takeL = std::min(needed, (long long)balance[l]);
+            moves += takeL * dist;
+            needed -= takeL;
+            
+            if (needed == 0) break;
+
+            // If l and r are the same, we just processed the last unique element via l.
+            // We must stop to avoid double counting.
+            if (l == r) break;
+
+            // Take from right neighbor
+            long long takeR = std::min(needed, (long long)balance[r]);
+            moves += takeR * dist;
+            needed -= takeR;
+
+            // Move pointers
+            l = (l - 1 + n) % n;
+            r = (r + 1) % n;
+            dist++;
         }
 
-        // If no negative balance exists, 0 moves are needed
-        if (sink_index == -1) {
-            return 0;
-        }
-
-        long long deficit = -(long long)balance[sink_index];
-        // Collect surplus available at each distance from the sink
-        // Max distance in a circular array of size n is n/2
-        vector<long long> surplus_at_dist(n / 2 + 1, 0);
-
-        for (int i = 0; i < n; ++i) {
-            if (i == sink_index) continue;
-            if (balance[i] > 0) {
-                int d = abs(i - sink_index);
-                d = min(d, n - d);
-                surplus_at_dist[d] += balance[i];
-            }
-        }
-
-        long long total_moves = 0;
-        // Greedily take surplus from the nearest neighbors first
-        for (int d = 1; d <= n / 2; ++d) {
-            if (deficit <= 0) break;
-            long long take = min(deficit, surplus_at_dist[d]);
-            total_moves += take * d;
-            deficit -= take;
-        }
-
-        return total_moves;
+        return moves;
     }
 };
 # @lc code=end
