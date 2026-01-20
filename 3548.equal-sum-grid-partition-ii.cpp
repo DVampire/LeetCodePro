@@ -5,120 +5,121 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <numeric>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     bool canPartitionGrid(vector<vector<int>>& grid) {
         int m = grid.size();
         int n = grid[0].size();
-        long long total_sum = 0;
-        vector<int> freq(100001, 0);
-        vector<long long> row_sums(m, 0);
-        vector<long long> col_sums(n, 0);
+        long long totalSum = 0;
 
+        // Frequency arrays for values. Max value is 10^5.
+        // Using vectors is safer and fast enough.
+        vector<int> bottomCount(100005, 0);
+        vector<int> topCount(100005, 0);
+
+        for(const auto& row : grid) {
+            for(int val : row) {
+                totalSum += val;
+                bottomCount[val]++;
+            }
+        }
+
+        long long topSum = 0;
+        long long bottomSum = totalSum;
+
+        // Try Horizontal Cuts
+        // Cut is after row i. i ranges from 0 to m-2.
         for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                int val = grid[i][j];
-                total_sum += val;
-                freq[val]++;
-                row_sums[i] += val;
-                col_sums[j] += val;
+            // Move row i from bottom to top
+            for (int val : grid[i]) {
+                bottomCount[val]--;
+                topCount[val]++;
+                topSum += val;
+                bottomSum -= val;
             }
-        }
 
-        // Horizontal cuts
-        vector<int> current_freq(100001, 0);
-        vector<int> remaining_freq = freq;
-        long long s_a = 0;
-        for (int i = 0; i < m - 1; ++i) {
-            for (int j = 0; j < n; ++j) {
-                int val = grid[i][j];
-                current_freq[val]++;
-                remaining_freq[val]--;
-            }
-            s_a += row_sums[i];
-            long long s_b = total_sum - s_a;
+            // If this is the last row, we can't cut after it
+            if (i == m - 1) continue;
 
-            if (s_a == s_b) return true;
+            if (topSum == bottomSum) return true;
 
-            // Check Section A (rows 0 to i)
-            long long x = 2 * s_a - total_sum;
-            if (x > 0 && x <= 100000) {
-                int h_a = i + 1;
-                if (h_a > 1 && n > 1) {
-                    if (current_freq[x] > 0) return true;
-                } else if (h_a == 1 && n > 1) {
-                    if (x == grid[0][0] || x == grid[0][n - 1]) return true;
-                } else if (h_a > 1 && n == 1) {
-                    if (x == grid[0][0] || x == grid[i][0]) return true;
-                } else if (h_a == 1 && n == 1) {
-                    if (x == grid[0][0]) return true;
+            long long diff = abs(topSum - bottomSum);
+            if (diff > 100000) continue; // Cannot remove such a large value
+
+            if (topSum > bottomSum) {
+                // Need to remove 'diff' from top
+                // Top section is rows 0 to i. Height is i+1. Width is n.
+                // It is connected unless width == 1 AND height > 1 AND we remove an internal node.
+                if (n > 1 || (i + 1) == 1) {
+                    if (topCount[diff] > 0) return true;
+                } else {
+                    // n == 1 and height > 1. Can only remove endpoints of the top section.
+                    // Endpoints are (0,0) and (i,0).
+                    if (grid[0][0] == diff || grid[i][0] == diff) return true;
                 }
-            }
-
-            // Check Section B (rows i+1 to m-1)
-            long long y = total_sum - 2 * s_a;
-            if (y > 0 && y <= 100000) {
-                int h_b = m - 1 - i;
-                if (h_b > 1 && n > 1) {
-                    if (remaining_freq[y] > 0) return true;
-                } else if (h_b == 1 && n > 1) {
-                    if (y == grid[i + 1][0] || y == grid[i + 1][n - 1]) return true;
-                } else if (h_b > 1 && n == 1) {
-                    if (y == grid[i + 1][0] || y == grid[m - 1][0]) return true;
-                } else if (h_b == 1 && n == 1) {
-                    if (y == grid[i + 1][0]) return true;
+            } else {
+                // Need to remove 'diff' from bottom
+                // Bottom section is rows i+1 to m-1. Height is m - 1 - i. Width is n.
+                if (n > 1 || (m - 1 - i) == 1) {
+                    if (bottomCount[diff] > 0) return true;
+                } else {
+                    // n == 1 and height > 1.
+                    // Endpoints are (i+1, 0) and (m-1, 0).
+                    if (grid[i+1][0] == diff || grid[m-1][0] == diff) return true;
                 }
             }
         }
 
-        // Vertical cuts
-        fill(current_freq.begin(), current_freq.end(), 0);
-        remaining_freq = freq;
-        s_a = 0;
-        for (int j = 0; j < n - 1; ++j) {
-            for (int i = 0; i < m; ++i) {
-                int val = grid[i][j];
-                current_freq[val]++;
-                remaining_freq[val]--;
+        // Try Vertical Cuts
+        // Reset counts
+        vector<int> rightCount(100005, 0);
+        vector<int> leftCount(100005, 0);
+        
+        // Re-populate rightCount with all values
+        // Note: We could have copied from bottomCount initially if we hadn't modified it,
+        // but re-scanning is O(MN) which is fine.
+        for(const auto& row : grid) {
+            for(int val : row) {
+                rightCount[val]++;
             }
-            s_a += col_sums[j];
-            long long s_b = total_sum - s_a;
+        }
 
-            if (s_a == s_b) return true;
+        long long leftSum = 0;
+        long long rightSum = totalSum;
 
-            // Check Section A (cols 0 to j)
-            long long x = 2 * s_a - total_sum;
-            if (x > 0 && x <= 100000) {
-                int w_a = j + 1;
-                if (m > 1 && w_a > 1) {
-                    if (current_freq[x] > 0) return true;
-                } else if (m == 1 && w_a > 1) {
-                    if (x == grid[0][0] || x == grid[0][j]) return true;
-                } else if (m > 1 && w_a == 1) {
-                    if (x == grid[0][0] || x == grid[m - 1][0]) return true;
-                } else if (m == 1 && w_a == 1) {
-                    if (x == grid[0][0]) return true;
+        // Cut is after column j. j ranges from 0 to n-2.
+        for (int j = 0; j < n; ++j) {
+            // Move col j from right to left
+            for (int r = 0; r < m; ++r) {
+                int val = grid[r][j];
+                rightCount[val]--;
+                leftCount[val]++;
+                leftSum += val;
+                rightSum -= val;
+            }
+
+            if (j == n - 1) continue;
+
+            if (leftSum == rightSum) return true;
+
+            long long diff = abs(leftSum - rightSum);
+            if (diff > 100000) continue;
+
+            if (leftSum > rightSum) {
+                // Remove from left. Left is cols 0..j. Width j+1, Height m.
+                if (m > 1 || (j + 1) == 1) {
+                    if (leftCount[diff] > 0) return true;
+                } else {
+                    // m == 1, width > 1. Line graph. Endpoints (0,0) and (0,j).
+                    if (grid[0][0] == diff || grid[0][j] == diff) return true;
                 }
-            }
-
-            // Check Section B (cols j+1 to n-1)
-            long long y = total_sum - 2 * s_a;
-            if (y > 0 && y <= 100000) {
-                int w_b = n - 1 - j;
-                if (m > 1 && w_b > 1) {
-                    if (remaining_freq[y] > 0) return true;
-                } else if (m == 1 && w_b > 1) {
-                    if (y == grid[0][j + 1] || y == grid[0][n - 1]) return true;
-                } else if (m > 1 && w_b == 1) {
-                    if (y == grid[0][j + 1] || y == grid[m - 1][j + 1]) return true;
-                } else if (m == 1 && w_b == 1) {
-                    if (y == grid[0][j + 1]) return true;
+            } else {
+                // Remove from right. Right is cols j+1..n-1. Width n-1-j, Height m.
+                if (m > 1 || (n - 1 - j) == 1) {
+                    if (rightCount[diff] > 0) return true;
+                } else {
+                    // m == 1, width > 1. Endpoints (0, j+1) and (0, n-1).
+                    if (grid[0][j+1] == diff || grid[0][n-1] == diff) return true;
                 }
             }
         }

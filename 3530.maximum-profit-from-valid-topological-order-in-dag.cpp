@@ -5,52 +5,47 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     int maxProfit(int n, vector<vector<int>>& edges, vector<int>& score) {
-        // pre[i] stores the bitmask of immediate predecessors of node i
-        vector<int> pre(n, 0);
+        // Precompute parents bitmasks
+        // parents[i] contains a bitmask where the j-th bit is set if there is an edge j -> i
+        vector<int> parents(n, 0);
         for (const auto& edge : edges) {
-            pre[edge[1]] |= (1 << edge[0]);
+            parents[edge[1]] |= (1 << edge[0]);
         }
 
-        int num_states = 1 << n;
-        // dp[mask] = max profit using nodes in mask in a valid topological order
-        // Using long long for safety, though int should suffice given constraints
-        vector<long long> dp(num_states, -1);
+        // dp[mask] stores the max profit for the set of nodes in mask
+        // utilizing positions 1 to k, where k is the number of set bits in mask.
+        // Initialize with -1 to represent unreachable states.
+        vector<int> dp(1 << n, -1);
         dp[0] = 0;
 
-        for (int mask = 0; mask < num_states; ++mask) {
+        // Iterate through all masks
+        for (int mask = 0; mask < (1 << n); ++mask) {
             if (dp[mask] == -1) continue;
 
-            // The next node added will be at position k + 1
-            int pos = __builtin_popcount(mask) + 1;
-            
-            // Iterate over all nodes not yet in the mask
-            int remaining = (num_states - 1) ^ mask;
-            while (remaining > 0) {
-                // Get the index of the next available node
-                int u = __builtin_ctz(remaining);
-                
-                // Check if all predecessors of node u are already in the mask
-                if ((mask & pre[u]) == pre[u]) {
-                    int next_mask = mask | (1 << u);
-                    long long next_val = dp[mask] + (long long)score[u] * pos;
-                    if (next_val > dp[next_mask]) {
-                        dp[next_mask] = next_val;
+            // The position for the next node will be (number of nodes currently in mask) + 1
+            int next_pos = __builtin_popcount(mask) + 1;
+
+            // Try to add any node u that is not yet in mask
+            for (int u = 0; u < n; ++u) {
+                // If u is not in mask
+                if (!((mask >> u) & 1)) {
+                    // Check if all dependencies of u are already in mask
+                    // parents[u] must be a subset of mask
+                    if ((parents[u] & mask) == parents[u]) {
+                        int next_mask = mask | (1 << u);
+                        int new_profit = dp[mask] + score[u] * next_pos;
+                        if (new_profit > dp[next_mask]) {
+                            dp[next_mask] = new_profit;
+                        }
                     }
                 }
-                // Clear the least significant set bit
-                remaining &= (remaining - 1);
             }
         }
 
-        return (int)dp[num_states - 1];
+        return dp[(1 << n) - 1];
     }
 };
 # @lc code=end

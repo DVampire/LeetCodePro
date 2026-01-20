@@ -5,86 +5,90 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <queue>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
+    vector<vector<int>> adj;
+    vector<vector<int>> up;
+    vector<int> depth;
+    vector<int> pow2;
+    int LOG;
+    const int MOD = 1e9 + 7;
+
+    void dfs(int u, int p, int d) {
+        depth[u] = d;
+        up[u][0] = p;
+        for (int i = 1; i < LOG; i++) {
+            if (up[u][i-1] != -1)
+                up[u][i] = up[up[u][i-1]][i-1];
+            else
+                up[u][i] = -1;
+        }
+        for (int v : adj[u]) {
+            if (v != p) {
+                dfs(v, u, d + 1);
+            }
+        }
+    }
+
+    int get_lca(int u, int v) {
+        if (depth[u] < depth[v]) swap(u, v);
+        for (int i = LOG - 1; i >= 0; i--) {
+            if (depth[u] - (1 << i) >= depth[v]) {
+                u = up[u][i];
+            }
+        }
+        if (u == v) return u;
+        for (int i = LOG - 1; i >= 0; i--) {
+            if (up[u][i] != up[v][i]) {
+                u = up[u][i];
+                v = up[v][i];
+            }
+        }
+        return up[u][0];
+    }
+
     vector<int> assignEdgeWeights(vector<vector<int>>& edges, vector<vector<int>>& queries) {
         int n = edges.size() + 1;
-        vector<vector<int>> adj(n + 1);
-        for (const auto& edge : edges) {
-            adj[edge[0]].push_back(edge[1]);
-            adj[edge[1]].push_back(edge[0]);
+        adj.assign(n + 1, vector<int>());
+        for (const auto& e : edges) {
+            adj[e[0]].push_back(e[1]);
+            adj[e[1]].push_back(e[0]);
         }
 
-        vector<int> depth(n + 1, 0);
-        vector<vector<int>> up(n + 1, vector<int>(18, 0));
-        vector<bool> visited(n + 1, false);
-        queue<int> q;
+        LOG = 0;
+        while ((1 << LOG) <= n) LOG++;
+        
+        up.assign(n + 1, vector<int>(LOG, -1));
+        depth.assign(n + 1, 0);
 
-        q.push(1);
-        visited[1] = true;
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
-            for (int v : adj[u]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    depth[v] = depth[u] + 1;
-                    up[v][0] = u;
-                    q.push(v);
-                }
-            }
+        dfs(1, -1, 0);
+
+        // Precompute powers of 2
+        // Max path length is n-1, so we need up to 2^(n-2)
+        pow2.assign(n + 1, 1);
+        for (int i = 1; i <= n; i++) {
+            pow2[i] = (1LL * pow2[i-1] * 2) % MOD;
         }
 
-        for (int j = 1; j < 18; ++j) {
-            for (int i = 1; i <= n; ++i) {
-                up[i][j] = up[up[i][j - 1]][j - 1];
-            }
-        }
+        vector<int> ans;
+        ans.reserve(queries.size());
 
-        auto get_lca = [&](int u, int v) {
-            if (depth[u] < depth[v]) swap(u, v);
-            for (int j = 17; j >= 0; --j) {
-                if (depth[u] - (1 << j) >= depth[v]) {
-                    u = up[u][j];
-                }
-            }
-            if (u == v) return u;
-            for (int j = 17; j >= 0; --j) {
-                if (up[u][j] != up[v][j]) {
-                    u = up[u][j];
-                    v = up[v][j];
-                }
-            }
-            return up[u][0];
-        };
-
-        vector<int> pow2(n + 1);
-        const int MOD = 1000000007;
-        pow2[0] = 1;
-        for (int i = 1; i <= n; ++i) {
-            pow2[i] = (pow2[i - 1] * 2LL) % MOD;
-        }
-
-        int m = queries.size();
-        vector<int> results(m);
-        for (int i = 0; i < m; ++i) {
-            int u = queries[i][0], v = queries[i][1];
+        for (const auto& q : queries) {
+            int u = q[0];
+            int v = q[1];
             if (u == v) {
-                results[i] = 0;
-            } else {
-                int lca = get_lca(u, v);
-                int dist = depth[u] + depth[v] - 2 * depth[lca];
-                results[i] = pow2[dist - 1];
+                ans.push_back(0);
+                continue;
             }
+            int lca = get_lca(u, v);
+            int dist = depth[u] + depth[v] - 2 * depth[lca];
+            
+            // If path length is L, number of ways is 2^(L-1)
+            // dist is guaranteed > 0 here
+            ans.push_back(pow2[dist - 1]);
         }
 
-        return results;
+        return ans;
     }
 };
 # @lc code=end
