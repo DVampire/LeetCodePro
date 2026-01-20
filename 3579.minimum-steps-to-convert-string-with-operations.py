@@ -5,45 +5,65 @@
 #
 
 # @lc code=start
-import sys
+from collections import Counter
+
 class Solution:
     def minOperations(self, word1: str, word2: str) -> int:
         n = len(word1)
-        INF = 10**9 + 7
-        dp = [INF] * (n + 1)
+        # dp[i] = min operations to transform word1[:i] to word2[:i]
+        dp = [float('inf')] * (n + 1)
         dp[0] = 0
-
-        def compute_no_reverse(l: int, r: int, rev_s: bool, rev_t: bool) -> int:
-            k = r - l + 1
-            cnt = [[0] * 26 for _ in range(26)]
-            matches = 0
-            a = ord('a')
-            for ii in range(k):
-                s_idx = r - ii if rev_s else l + ii
-                s_ch = ord(word1[s_idx]) - a
-                t_idx = r - ii if rev_t else l + ii
-                t_ch = ord(word2[t_idx]) - a
-                cnt[s_ch][t_ch] += 1
-                if s_ch == t_ch:
-                    matches += 1
-            hamm = k - matches
-            cross = 0
-            for x in range(26):
-                for y in range(x + 1, 26):
-                    cross += min(cnt[x][y], cnt[y][x])
-            return hamm - cross
-
-        def min_ops_sub(l: int, r: int) -> int:
-            c1 = compute_no_reverse(l, r, False, False)
-            c2 = compute_no_reverse(l, r, True, False)
-            c3 = compute_no_reverse(l, r, False, True)
-            return min(c1, 1 + c2, 1 + c3)
+        
+        def get_transform_cost(s1, s2):
+            # Cost without reverse
+            # Calculate mismatches
+            mismatches = 0
+            pair_counts = Counter()
+            
+            for c1, c2 in zip(s1, s2):
+                if c1 != c2:
+                    mismatches += 1
+                    pair_counts[(c1, c2)] += 1
+            
+            savings = 0
+            # Find cross pairs (a, b) and (b, a) to swap
+            # We iterate over the keys. To avoid double counting, we can process a pair only if a < b
+            # or just process all and divide by 2? No, simpler to iterate copy of keys.
+            # Actually, just iterate distinct pairs found.
+            processed_pairs = set()
+            for (a, b), count in pair_counts.items():
+                if (a, b) in processed_pairs:
+                    continue
+                
+                if (b, a) in pair_counts:
+                    # We can form min(count[(a,b)], count[(b,a)]) swaps
+                    # Each swap fixes 2 mismatches with 1 operation (instead of 2 replacements)
+                    # So savings is 1 per swap.
+                    num_swaps = min(count, pair_counts[(b, a)])
+                    savings += num_swaps
+                    processed_pairs.add((a, b))
+                    processed_pairs.add((b, a))
+            
+            return mismatches - savings
 
         for i in range(1, n + 1):
             for j in range(i):
-                cost = min_ops_sub(j, i - 1)
-                if dp[j] + cost < dp[i]:
-                    dp[i] = dp[j] + cost
+                # Substring from j to i-1
+                sub1 = word1[j:i]
+                sub2 = word2[j:i]
+                
+                # Option 1: No reverse on this chunk
+                cost1 = get_transform_cost(sub1, sub2)
+                
+                # Option 2: Reverse this chunk
+                # Cost is 1 (for reverse) + transform cost of reversed substring
+                cost2 = 1 + get_transform_cost(sub1[::-1], sub2)
+                
+                current_chunk_cost = min(cost1, cost2)
+                
+                if dp[j] + current_chunk_cost < dp[i]:
+                    dp[i] = dp[j] + current_chunk_cost
+                    
         return dp[n]
 
 # @lc code=end

@@ -5,31 +5,47 @@
 #
 
 # @lc code=start
-from typing import List
 import heapq
 
 class Solution:
     def minTime(self, n: int, edges: List[List[int]]) -> int:
+        # Adjacency list to store graph: u -> [(v, start, end)]
         graph = [[] for _ in range(n)]
-        for u, v, s, e in edges:
-            graph[u].append((v, s, e))
+        for u, v, start, end in edges:
+            graph[u].append((v, start, end))
         
-        dist = [float('inf')] * n
-        dist[0] = 0
-        pq = [(0, 0)]  # (time, node)
+        # Priority queue for Dijkstra: (current_time, node)
+        pq = [(0, 0)]
+        
+        # Min time to reach each node, initialized to infinity
+        min_arrival = [float('inf')] * n
+        min_arrival[0] = 0
         
         while pq:
-            time, u = heapq.heappop(pq)
-            if time > dist[u]:
+            curr_time, u = heapq.heappop(pq)
+            
+            # If we reached the destination, return the time
+            if u == n - 1:
+                return curr_time
+            
+            # If we found a faster way to u already, skip
+            if curr_time > min_arrival[u]:
                 continue
-            for v, s, e in graph[u]:
-                depart = max(time, s)
-                if depart <= e:
-                    arr = depart + 1
-                    if arr < dist[v]:
-                        dist[v] = arr
-                        heapq.heappush(pq, (arr, v))
-        
-        return dist[n-1] if dist[n-1] != float('inf') else -1
-
+            
+            for v, start, end in graph[u]:
+                # Calculate the earliest time we can take this edge
+                # We must wait until at least 'start'.
+                # If we arrive after 'start', we can take it immediately (wait time = 0).
+                departure_time = max(curr_time, start)
+                
+                # Check if the departure time is within the valid window [start, end]
+                if departure_time <= end:
+                    arrival_time = departure_time + 1
+                    
+                    # If this path is faster than any previous path to v
+                    if arrival_time < min_arrival[v]:
+                        min_arrival[v] = arrival_time
+                        heapq.heappush(pq, (arrival_time, v))
+                        
+        return -1
 # @lc code=end
