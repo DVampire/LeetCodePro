@@ -4,74 +4,72 @@
 # [3640] Trionic Array II
 #
 
-from typing import List
-
 # @lc code=start
 class Solution:
     def maxSumTrionic(self, nums: List[int]) -> int:
         n = len(nums)
-        prefix = [0] * (n + 1)
-        for i in range(n):
-            prefix[i + 1] = prefix[i] + nums[i]
+        # inc1: max sum of the first increasing segment ending at current index
+        # dec: max sum of (inc1 + decreasing segment) ending at current index
+        # inc2: max sum of (inc1 + dec + increasing segment) ending at current index
         
-        INF = float('inf')
-        NEG_INF = float('-inf')
+        # Initialize with a very small number representing infinity
+        inf = float('inf')
+        inc1 = -inf
+        dec = -inf
+        inc2 = -inf
         
-        # max_inc_end[i]: max sum strict inc len>=2 ending at i
-        len_inc = [1] * n
+        ans = -inf
+        
         for i in range(1, n):
-            if nums[i - 1] < nums[i]:
-                len_inc[i] = len_inc[i - 1] + 1
-        max_inc_end = [NEG_INF] * n
-        min_for_end = [INF] * n
-        for i in range(1, n):
-            if len_inc[i] >= 2:
-                if len_inc[i] == 2:
-                    min_for_end[i] = prefix[i - 1]
-                else:
-                    min_for_end[i] = min(min_for_end[i - 1], prefix[i - 1])
-                max_inc_end[i] = prefix[i + 1] - min_for_end[i]
-        
-        # len_forward[i]: max inc length starting at i
-        len_forward = [1] * n
-        for i in range(n - 2, -1, -1):
-            if nums[i] < nums[i + 1]:
-                len_forward[i] = len_forward[i + 1] + 1
-        
-        # max_inc_start[i]: max sum strict inc len>=2 starting at i
-        max_inc_start = [NEG_INF] * n
-        for i in range(n - 1, -1, -1):
-            if len_forward[i] >= 2:
-                next_max = max_inc_start[i + 1] if i + 1 < n else NEG_INF
-                cand1 = nums[i + 1]
-                max_add = max(cand1, next_max)
-                max_inc_start[i] = nums[i] + max_add
-        
-        # len_dec[i]: max dec length ending at i
-        len_dec = [1] * n
-        for i in range(1, n):
-            if nums[i - 1] > nums[i]:
-                len_dec[i] = len_dec[i - 1] + 1
-        
-        # B[p]
-        B = [NEG_INF] * n
-        for p in range(n):
-            if max_inc_end[p] != NEG_INF:
-                B[p] = max_inc_end[p] - prefix[p] - nums[p]
-        
-        # Now for each q
-        ans = NEG_INF
-        current_max_B = NEG_INF
-        for q in range(n):
-            if len_dec[q] >= 2:
-                if len_dec[q] == 2:
-                    current_max_B = B[q - 1]
-                else:
-                    current_max_B = max(current_max_B, B[q - 1])
-                if current_max_B != NEG_INF and max_inc_start[q] != NEG_INF:
-                    c_q = prefix[q + 1] + max_inc_start[q] - nums[q]
-                    total = current_max_B + c_q
-                    ans = max(ans, total)
-        
-        return int(ans)
+            curr = nums[i]
+            prev = nums[i-1]
+            
+            # Calculate new states based on transition from prev to curr
+            # We use temporary variables for the next state to avoid using updated values within the same step
+            if curr > prev:
+                # Increasing step
+                
+                # update inc2: can extend previous inc2 OR start inc2 from a previous dec
+                # Since we are going UP, we can be in the second increasing phase
+                new_inc2 = -inf
+                if inc2 != -inf:
+                    new_inc2 = max(new_inc2, inc2 + curr)
+                if dec != -inf:
+                    new_inc2 = max(new_inc2, dec + curr)
+                
+                # update inc1: can extend previous inc1 OR start new inc1 with (prev, curr)
+                new_inc1 = prev + curr
+                if inc1 != -inf:
+                    new_inc1 = max(new_inc1, inc1 + curr)
+                
+                # Cannot be in decreasing phase if we just went up
+                new_dec = -inf
+                
+                inc1, dec, inc2 = new_inc1, new_dec, new_inc2
+                
+            elif curr < prev:
+                # Decreasing step
+                
+                # update dec: can extend previous dec OR start dec from a previous inc1
+                # Since we are going DOWN, we can be in the middle decreasing phase
+                new_dec = -inf
+                if dec != -inf:
+                    new_dec = max(new_dec, dec + curr)
+                if inc1 != -inf:
+                    new_dec = max(new_dec, inc1 + curr)
+                
+                # Cannot extend increasing phases if we just went down
+                new_inc1 = -inf
+                new_inc2 = -inf
+                
+                inc1, dec, inc2 = new_inc1, new_dec, new_inc2
+                
+            else:
+                # Equal elements: strictly increasing/decreasing property broken
+                inc1, dec, inc2 = -inf, -inf, -inf
+            
+            if inc2 != -inf:
+                ans = max(ans, inc2)
+                
+        return ans
 # @lc code=end

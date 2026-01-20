@@ -5,105 +5,93 @@
 #
 
 # @lc code=start
-
-from typing import Dict, List
-import itertools
-import sys
-
+from itertools import permutations, combinations
 
 class Solution:
-    def get_all_pals(self, freq: Dict[int, int], L: int) -> List[str]:
-        p = L // 2
-        odds = [k for k in freq if freq[k] % 2 == 1]
-        multiset: List[str] = []
-        if L % 2 == 0:
-            for k in freq:
-                multiset.extend([str(k)] * (freq[k] // 2))
-        else:
-            o = odds[0]
-            for k in freq:
-                cnt = (freq[k] - 1) // 2 if k == o else freq[k] // 2
-                multiset.extend([str(k)] * cnt)
-        unique_lefts = set(''.join(perm) for perm in itertools.permutations(multiset))
-        pals = []
-        if L % 2 == 0:
-            for left in unique_lefts:
-                full = left + left[::-1]
-                pals.append(full)
-        else:
-            middle = str(odds[0])
-            for left_paired in unique_lefts:
-                full = left_paired + middle + left_paired[::-1]
-                pals.append(full)
-        return sorted(pals)
-
-    def get_smallest_pal(self, freq: Dict[int, int], L: int) -> str:
-        odds = [k for k in freq if freq[k] % 2 == 1]
-        if L % 2 == 0:
-            count_left = {k: freq[k] // 2 for k in freq}
-            left = ''
-            for _ in range(L // 2):
-                for d in range(1, 10):
-                    if count_left.get(d, 0) > 0:
-                        left += str(d)
-                        count_left[d] -= 1
-                        break
-            return left + left[::-1]
-        else:
-            o = odds[0]
-            count_left = {}
-            for k in freq:
-                if k == o:
-                    count_left[k] = (freq[k] - 1) // 2
-                else:
-                    count_left[k] = freq[k] // 2
-            left_paired = ''
-            p = L // 2
-            for _ in range(p):
-                for d in range(1, 10):
-                    if count_left.get(d, 0) > 0:
-                        left_paired += str(d)
-                        count_left[d] -= 1
-                        break
-            middle = str(o)
-            left = left_paired + middle
-            return left + left_paired[::-1]
-
     def specialPalindrome(self, n: int) -> int:
-        n_str = str(n)
-        d = len(n_str)
-        odds_list = [1, 3, 5, 7, 9]
-        evens_list = [2, 4, 6, 8]
-        all_S = []
-        # m=0: subsets of evens, non-empty
-        for mask in range(1 << 4):
-            Se = [evens_list[i] for i in range(4) if (mask & (1 << i))]
-            tot = sum(Se)
-            if tot > 0:
-                freq = {k: k for k in Se}
-                all_S.append((tot, freq))
-        # m=1: one odd + subsets of evens
-        for o in odds_list:
-            for mask in range(1 << 4):
-                Se = [evens_list[i] for i in range(4) if (mask & (1 << i))]
-                tot = sum(Se) + o
-                freq = {k: k for k in Se}
-                freq[o] = o
-                all_S.append((tot, freq))
-        candidates = []
-        # L == d: smallest pal > n_str for each S
-        for Lf, freq in all_S:
-            if Lf != d:
-                continue
-            pals = self.get_all_pals(freq, Lf)
-            for pal in pals:
-                if pal > n_str:
-                    candidates.append(int(pal))
-                    break
-        # L > d: smallest pal for each S
-        for Lf, freq in all_S:
-            if Lf > d:
-                pal_str = self.get_smallest_pal(freq, Lf)
-                candidates.append(int(pal_str))
-        return min(candidates)
+        s_n = str(n)
+        len_n = len(s_n)
+        
+        # We iterate through lengths starting from the length of n
+        # Since n <= 10^15, reasonable upper bound for length is enough.
+        # Max possible sum of unique digits 1-9 is 45, but we stop as soon as we find a solution.
+        for length in range(len_n, 46):
+            candidates = []
+            
+            # Find all subsets of digits {1..9} that sum to 'length'
+            # and satisfy parity constraints.
+            # Parity constraint: 
+            #   If length is even, all digits in subset must be even.
+            #   If length is odd, exactly one digit in subset must be odd.
+            
+            valid_subsets = []
+            
+            # Helper to find subsets
+            def find_subsets(target, current_digits, index):
+                if target == 0:
+                    valid_subsets.append(list(current_digits))
+                    return
+                if target < 0 or index > 9:
+                    return
+                
+                # Include index
+                find_subsets(target - index, current_digits + [index], index + 1)
+                # Exclude index
+                find_subsets(target, current_digits, index + 1)
+
+            find_subsets(length, [], 1)
+            
+            for subset in valid_subsets:
+                # Check parity constraints
+                odds = [d for d in subset if d % 2 != 0]
+                evens = [d for d in subset if d % 2 == 0]
+                
+                mid_digit = -1
+                half_digits = []
+                
+                if length % 2 == 0:
+                    if len(odds) != 0:
+                        continue
+                    # All evens, form half digits
+                    for d in subset:
+                        half_digits.extend([str(d)] * (d // 2))
+                else:
+                    if len(odds) != 1:
+                        continue
+                    mid_digit = odds[0]
+                    # Add half counts for all numbers (odd one loses 1 for middle)
+                    for d in subset:
+                        half_digits.extend([str(d)] * (d // 2))
+                
+                # If we are strictly above the original length, we just want the smallest number
+                # formed by these digits. Sort half_digits to get smallest prefix.
+                if length > len_n:
+                    half_digits.sort()
+                    half_s = "".join(half_digits)
+                    if length % 2 == 0:
+                        cand_str = half_s + half_s[::-1]
+                    else:
+                        cand_str = half_s + str(mid_digit) + half_s[::-1]
+                    candidates.append(int(cand_str))
+                else:
+                    # Length matches n. We need to check permutations to find strictly greater
+                    # Since max length is around 16, half length is ~8. 8! is small (40k).
+                    # We can generate unique permutations.
+                    unique_perms = sorted(list(set(permutations(half_digits))))
+                    for p in unique_perms:
+                        half_s = "".join(p)
+                        if length % 2 == 0:
+                            cand_str = half_s + half_s[::-1]
+                        else:
+                            cand_str = half_s + str(mid_digit) + half_s[::-1]
+                        
+                        val = int(cand_str)
+                        if val > n:
+                            candidates.append(val)
+            
+            if candidates:
+                return min(candidates)
+                
+        return -1 # Should not reach here
+
 # @lc code=end
