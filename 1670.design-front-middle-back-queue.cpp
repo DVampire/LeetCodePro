@@ -1,3 +1,5 @@
+#include <deque>
+
 #
 # @lc app=leetcode id=1670 lang=cpp
 #
@@ -5,80 +7,79 @@
 #
 
 # @lc code=start
-#include <deque>
-
 class FrontMiddleBackQueue {
 private:
-    std::deque<int> dq1; // Front half
-    std::deque<int> dq2; // Back half
+    std::deque<int> left;
+    std::deque<int> right;
 
-    // Maintain invariant: dq2.size() == dq1.size() OR dq2.size() == dq1.size() + 1
+    // Maintain invariant: left.size() <= right.size() <= left.size() + 1
     void balance() {
-        if (dq1.size() > dq2.size()) {
-            dq2.push_front(dq1.back());
-            dq1.pop_back();
-        } else if (dq2.size() > dq1.size() + 1) {
-            dq1.push_back(dq2.front());
-            dq2.pop_front();
+        if (left.size() > right.size()) {
+            right.push_front(left.back());
+            left.pop_back();
+        } else if (right.size() > left.size() + 1) {
+            left.push_back(right.front());
+            right.pop_front();
         }
     }
 
 public:
     FrontMiddleBackQueue() {
+        
     }
     
     void pushFront(int val) {
-        dq1.push_front(val);
+        left.push_front(val);
         balance();
     }
     
     void pushMiddle(int val) {
-        if (dq1.size() == dq2.size()) {
-            dq2.push_front(val);
+        if (left.size() == right.size()) {
+            right.push_front(val);
         } else {
-            dq1.push_back(val);
+            left.push_back(val);
         }
     }
     
     void pushBack(int val) {
-        dq2.push_back(val);
+        right.push_back(val);
         balance();
     }
     
     int popFront() {
-        if (dq2.empty()) return -1;
-        int res;
-        if (dq1.empty()) {
-            res = dq2.front();
-            dq2.pop_front();
+        if (right.empty()) return -1;
+        int val;
+        if (left.empty()) {
+            val = right.front();
+            right.pop_front();
         } else {
-            res = dq1.front();
-            dq1.pop_front();
+            val = left.front();
+            left.pop_front();
         }
         balance();
-        return res;
+        return val;
     }
     
     int popMiddle() {
-        if (dq2.empty()) return -1;
-        int res;
-        if (dq1.size() == dq2.size()) {
-            res = dq1.back();
-            dq1.pop_back();
+        if (right.empty()) return -1;
+        int val;
+        if (left.size() == right.size()) {
+            val = left.back();
+            left.pop_back();
         } else {
-            res = dq2.front();
-            dq2.pop_front();
+            val = right.front();
+            right.pop_front();
         }
         balance();
-        return res;
+        return val;
     }
     
     int popBack() {
-        if (dq2.empty()) return -1;
-        int res = dq2.back();
-        dq2.pop_back();
+        if (right.empty()) return -1;
+        int val = right.back();
+        right.pop_back();
         balance();
-        return res;
+        return val;
     }
 };
 

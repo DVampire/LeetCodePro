@@ -1,8 +1,3 @@
-#include <vector>
-#include <queue>
-
-using namespace std;
-
 #
 # @lc app=leetcode id=3310 lang=cpp
 #
@@ -10,20 +5,26 @@ using namespace std;
 #
 
 # @lc code=start
+#include <vector>
+#include <queue>
+#include <numeric>
+
+using namespace std;
+
 class Solution {
 public:
     vector<int> remainingMethods(int n, int k, vector<vector<int>>& invocations) {
-        // Step 1: Build the adjacency list for the directed graph
+        // Step 1: Build adjacency list
         vector<vector<int>> adj(n);
         for (const auto& inv : invocations) {
             adj[inv[0]].push_back(inv[1]);
         }
 
-        // Step 2: Identify all suspicious methods using BFS starting from k
-        vector<bool> isSuspicious(n, false);
+        // Step 2: Find all suspicious methods using BFS starting from k
+        vector<bool> suspicious(n, false);
         queue<int> q;
         
-        isSuspicious[k] = true;
+        suspicious[k] = true;
         q.push(k);
 
         while (!q.empty()) {
@@ -31,39 +32,36 @@ public:
             q.pop();
 
             for (int neighbor : adj[curr]) {
-                if (!isSuspicious[neighbor]) {
-                    isSuspicious[neighbor] = true;
+                if (!suspicious[neighbor]) {
+                    suspicious[neighbor] = true;
                     q.push(neighbor);
                 }
             }
         }
 
-        // Step 3: Check if any non-suspicious method invokes a suspicious method
+        // Step 3: Check if any non-suspicious method calls a suspicious one
         bool canRemove = true;
         for (const auto& inv : invocations) {
             int u = inv[0];
             int v = inv[1];
-            // If u is NOT suspicious but v IS suspicious, we cannot remove the group
-            if (!isSuspicious[u] && isSuspicious[v]) {
+            // If caller is NOT suspicious and callee IS suspicious, we cannot remove
+            if (!suspicious[u] && suspicious[v]) {
                 canRemove = false;
                 break;
             }
         }
 
-        // Step 4: Prepare the output
+        // Step 4: Return result based on removal condition
         vector<int> result;
         if (canRemove) {
-            // Return only non-suspicious methods
             for (int i = 0; i < n; ++i) {
-                if (!isSuspicious[i]) {
+                if (!suspicious[i]) {
                     result.push_back(i);
                 }
             }
         } else {
-            // Return all methods
-            for (int i = 0; i < n; ++i) {
-                result.push_back(i);
-            }
+            result.resize(n);
+            iota(result.begin(), result.end(), 0);
         }
 
         return result;

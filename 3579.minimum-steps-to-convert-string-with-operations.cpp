@@ -19,67 +19,39 @@ public:
         vector<int> dp(n + 1, 1e9);
         dp[0] = 0;
 
+        auto get_cost = [&](int start, int len) {
+            string s1 = word1.substr(start, len);
+            string s2 = word2.substr(start, len);
+            if (s1 == s2) return 0;
+
+            // Count character differences for Replace operations
+            vector<int> count1(26, 0), count2(26, 0);
+            for (char c : s1) count1[c - 'a']++;
+            for (char c : s2) count2[c - 'a']++;
+
+            int diff = 0;
+            for (int i = 0; i < 26; ++i) {
+                if (count1[i] > count2[i]) diff += count1[i] - count2[i];
+            }
+
+            // If we can transform s1 to s2 using only replaces
+            int replace_only = 0;
+            for (int i = 0; i < len; ++i) if (s1[i] != s2[i]) replace_only++;
+
+            // If we use one rearrangement (Swap or Reverse) plus replaces
+            // The rearrangement cost is 1. The number of replaces is 'diff'.
+            int with_rearrange = 1 + diff;
+
+            return min(replace_only, with_rearrange);
+        };
+
         for (int i = 1; i <= n; ++i) {
             for (int j = 0; j < i; ++j) {
-                string s = word1.substr(j, i - j);
-                string t = word2.substr(j, i - j);
-                
-                int cost = calculateCost(s, t);
-                dp[i] = min(dp[i], dp[j] + cost);
+                dp[i] = min(dp[i], dp[j] + get_cost(j, i - j));
             }
         }
 
         return dp[n];
-    }
-
-private:
-    int calculateCost(string s, string t) {
-        if (s == t) return 0;
-        
-        int n = s.length();
-        vector<int> countS(26, 0), countT(26, 0);
-        for (char c : s) countS[c - 'a']++;
-        for (char c : t) countT[c - 'a']++;
-
-        int matches = 0;
-        for (int k = 0; k < 26; ++k) {
-            matches += min(countS[k], countT[k]);
-        }
-
-        int replaces = n - matches;
-        
-        // After replaces, we have a permutation of T.
-        // If the original (with replaced chars) is already T, 0 extra.
-        // If it's the reverse of T, 1 extra (Reverse).
-        // If it's a permutation of T, 1 extra (Swap).
-        // If we need both, 2 extra.
-        
-        // Special case: if replaces accounts for all differences and result is T
-        // But we must consider if we can achieve T using the allowed moves.
-        // The constraint "each index involved at most once" for swap/reverse/replace
-        // is key. If we replace a char, that index is done for replacements.
-        
-        string s_rev = s;
-        reverse(s_rev.begin(), s_rev.end());
-
-        if (replaces == 0) {
-            if (s_rev == t) return 1; // Reverse
-            return 1; // Swap (since s != t and same counts)
-        }
-
-        // If we replace characters, we can choose which indices to replace.
-        // To minimize operations, we replace indices where s[i] != t[i].
-        int diff_pos = 0;
-        for(int k=0; k<n; ++k) if(s[k] != t[k]) diff_pos++;
-
-        if (diff_pos == replaces) return replaces; 
-        
-        // Check if Reverse + Replace works
-        int diff_pos_rev = 0;
-        for(int k=0; k<n; ++k) if(s_rev[k] != t[k]) diff_pos_rev++;
-        if (diff_pos_rev <= replaces) return replaces + 1;
-
-        return replaces + 1; // Generally Replace + Swap
     }
 };
 # @lc code=end
