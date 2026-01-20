@@ -8,115 +8,85 @@
 import heapq
 from typing import List
 
-class Node:
-    def __init__(self, val: int, min_idx: int):
-        self.val = val
-        self.min_idx = min_idx
-        self.id = 0
-        self.prev = None
-        self.next = None
-
-# @lc code=end
 class Solution:
     def minimumPairRemoval(self, nums: List[int]) -> int:
         n = len(nums)
-        if n <= 1:
+        if n < 2:
             return 0
+            
+        # Doubly Linked List simulation arrays
+        # next_node[i] points to the index of the right neighbor of i
+        # prev_node[i] points to the index of the left neighbor of i
+        next_node = list(range(1, n + 1))
+        next_node[-1] = -1
+        prev_node = list(range(-1, n - 1))
         
-        nodes = []
-        id_counter = 0
-        id_to_node = {}
-        for i, val in enumerate(nums):
-            node = Node(val, i)
-            node.id = id_counter
-            id_counter += 1
-            id_to_node[node.id] = node
-            nodes.append(node)
+        # Current values of nodes
+        values = list(nums)
         
-        for i in range(n - 1):
-            nodes[i].next = nodes[i + 1]
-            nodes[i + 1].prev = nodes[i]
+        # Validity flag to handle lazy deletion/updates
+        valid = [True] * n
         
-        # Compute initial violations
-        violations = 0
-        cur = nodes[0]
-        while cur.next:
-            if cur.val > cur.next.val:
-                violations += 1
-            cur = cur.next
-        
-        if violations == 0:
-            return 0
-        
-        # Initialize priority queue
+        bad_count = 0
         pq = []
-        cur = nodes[0]
-        while cur.next:
-            s = cur.val + cur.next.val
-            heapq.heappush(pq, (s, cur.min_idx, cur.id, cur.next.id))
-            cur = cur.next
         
+        # Initial population of heap and bad_count
+        for i in range(n - 1):
+            if values[i] > values[i+1]:
+                bad_count += 1
+            # Heap stores (sum, left_index, right_index)
+            # Tie-breaking: min sum, then min left_index (leftmost)
+            heapq.heappush(pq, (values[i] + values[i+1], i, i+1))
+            
         ops = 0
-        while violations > 0:
-            # Find valid minimum pair
-            while pq:
-                s, minidx, lid, rid = heapq.heappop(pq)
-                if lid not in id_to_node or rid not in id_to_node:
-                    continue
-                node_l = id_to_node[lid]
-                node_r = id_to_node[rid]
-                if node_l.next != node_r:
-                    continue
-                # Valid pair found
-                break
-            else:
-                # No more pairs, should not happen if violations > 0
-                return ops
-            
-            # Update violations delta
-            delta = 0
-            p = node_l.prev
-            if p:
-                delta -= 1 if p.val > node_l.val else 0
-            delta -= 1 if node_l.val > node_r.val else 0
-            nxt = node_r.next
-            if nxt:
-                delta -= 1 if node_r.val > nxt.val else 0
-            
-            new_val = node_l.val + node_r.val
-            if p:
-                delta += 1 if p.val > new_val else 0
-            if nxt:
-                delta += 1 if new_val > nxt.val else 0
-            
-            violations += delta
-            
-            # Create new node
-            new_node = Node(new_val, min(node_l.min_idx, node_r.min_idx))
-            new_node.id = id_counter
-            id_counter += 1
-            id_to_node[new_node.id] = new_node
-            
-            # Relink
-            new_node.prev = p
-            new_node.next = nxt
-            if p:
-                p.next = new_node
-            if nxt:
-                nxt.prev = new_node
-            
-            # Deactivate old nodes
-            del id_to_node[lid]
-            del id_to_node[rid]
-            
-            # Push new pairs
-            if p:
-                news = p.val + new_node.val
-                heapq.heappush(pq, (news, p.min_idx, p.id, new_node.id))
-            if nxt:
-                news = new_node.val + nxt.val
-                heapq.heappush(pq, (news, new_node.min_idx, new_node.id, nxt.id))
-            
-            ops += 1
         
+        while bad_count > 0:
+            # Extract valid minimum pair
+            while True:
+                if not pq:
+                    return ops
+                s, u, v = heapq.heappop(pq)
+                # Check if nodes are still valid and adjacent
+                if valid[u] and valid[v] and next_node[u] == v:
+                    # Check if the sum is current (handles stale entries)
+                    if values[u] + values[v] == s:
+                        break
+            
+            # Perform merge operation
+            ops += 1
+            
+            p = prev_node[u]
+            nxt = next_node[v]
+            
+            # 1. Remove contribution of old edges to bad_count
+            if p != -1 and values[p] > values[u]:
+                bad_count -= 1
+            if values[u] > values[v]:
+                bad_count -= 1
+            if nxt != -1 and values[v] > values[nxt]:
+                bad_count -= 1
+                
+            # 2. Update structure (merge v into u)
+            new_val = values[u] + values[v]
+            values[u] = new_val
+            valid[v] = False
+            
+            next_node[u] = nxt
+            if nxt != -1:
+                prev_node[nxt] = u
+            # prev_node[u] remains p
+            
+            # 3. Add contribution of new edges to bad_count
+            if p != -1 and values[p] > values[u]:
+                bad_count += 1
+            if nxt != -1 and values[u] > values[nxt]:
+                bad_count += 1
+                
+            # 4. Push new adjacent sums to heap
+            if p != -1:
+                heapq.heappush(pq, (values[p] + values[u], p, u))
+            if nxt != -1:
+                heapq.heappush(pq, (values[u] + values[nxt], u, nxt))
+                
         return ops
+# @lc code=end
