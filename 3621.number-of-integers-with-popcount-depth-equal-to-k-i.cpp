@@ -6,58 +6,64 @@
 
 # @lc code=start
 #include <vector>
-#include <iostream>
 
 class Solution {
-public:
     long long nCr[66][66];
-    int depth[66];
 
-    void precompute() {
+    void precomputeNCR() {
         for (int i = 0; i <= 65; i++) {
             nCr[i][0] = 1;
             for (int j = 1; j <= i; j++) {
                 nCr[i][j] = nCr[i - 1][j - 1] + nCr[i - 1][j];
             }
         }
-
-        depth[1] = 0;
-        for (int i = 2; i <= 65; i++) {
-            depth[i] = 1 + depth[__builtin_popcount(i)];
-        }
     }
 
-    long long countWithPopcount(long long n, int target_c) {
-        if (target_c < 0 || target_c > 64) return 0;
+    long long countWithPopcount(long long n, int target) {
+        if (target < 0) return 0;
         long long count = 0;
-        int current_c = 0;
-        for (int i = 62; i >= 0; i--) {
+        int current_popcount = 0;
+        for (int i = 62; i >= 0; --i) {
             if ((n >> i) & 1) {
-                int needed = target_c - current_c;
-                if (needed >= 0 && needed <= i) {
-                    count += nCr[i][needed];
+                if (target - current_popcount >= 0 && target - current_popcount <= i) {
+                    count += nCr[i][target - current_popcount];
                 }
-                current_c++;
+                current_popcount++;
             }
         }
-        if (current_c == target_c) count++;
+        if (current_popcount == target) {
+            count++;
+        }
         return count;
     }
 
+public:
     long long popcountDepth(long long n, int k) {
-        if (k == 0) return 1; // Only x = 1
-        precompute();
+        if (k == 0) return 1;
+
+        precomputeNCR();
+
+        int d_vals[66];
+        d_vals[1] = 0;
+        for (int i = 2; i <= 64; ++i) {
+            int pc = 0;
+            int temp = i;
+            while (temp > 0) {
+                if (temp & 1) pc++;
+                temp >>= 1;
+            }
+            d_vals[i] = 1 + d_vals[pc];
+        }
 
         long long total = 0;
-        for (int c = 1; c <= 64; c++) {
-            if (depth[c] == k - 1) {
+        for (int c = 1; c <= 64; ++c) {
+            if (d_vals[c] == k - 1) {
                 total += countWithPopcount(n, c);
             }
         }
 
-        // If k=1, we counted x=1 (popcount 1, depth 0) but we need depth 1.
         if (k == 1) {
-            total--;
+            total--; // exclude x=1, which has popcount 1 but depth 0
         }
 
         return total;
