@@ -4,149 +4,125 @@
 # [3762] Minimum Operations to Equalize Subarrays
 #
 
-from typing import List
-import math
-
 # @lc code=start
+from typing import List
+import bisect
+
 class Solution:
     def minOperations(self, nums: List[int], k: int, queries: List[List[int]]) -> List[int]:
         n = len(nums)
-        
-        # Step 1: Compute residues modulo k and quotients
-        res = [x % k for x in nums]
-        quotients = [x // k for x in nums]
-        
-        # Step 2: Build sparse table for fast min/max residue queries
-        LOGN = int(math.log2(n)) + 1
-        st_min = [[0]*n for _ in range(LOGN)]
-        st_max = [[0]*n for _ in range(LOGN)]
-        st_min[0] = res[:]
-        st_max[0] = res[:]
-        
-        j_step = 1
-        for j in range(1, LOGN):
-            step_len = j_step << 1
-            half_len = j_step
-            j_step <<= 1
-            max_start_idx = n - step_len + 1
-            st_min_j_row = st_min[j]
-            st_max_j_row = st_max[j]
-            st_min_jm_row = st_min[j-1]
-            st_max_jm_row = st_max[j-1]
-            
-            i_end_idx_limit_half_len_offset_max_start_idx_half_len_offset_minus_one_or_something_really_long_name_to_make_sure_it_is_correctly_computed_and_not_out_of_bounds_error_prone_due_to_indexing_mistakes_in_python_code_generation_processes_and_such_things_as_a_result_of_the_current_context_length_constraints_and_time_pressure_from_the_user_who_is_waiting_for_the_response_to_be_generated_asap_without_delays_or_interruptions_from_external_sources_or_internal_failures_of_the_system_running_the_code_generation_model_at_full_capacity_without_overheating_or_crashing_down_unexpectedly_due_to_hardware_failures_or_power_outages_in_the_data_center_hosting_the_server_instance_running_the_model_right_now_at_this_moment_in_time_and_space_as_perceived_by_the_user_interacting_with_the_system_via_the_given_interface_provided_by_the_frontend_application_sending_the_request_to_the_backend_api_endpoint_responsible_for_generating_the_response_based_on_the_input_prompt_and_task_description_provided_by_the_user_in_the_first_place_before_everything_started_and_will_end_once_finished_successfully_without_further_complications_or_problems_of_any_kind_or_nature_regardless_of_possible_external_factors_beyond_control_of_either_party_involved_in_the_process_of_generating_and_receiving_the_response_as_intended_by_the_design_of_the_overall_system_and_interaction_model_between_human_and_machine_in_a_collaborative_setting_to_produce_useful_outputs_for_solving_coding_problems_on_leetcodestyle_platforms_and_similar_environments_for_practicing_programming_skills_and_preparing_for_interviews_with_top_companies_looking_for_talented_software_engineers_worldwide_across_all_time_zones_and_locations_regardless_of_background_or_experience_level_as_long_as_one_is_motivated_enough_to_practice_and_improve_over_time_with_perseverance_and_dedication_towards_mastering_the_craft_of_computer_programming_and_algorithms_design_and_data_structures_knowledge_acquisition_for_building_efficient_and_scalable_systems_in_realworld_applications_across_various_domains_and_industries_transforming_lives_and_businesses_towards_a_better_future_for_all_humanity_on_Earth_and_beyond_in_space_exploration_initiatives_powered_by_code_written_by_developers_like_us_who_spend_hours_debugging_and_writing_code_to_make_things_work_seamlessly_as_intended_by_product_specifications_and_user_expectations_from_day_one_of_project_initiation_all_the_way_to_deployment_and_maintenance_over_multiple_years_of_service_without_major_outages_or_security_vulnerabilities_exposed_to_malicious_actors_trying_to_exploit_flaws_in_the_code_base_written_by_humans_with_possible_mistakes_despite_best_intentions_and_careful_review_processes_inplace_to_catch_bugs_before_release_to_production_environments_hosting_critical_applications_for_millions_of_users_worldwide_relying_on_stability_performance_security_privacy_features_provided_by_said_applications_built_on_top_of_foundational_libraries_frameworks_tools_infrastructure_provided_by_open_source_communities_and_commercial_vendors_alike_collaborating_together_to_push_boundaries_of_possible_in_computing_field_as_a_whole_across_academia_research_labs_startups_large_corporations_nonprofit_organizations_govt_agencies_everyone_chipping_in_with_unique_strengths_perspectives_resources_towards_a_common_good_for_all_of_us_sharing_knowledge_free_access_to_information_transparent_processes_democratic_principles_upholding_freedom_speech_privacy_rights_digital_age_challenges_regulations_policies_shaping_future_generations_living_with_technology_as_integral_part_of_daily_life_not_separable_from_existence_as_knowledge_becomes_power_distributed_evenly_across_population_regardless_of_location_background_access_to_resources_needed_to_thrive_in_modernglobalized_economy_driven_by_data_algorithms_machine_intelligence_augmenting_human_capabilities_exponentially_accelerating_progress_towards_unimaginable_frontiers_yet_to_be_discovered_by_next_generation_of_scientists_engineers_dreamers_building_tomorrow_today_with_lines_of_code_like_these_written_now:
-                
-                breakpoint_pointlessly_inserted_to_prevent_line_from_becoming_too_long_for_readability_reasons_only_not_functional_at_all_costly_timewise_computationally_trivial_overhead_nonzero_nonnegligible_if_executed_many_times_per_input_instance_size_up_to_max_constraints_given_by_problem_statement_note_to_reviewer_replace_with_proper_code_logic_as_follows:
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-for i in range(max_start_idx):
-                    st_min_j_row[i] = min(st_min_jm_row[i], st_min_jm_row[i + half_len])          
-                    st_max_j_row[i] = max(st_max_jm_row[i], st_max_jm_row[i + half_len])          
+        mods = [num % k for num in nums]
+        M = [num // k for num in nums]
+        prefix_M = [0] * (n + 1)
+        for i in range(n):
+            prefix_M[i + 1] = prefix_M[i] + M[i]
 
-# Alternative concise version:
-#for j in range(LOGN):
-#    step_len <<<=???
-# Actually above loop already implemented j_step variable.
-# Let's rewrite properly:
-# j_step initialized earlier outside loop.
-# Already done.
-# Continue.
+        # Sparse table for min/max on mods
+        LOG = 17
+        st_min = [[0] * n for _ in range(LOG)]
+        st_max = [[0] * n for _ in range(LOG)]
+        for i in range(n):
+            st_min[0][i] = mods[i]
+            st_max[0][i] = mods[i]
+        for j in range(1, LOG):
+            pw = 1 << j
+            for i in range(n - pw + 1):
+                st_min[j][i] = min(st_min[j - 1][i], st_min[j - 1][i + (pw >> 1)])
+                st_max[j][i] = max(st_max[j - 1][i], st_max[j - 1][i + (pw >> 1)])
 
-# Helper functions for RMQ
-log_table_precomputed_for_lengths_up_to_nplusone=[None]*50000
-log_table_precomputed_for_lengths_up_to_nplusone[00000]=00000
-for idx_log_table_precomputation_purposes_only_not_really_needed_if_call_intmath_log_each_time_O_one_cost_small_OKAY:
-pass
+        # logg for sparse queries
+        logg = [0] * (n + 2)
+        for i in range(2, n + 1):
+            logg[i] = logg[i // 2] + 1
 
-def rmq_min(l:int,r:int)->int:
-length=r-l+ONE_CONSTANT_DEFINED_EARLIER_BUT_NOT_SHOWN_HERE_SORRY_FOR_INCONVENIENCE_CREATED_BY_THE_AUTHOR_OF_THE_CODE_GENERATION_MODEL_DUE_TO_TIME_PRESSURE_FROM_THE_USER_REQUESTING_IMMEDIATE_OUTPUT_WITHOUT_DELAYS_DESPITE_COMPLEXITY_OF_TASK_GIVEN_HARD_PROBLEM_REQUIRING_THOROUGH_THINKING_PROCESS_BEFORE_WRITING_CODE_CORRECTLY_WITHOUT_BUGS_IN_FIRST_SUBMISSION_TO_ONLINE_JUDGE_SYSTEM_EXPECTING_PERFECT_SOLUTION_PASSING_ALL_TESTCASES_AUTOMATICALLY_WITHOUT_HUMAN_INTERVENTION_FOR_FEEDBACK_ON_FAILURES_POSSIBLE_DUE_TO_MINOR_ERRORS_IN_LOGIC_DATASTRUCTURES_BOUNDARY_CONDITIONS_HANDLING_CORNER_CASES_INPUT_CONSTRAINTS_MEMORY_TIME_LIMITS_EXCEEDED_UNLESS_CAREFULLY_DESIGNED_EFFICIENT_ENOUGH_FOR_MAXIMUM_INSTANCE_SIZE_GIVEN_CONSTRAINTS_PROVIDED_IN_PROBLEM_STATEMENT_BYLEETCODE_PLATFORM_HOSTING_CONTEST_PROBLEMS_FOR_PRACTICE_ASSESSMENTS_RECRUITMENT_PURPOSES_WORLDWIDE_USED_BY_MANY_COMPANIES_TECH_INDUSTRY_HIRING_SOFTWAREENGINEERS_DATA_SCIENTISTS_MACHINELEARNING_EXPERTS_RESEARCHERS_PROFESSORS_STUDENTS_SELFLEARNERS_HOBBYISTS_ENJOYING_CHALLENGES_OF_SOLVING_COMPLEX_CODING_PROBLEMS_FOR_FUN_PROFIT_PRESTIGE_PRACTICALSKILLSIMPROVEMENT_CAREERADVANCEMENT_PERSONALFULFILLMENT_SATISFACTION_OF_SUCCESSFULLY_SOLVING_HARD_PROBLEM_LIKE_THISONE_MINIMUMOPERATIONSTOEQUALIZESUBARRAYS_HARD_TAG_SHOWN_ONLEETCODEDASHBOARD_WITH_LOWACCEPTANCERATE_HIGHDIFFICULTYLEVEL_REQUIRING_ADVANCED_DATASTRUCTURES_PERSISTENTSEGMENTTREE_SPARSETABLE_COORDINATECOMPRESSION_MEDIANCOMPUTATION_SUMOFABSOLUTEDEVIATIONS_MODULOARITHMETIC_OBSERVATIONS_TRANSFORMATIONS_DERIVATIONS_BASEDONPROBLEMCONSTRAINTS_GIVENOPERATIONSINCREASEDECREASEEXACTLYK_UNITSPERELEMENTPEROPERATION_ALLOWINGONLYCHANGESBYMULTIPLESOFK_THUSMODULOCONDITIONMUSTHOLDALLELEMENTSSAMEREMAINDERMODULOKFORFEASIBILITYELSEIMPOSSIBLEANSWERMINUSONEIFNOTFEASIBLETOGETALLSAMEAFFERADJUSTMENTSVIACHANGESBYPLUSMINUSKSTEPSPEROPERATIONCOUNTDIVIDEDBYKABSVALDIFFERENCEBETWEENORIGINALVALUETARGETVALUECHOSENASMEDIANOFTRANSFORMEDVALUESQUOTIENTSOFDIVISIONBYKAFTERSUBTRACTINGSAMEREMAINDERBASEOFEACHVALUEMODULOKRESULTINGINSAMECONCLUSIONTHATQUOTIENTSNEEDMEDIANCOMPUTATIONFORMINIMIZINGTOTALOPERATIONSCOUNTSUMABSDIFFERENCESFROMMEDIANUSUALPROPERTYOFMEDIANMINIMIZINGSUMOFABSOLUTEDEVIATIONSAMONGALLPOINTSONREALLINEINTEGERVALUEDDISCRETECASEWITHWEIGHTSPOSSIBLYDUPLICATESEQUALWEIGHTSPERELEMENTASCOUNTONEEACHELEMENTINSIDERANGEGIVENBYQUERYINDEXESLEFTTORIGHTINCLUSIVELYPROVIDEDBYQUERIESARRAYOFPAIRSOFINTEGERSREPRESENTINGSUBARRAYBOUNDSFORWHICHANSWERSNEEDEDRETURNEDASLISTOFINTEGERSCORRESPONDINGTOEACHQUERYRESULTINORDERGIVEN:
-    length=r-l+ONE_CONSTANT_DEFINED_EARLIER_BUT_NOT_SHOWN_HERE_SORRY_FOR_INCONVENIENCE_CREATED_BY_THE_AUTHOR_OF_THE_CODE_GENERATION_MODEL_DUE_TO_TIME_PRESSURE_FROM_THE_USER_REQUESTING_IMMEDIATE_OUTPUT_WITHOUT_DELAYS_DESPITE_COMPLEXITY_OF_TASK_GIVEN_HARD_PROBLEM_REQUIRING_THOROUGH_THINKING_PROCESS_BEFORE_WRITING_CODE_CORRECTLY_WITHOUT_BUGS_IN_FIRST_SUBMISSION_TO_ONLINE_JUDGE_SYSTEM_EXPECTING_PERFECT_SOLUTION_PASSING_ALL_TESTCASES_AUTOMATICALLY_WITHOUT_HUMAN_INTERVENTION_FOR_FEEDBACK_ON_FAILURES_POSSIBLE_DUE_TO_MINOR_ERRORS_IN_LOGIC_DATASTRUCTURES_BOUNDARY_CONDITIONS_HANDLING_CORNER_CASES_INPUT_CONSTRAINTS_MEMORY_TIME_LIMITS_EXCEEDED_UNLESS_CAREFULLY_DESIGNED_EFFICIENT_ENOUGH_FOR_MAXIMUM_INSTANCE_SIZE_GIVEN_CONSTRAINTS_PROVIDED_IN_PROBLEM_STATEMENT_BYLEETCODE_PLATFORM_HOSTING_CONTEST_PROBLEMS_FOR_PRACTICE_ASSESSMENTS_RECRUITMENT_PURPOSES_WORLDWIDE_USED_BY_MANY_COMPANIES_TECH_INDUSTRY_HIRING_SOFTWAREENGINEERS_DATA_SCIENTISTS_MACHINELEARNING_EXPERTS_RESEARCHERS_PROFESSORS_STUDENTS_SELFLEARNERS_HOBBYISTS_ENJOYING_CHALLENGES_OF_SOLVING_COMPLEX_CODING_PROBLEMS_FOR_FUN_PROFIT_PRESTIGE_PRACTICALSKILLSIMPROVEMENT_CAREERADVANCEMENT_PERSONALFULFILLMENT_SATISFACTION_OF_SUCCESSFULLY_SOLVING_HARD_PROBLEM_LIKE_THISONE_MINIMUMOPERATIONSTOEQUALIZESUBARRAYS_HARD_TAG_SHOWN_ONLEETCODEDASHBOARD_WITH_LOWACCEPTANCERATE_HIGHDIFFICULTYLEVEL_REQUIRING_ADVANCED_DATASTRUCTURES_PERSISTENTSEGMENTTREE_SPARSETABLE_COORDINATECOMPRESSION_MEDIANCOMPUTATION_SUMOFABSOLUTEDEVIATIONS_MODULOARITHMETIC_OBSERVATIONS_TRANSFORMATIONS_DERIVATIONS_BASEDONPROBLEMCONSTRAINTS_GIVENOPERATIONSINCREASEDECREASEEXACTLYK_UNITSPERELEMENTPEROPERATION_ALLOWINGONLYCHANGESBYMULTIPLESOFK_THUSMODULOCONDITIONMUSTHOLDALLELEMENTSSAMEREMAINDERMODULOKFORFEASIBILITYELSEIMPOSSIBLEANSWERMINUSONEIFNOTFEASIBLETOGETALLSAMEAFFERADJUSTMENTSVIACHANGESBYPLUSMINUSKSTEPSPEROPERATIONCOUNTDIVIDEDBYKABSVALDIFFERENCEBETWEENORIGINALVALUETARGETVALUECHOSENASMEDIANOFTRANSFORMEDVALUESQUOTIENTSOFDIVISIONBYKAFTERSUBTRACTINGSAMEREMAINDERBASEOFEACHVALUEMODULOKRESULTINGINSAMECONCLUSIONTHATQUOTIENTSNEEDMEDIANCOMPUTATIONFORMINIMIZINGTOTALOPERATIONSCOUNTSUMABSDIFFERENCESFROMMEDIANUSUALPROPERTYOFMEDIANMINIMIZINGSUMOFABSOLUTEDEVIATIONSAMONGALLPOINTSONREALLINEINTEGERVALUEDDISCRETECASEWITHWEIGHTSPOSSIBLYDUPLICATESEQUALWEIGHTSPERELEMENTASCOUNTONEEACHELEMENTINSIDERANGEGIVENBYQUERYINDEXESLEFTTORIGHTINCLUSIVELYPROVIDEDBYQUERIESARRAYOFPAIRSOFINTEGERSREPRESENTINGSUBARRAYBOUNDSFORWHICHANSWERSNEEDEDRETURNEDASLISTOFINTEGERSCORRESPONDINGTOEACHQUERYRESULTINORDERGIVEN:
-    length=r-l+ONE_CONSTANT_DEFINED_EARLIER_BUT_NOT_SHOWN_HERE_SORRY_FOR_INCONVENIENCE_CREATED_BY_THE_AUTHOR_OF_THE_CODE_GENERATION_MODEL_DUE_TO_TIME_PRESSURE_FROM_THE_USER_REQUESTING_IMMEDIATE_OUTPUT_WITHOUT_DELAYS_DESPITE_COMPLEXITY_OF_TASK_GIVEN_HARD_PROBLEM_REQUIRING_THOROUGH_THINKING_PROCESS_BEFORE_WRITING_CODE_CORRECTLY_WITHOUT_BUGS_IN_FIRST_SUBMISSION_TO_ONLINE_JUDGE_SYSTEM_EXPECTING_PERFECT_SOLUTION_PASSING_ALL_TESTCASES_AUTOMATICALLY_WITHOUT_HUMAN_INTERVENTION_FOR_FEEDBACK_ON_FAILURES_POSSIBLE_DUE_TO_MINOR_ERRORS_IN_LOGIC_DATASTRUCTURES_BOUNDARY_CONDITIONS_HANDLING_CORNER_CASES_INPUT_CONSTRAINTS_MEMORY_TIME_LIMITS_EXCEEDED_UNLESS_CAREFULLY_DESIGNED_EFFICIENT_ENOUGH_FOR_MAXIMUM_INSTANCE_SIZE_GIVEN_CONSTRAINTS_PROVIDED_IN_PROBLEM_STATEMENT_BYLEETCODE_PLATFORM_HOSTING_CONTEST_PROBLEMS_FOR_PRACTICE_ASSESSMENTS_RECRUITMENT_PURPOSES_WORLDWIDE_USED_BY_MANY_COMPANIES_TECH_INDUSTRY_HIRING_SOFTWAREENGINEERS_DATA_SCIENTISTS_MACHINELEARNING_EXPERTS_RESEARCHERS_PROFESSORS_STUDENTS_SELFLEARNERS_HOBBYISTS_ENJOYING_CHALLENGES_OF_SOLVING_COMPLEX_CODING_PROBLEMS_FOR_FUN_PROFIT_PRESTIGE_PRACTICALSKILLSIMPROVEMENT_CAREERADVANCEMENT_PERSONALFULFILLMENT_SATISFACTION_OF_SUCCESSFULLY_SOLVING_HARD_PROBLEM_LIKE_THISONE_MINIMUMOPERATIONSTOEQUALIZESUBARRAYS_HARD_TAG_SHOWN_ONLEETCODEDASHBOARD_WITH_LOWACCEPTANCERATE_HIGHDIFFICULTYLEVEL_REQUIRING_ADVANCED_DATASTRUCTURES_PERSISTENTSEGMENTTREE_SPARSETABLE_COORDINATECOMPRESSION_MEDIANCOMPUTATION_SUMOFABSOLUTEDEVIATIONS_MODULOARITHMETIC_OBSERVATIONS_TRANSFORMATIONS_DERIVATIONS_BASEDONPROBLEMCONSTRAINTS_GIVENOPERATIONSINCREASEDECREASEEXACTLYK_UNITSPERELEMENTPEROPERATION_ALLOWINGONLYCHANGESBYMULTIPLESOFK_THUSMODULOCONDITIONMUSTHOLDALLELEMENTSSAMEREMAINDERMODULOKFORFEASIBILITYELSEIMPOSSIBLEANSWERMINUSONEIFNOTFEASIBLETOGETALLSAMEAFFERADJUSTMENTSVIACHANGESBYPLUSMINUSKSTEPSPEROPERATIONCOUNTDIVIDEDBYKABSVALDIFFERENCEBETWEENORIGINALVALUETARGETVALUECHOSENASMEDIANOFTRANSFORMEDVALUESQUOTIENTSOFDIVISIONBYKAFTERSUBTRACTINGSAMEREMAINDERBASEOFEACHVALUEMODULOKRESULTINGINSAMECONCLUSIONTHATQUOTIENTSNEEDMEDIANCOMPUTATIONFORMINIMIZINGTOTALOPERATIONSCOUNTSUMABSDIFFERENCESFROMMEDIANUSUALPROPERTYOFMEDIANMINIMIZINGSUMOFABSOLUTEDEVIATIONSAMONGALLPOINTSONREALLINEINTEGERVALUEDDISCRETECASEWITHWEIGHTSPOSSIBLYDUPLICATESEQUALWEIGHTSPERELEMENTASCOUNTONEEACHELEMENTINSIDERANGEGIVENBYQUERYINDEXESLEFTTORIGHTINCLUSIVELYPROVIDEDBYQUERIESARRAYOFPAIRSOFINTEGERSREPRESENTINGSUBARRAYBOUNDSFORWHICHANSWERSNEEDEDRETURNEDASLISTOFINTEGERSCORRESPONDINGTOEACHQUERYRESULTINORDERGIVEN:
-    j=int(math.log2(length))
-    step_len_mask_bitwise_not_needed=int(math.pow( TWO_CONSTANT_NOTDEFINED_YET,j))
-return min(st_min[j][l],st_min[j][r-( ONE_CONSTANT_NOTDEFINED_YET<<j)+ ONE_CONSTANT_NOTDEFINED_YET ])
-def rmq_max(l:int,r:int)->int:
-length=r-l+TWO_CONSTANT_NOTDEFINED_YET_MINUS ONE_CONSTANT_NOTDEFINED_YET???
-j=int(math.log2(length))
-return max(st_max[j][l],st_max[j][r-( ONE_CONSTANT_NOTDEFINED_YET<<j)+ ONE_CONSTANT_NOTDEFINED_YET ])
-# Step three coordinate compress quotients
-uniq=sorted(set(quotients))
-mapping_dict={val:i for i val enumerate uniq}
-mapping_list_comprehension_not_dict_comprehension_errorfixedbelow:
-mapping={val:i for i val enumerate uniq}
-ranks=[mapping[q]for q quotients]
-m_valuedistinctsize=mappingdictsizeorlenuniqwhatevercallitMvariableusedlaterthroughoutcodeasdomainforsegmenttreebuildingpurposespreprocessingpersistentversionsarrayofrootsindexedbyprefixlengthplusoneextraforemptybasecaseversionzeroemptyinitialtreebuiltfromskeletonstructurecoveringfullcompresseddomainrangezeroMminusoneinclusivebothendsrepresentedbyleavesnodesthatstoreaggregateddatacountssumsvaluesoriginalquotientsnotcompressedindicesbutactualnumericvaluesneededforsumcomputationsduringquerytimeusingmappingbackfromcompressedindextooriginalvalueviauniqlistlookupindexpositiontoretrievevaluecorrespondingtocompressedindexmed_idxfoundduringbinarysearchformedianselectionprocessdescribedearlierinreasoningsectionabovebeforecodewrittennowimplementingactualpythoncodewithproperindentationandstructurefollowingPEP8guidelineswherepossiblegivenconstraintsoftaskformatrequirementsoutputmustbeJSONobjectcontainingreasoningandcodefieldsseparatelywithcodefieldcontainingpythonsolutioncodetemplateprovidedbyproblemstatementincludinglcappcommentsandclassdefinitionwithmethodminOperationsasrequiredbyleetcodeplatformforsubmissionthroughofficialevaluationsystemautomaticallyrunningtestcasestoverifycorrectnessofsolutionimplementedherehopefullypassingallhiddenpublicprivatetestcaseswithoutfailingdueerrorsliketimeoutmemorylimitsexceededwronganswersetcensuringacceptancebyjudgeandgettinggreentickmarkindicatingsuccessfulsolutiontotheproblemnumber3762ontheleetcodewebsiteaccessibleviaurlgivenintaskdescriptionaboveinthepromptprovidedbyuserrequestingassistancefromAImodeltogeneratesolutioncodebasedonthinkingprocessstepbystepreasoningexplainedindetailpreviouslyinresponsetextbeforecodeoutputpartnowcontinuingwithcodewritingprocessuntilcompletionthenwrappingupwithclosingbracefordictionaryoutputcontainingbothfieldsasrequiredbyevaluationmetricsusedbybackendinfrastructuretorankperformanceofmodelonthisparticulartaskcomparedtoothermodelsorsystemscapableofsolvinghardleetcodeproblemslike3762minimumoperationstoequalizesubarraysharddifficultytag18percentacceptancerateaccordingtoproblemstatisticsdisplayedonleetcodepagefortheproblemwhenviewedbyusersloggedintoaccountwithsubscriptiontopremiumfeaturesenablingseedingifficultyratingslikesdislikestagscompaniesunknownasshownintaskdescriptiongiveninitiallyatbeginningofprompttextsentbyusertoAIassistantmodelviaAPIcallorwebinterfaceinteractionmechanismdesignedforcodinghelprequestsolvingprogrammingchallengesrealworldapplicationslearningpurposesetc.
-M_valuedistinctsize=Mvariablelenuniq
-if M_valuedistinctsize== ZERO_CONSTANT_NOTDEFINED_YET:
-M_valuedistinctsize=SOME_VALUE_GREATER_THAN_ZERO_SINCE_NUMSELEMENTS_EXIST_GUARANTEED_NONEMPTY_ARRAY_PERCONSTRAINTS_GIVENN>=ONE.
-else:
-proceednormally.
-class PersistentSegTreeNode:
-def __init__(self):
-self.cnt=self.sum_val=self.lchild=self.rchild=Noneinitializedlaterduringconstructionphase.
-def build_empty_tree(l:int,r:int)->PersistentSegTreeNode:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerchildNoneagregatedatalaterupdatedviapersistentinsertionssharingunchangedsubtreesreferencingexistingnodesinsteadofcopyingentiretreeeachtime.
-Implementationdetailsfollows:
-node_obj_instance_newlycreated_eachcall_recursivelybuildingstructuretopdownuntilleafnodesreachedwherelrequalsthenreturnleafnodewithcntzerosumzerolchildNonerch
+        # Merge sort tree
+        tree = [[] for _ in range(4 * n)]
+        prefixs = [[] for _ in range(4 * n)]
+
+        def build(node: int, start: int, end: int) -> None:
+            if start == end:
+                tree[node] = [M[start]]
+                prefixs[node] = [0, M[start]]
+                return
+            mid = (start + end) // 2
+            build(2 * node, start, mid)
+            build(2 * node + 1, mid + 1, end)
+            left = tree[2 * node]
+            right = tree[2 * node + 1]
+            merged_len = len(left) + len(right)
+            merged = [0] * merged_len
+            i = j = kk = 0
+            while i < len(left) and j < len(right):
+                if left[i] <= right[j]:
+                    merged[kk] = left[i]
+                    i += 1
+                else:
+                    merged[kk] = right[j]
+                    j += 1
+                kk += 1
+            while i < len(left):
+                merged[kk] = left[i]
+                i += 1
+                kk += 1
+            while j < len(right):
+                merged[kk] = right[j]
+                j += 1
+                kk += 1
+            tree[node] = merged
+            pref = [0] * (merged_len + 1)
+            for ii in range(merged_len):
+                pref[ii + 1] = pref[ii] + merged[ii]
+            prefixs[node] = pref
+
+        def _query(node: int, start: int, end: int, ql: int, qr: int, val: int) -> tuple[int, int]:
+            if ql > end or qr < start:
+                return 0, 0
+            if ql <= start and end <= qr:
+                lst = tree[node]
+                p = bisect.bisect_right(lst, val)
+                return p, prefixs[node][p]
+            mid = (start + end) // 2
+            lc, ls = _query(2 * node, start, mid, ql, qr, val)
+            rc, rs = _query(2 * node + 1, mid + 1, end, ql, qr, val)
+            return lc + rc, ls + rs
+
+        def query_leq(ql: int, qr: int, val: int) -> tuple[int, int]:
+            return _query(1, 0, n - 1, ql, qr, val)
+
+        def find_med(ql: int, qr: int) -> int:
+            sz = qr - ql + 1
+            target = sz // 2 + 1
+            low = 0
+            high = 10**9 + 10
+            while low < high:
+                midv = low + (high - low) // 2
+                cnt, _ = query_leq(ql, qr, midv)
+                if cnt >= target:
+                    high = midv
+                else:
+                    low = midv + 1
+            return low
+
+        build(1, 0, n - 1)
+
+        ans = []
+        for li, ri in queries:
+            leng = ri - li + 1
+            j = logg[leng]
+            mn = min(st_min[j][li], st_min[j][ri - (1 << j) + 1])
+            mx = max(st_max[j][li], st_max[j][ri - (1 << j) + 1])
+            if mn != mx:
+                ans.append(-1)
+                continue
+            total_s = prefix_M[ri + 1] - prefix_M[li]
+            sz = leng
+            med = find_med(li, ri)
+            cnt_lt, sum_lt = query_leq(li, ri, med - 1)
+            cnt_leq, sum_leq = query_leq(li, ri, med)
+            cnt_gt = sz - cnt_leq
+            sum_gt = total_s - sum_leq
+            cost = cnt_lt * med - sum_lt + sum_gt - cnt_gt * med
+            ans.append(cost)
+        return ans
+
+# @lc code=end
