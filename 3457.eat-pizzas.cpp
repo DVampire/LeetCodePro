@@ -7,40 +7,40 @@
 # @lc code=start
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 using namespace std;
 
 class Solution {
 public:
     long long maxWeight(vector<int>& pizzas) {
-        // Sort pizzas in descending order to easily pick the heaviest ones
-        sort(pizzas.rbegin(), pizzas.rend());
-        
-        int n = pizzas.size();
-        int total_days = n / 4;
-        
-        // Calculate how many odd and even days we have
-        int odd_days = (total_days + 1) / 2;
-        int even_days = total_days / 2;
-        
-        long long total_weight = 0;
-        int current_idx = 0;
-        
-        // On odd-numbered days, we gain the heaviest pizza (Z) of the 4.
-        // To maximize, we pick the largest available pizzas.
+        long long n = pizzas.size();
+        long long days = n / 4;
+        long long odd_days = (days + 1) / 2;
+        long long even_days = days / 2;
+
+        sort(pizzas.begin(), pizzas.end());
+
+        long long totalWeight = 0;
+        int index = n - 1;
+
+        // For odd days, we gain weight Z (the largest in the group).
+        // We greedily take the largest available pizzas.
         for (int i = 0; i < odd_days; ++i) {
-            total_weight += pizzas[current_idx++];
+            totalWeight += pizzas[index];
+            index--;
         }
-        
-        // On even-numbered days, we gain the second heaviest pizza (Y) of the 4.
-        // To maximize, we pick the next largest available pizzas, but for each one,
-        // we must skip one heavier pizza to act as the 'Z' for that day.
+
+        // For even days, we gain weight Y (the second largest in the group).
+        // We need pairs of large pizzas. The larger of the pair serves as Z (wasted),
+        // the smaller serves as Y (gained).
         for (int i = 0; i < even_days; ++i) {
-            current_idx++; // Skip the pizza that will act as Z
-            total_weight += pizzas[current_idx++]; // Take the pizza that will act as Y
+            index--; // Skip the largest remaining (acts as Z)
+            totalWeight += pizzas[index]; // Take the next largest (acts as Y)
+            index--;
         }
-        
-        return total_weight;
+
+        return totalWeight;
     }
 };
 # @lc code=end

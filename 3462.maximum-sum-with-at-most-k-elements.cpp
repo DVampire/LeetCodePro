@@ -5,45 +5,36 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     long long maxSum(vector<vector<int>>& grid, vector<int>& limits, int k) {
+        vector<int> candidates;
         int n = grid.size();
-        vector<int> all_candidates;
-
-        // Step 1: For each row, identify the best candidates to pick.
-        // We can take at most limits[i] elements from row i. 
-        // To maximize the sum, we should pick the largest ones available in that row.
+        
+        // Step 1: Collect valid candidates from each row based on row limits
         for (int i = 0; i < n; ++i) {
-            // Sort the row in descending order
-            sort(grid[i].begin(), grid[i].end(), greater<int>());
+            // Sort the row in descending order to pick the largest elements
+            sort(grid[i].rbegin(), grid[i].rend());
             
-            // Take the top 'limits[i]' elements from this row
-            int count_to_take = limits[i];
-            // Since 0 <= limits[i] <= m, count_to_take is at most the row size.
-            for (int j = 0; j < count_to_take; ++j) {
-                all_candidates.push_back(grid[i][j]);
+            // We can take at most limits[i] elements from this row
+            int count = limits[i];
+            for (int j = 0; j < count && j < grid[i].size(); ++j) {
+                candidates.push_back(grid[i][j]);
             }
         }
-
-        // Step 2: From all potential candidates across all rows, pick the top k.
-        // Sort the entire candidate pool in descending order.
-        sort(all_candidates.begin(), all_candidates.end(), greater<int>());
-
-        // Step 3: Calculate the maximum sum by picking the largest k elements.
-        long long total_sum = 0;
-        // Per constraints, k <= sum(limits), so all_candidates.size() is at least k.
-        // Also, all elements are non-negative, so taking exactly k elements is optimal.
-        for (int i = 0; i < k && i < all_candidates.size(); ++i) {
-            total_sum += (long long)all_candidates[i];
+        
+        // Step 2: Sort all collected candidates in descending order
+        sort(candidates.rbegin(), candidates.rend());
+        
+        // Step 3: Pick the top k elements (or fewer if we don't have enough candidates)
+        long long totalSum = 0;
+        int selections = min((int)candidates.size(), k);
+        
+        for (int i = 0; i < selections; ++i) {
+            totalSum += candidates[i];
         }
-
-        return total_sum;
+        
+        return totalSum;
     }
 };
 # @lc code=end

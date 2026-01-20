@@ -5,66 +5,72 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <algorithm>
-#include <cmath>
-
-using namespace std;
-
 class Solution {
 public:
-    bool check(long long X, int n, const vector<int>& points, long long m) {
-        if (X == 0) return true;
+    bool check(long long target, const vector<int>& points, int m) {
+        long long moves = 0;
+        long long cur = 0;
+        int n = points.size();
         
-        long long total_moves = 0;
-        long long extra_next = 0;
-        
-        for (int i = 0; i < n; ++i) {
-            long long needed = (X + points[i] - 1) / points[i];
-            long long current_visits = extra_next + 1; // 1 move to reach index i from i-1
-            total_moves++; 
-            
-            if (total_moves > m) return false;
-            
-            if (current_visits < needed) {
-                long long diff = needed - current_visits;
-                // Toggle between i and i+1 to get 'diff' more visits at index i.
-                // Each toggle (i -> i+1 -> i) costs 2 moves and adds 1 visit to i and i+1.
-                total_moves += 2 * diff;
-                extra_next = diff;
-            } else {
-                extra_next = 0;
+        // We iterate up to n-2. The last element n-1 is handled specially
+        // or as a consequence of n-2.
+        for (int i = 0; i < n - 1; ++i) {
+            if (i == 0) {
+                moves++; // Move -1 -> 0
+                cur = 1;
             }
             
-            if (total_moves > m) return false;
+            long long req = (target + points[i] - 1) / points[i];
+            long long needed = 0;
+            if (cur < req) {
+                needed = req - cur;
+                moves += needed * 2;
+            }
             
-            // If we are at index n-2 and the toggles have already satisfied index n-1,
-            // we don't need to move to index n-1.
+            if (moves > m) return false;
+            
+            // needed loops of i -> i+1 -> i contribute 'needed' visits to i+1
+            long long visits_next = needed;
+            
+            // Strategy check: can we stop at i (after the loops) without moving to i+1?
+            // This is only valid if i+1 is the last element (n-1) and it is already satisfied.
             if (i == n - 2) {
-                long long next_needed = (X + points[i + 1] - 1) / points[i + 1];
-                if (extra_next >= next_needed) return true;
+                long long req_last = (target + points[n-1] - 1) / points[n-1];
+                if (visits_next >= req_last) {
+                    return true;
+                }
             }
+            
+            // Proceed to i+1
+            moves++;
+            cur = visits_next + 1; // visits from loops + the arrival move
+            
+            if (moves > m) return false;
         }
         
-        return total_moves <= m;
+        // At this point, we are at n-1. 'cur' tracks visits to n-1.
+        // We might need more visits for n-1. The only way is to oscillate (n-1) -> (n-2) -> (n-1).
+        long long req = (target + points[n-1] - 1) / points[n-1];
+        if (cur < req) {
+            moves += (req - cur) * 2;
+        }
+        
+        return moves <= m;
     }
 
     long long maxScore(vector<int>& points, int m) {
-        int n = points.size();
-        long long low = 0;
-        long long high = 1e15; // Sufficiently large upper bound
+        long long low = 0, high = 200000000000000LL; // 2e14, safe upper bound
         long long ans = 0;
         
         while (low <= high) {
             long long mid = low + (high - low) / 2;
-            if (check(mid, n, points, (long long)m)) {
+            if (check(mid, points, m)) {
                 ans = mid;
                 low = mid + 1;
             } else {
                 high = mid - 1;
             }
         }
-        
         return ans;
     }
 };
