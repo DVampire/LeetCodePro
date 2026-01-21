@@ -1,58 +1,57 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=3398 lang=cpp
+#
+# [3398] Smallest Substring With Identical Characters I
+#
 
-// @lc app=leetcode id=3398 lang=cpp
-//
-// [3398] Smallest Substring With Identical Characters I
-//
-
-// @lc code=start
+# @lc code=start
 class Solution {
 public:
     int minLength(string s, int numOps) {
-        int n = (int)s.size();
-
-        auto feasible = [&](int L) -> bool {
-            const int INF = 1e9;
-            vector<vector<int>> dp(2, vector<int>(L + 1, INF));
-
-            // i = 0 initialization
-            for (int c = 0; c <= 1; c++) {
-                int cost = ((s[0] - '0') != c);
-                dp[c][1] = min(dp[c][1], cost);
+        int n = s.size();
+        auto can = [&](int K) -> bool {
+            const int INF = 2000000000;
+            std::vector<std::vector<int>> prev_layer(K + 1, std::vector<int>(2, INF));
+            // First character
+            for (int c = 0; c < 2; ++c) {
+                int cost = ((s[0] - '0') != c ? 1 : 0);
+                prev_layer[1][c] = cost;
             }
-
-            for (int i = 1; i < n; i++) {
-                vector<vector<int>> ndp(2, vector<int>(L + 1, INF));
-                for (int prev = 0; prev <= 1; prev++) {
-                    for (int len = 1; len <= L; len++) {
-                        int cur = dp[prev][len];
-                        if (cur >= INF) continue;
-                        for (int c = 0; c <= 1; c++) {
-                            int nlen = (c == prev) ? (len + 1) : 1;
-                            if (nlen > L) continue;
-                            int add = ((s[i] - '0') != c);
-                            ndp[c][nlen] = min(ndp[c][nlen], cur + add);
+            for (int i = 1; i < n; ++i) {
+                std::vector<std::vector<int>> curr_layer(K + 1, std::vector<int>(2, INF));
+                for (int p_len = 1; p_len <= K; ++p_len) {
+                    for (int p_c = 0; p_c < 2; ++p_c) {
+                        if (prev_layer[p_len][p_c] == INF) continue;
+                        for (int new_c = 0; new_c < 2; ++new_c) {
+                            int cost = ((s[i] - '0') != new_c ? 1 : 0);
+                            int new_len = (new_c == p_c ? p_len + 1 : 1);
+                            if (new_len > K) continue;
+                            curr_layer[new_len][new_c] = std::min(curr_layer[new_len][new_c],
+                                prev_layer[p_len][p_c] + cost);
                         }
                     }
                 }
-                dp.swap(ndp);
+                prev_layer = std::move(curr_layer);
             }
-
-            int best = INT_MAX;
-            for (int c = 0; c <= 1; c++)
-                for (int len = 1; len <= L; len++)
-                    best = min(best, dp[c][len]);
-            return best <= numOps;
+            int min_flips = INF;
+            for (int len = 1; len <= K; ++len) {
+                for (int c = 0; c < 2; ++c) {
+                    min_flips = std::min(min_flips, prev_layer[len][c]);
+                }
+            }
+            return min_flips <= numOps;
         };
-
-        int lo = 1, hi = n;
-        while (lo < hi) {
-            int mid = lo + (hi - lo) / 2;
-            if (feasible(mid)) hi = mid;
-            else lo = mid + 1;
+        int left = 1, right = n, ans = n;
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (can(mid)) {
+                ans = mid;
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
         }
-        return lo;
+        return ans;
     }
 };
-// @lc code=end
+# @lc code=end
