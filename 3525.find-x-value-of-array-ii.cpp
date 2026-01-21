@@ -1,118 +1,92 @@
-#
-# @lc app=leetcode id=3525 lang=cpp
-#
-# [3525] Find X Value of Array II
-#
-
-# @lc code=start
-#include <vector>
-
+#include <bits/stdc++.h>
 using namespace std;
 
+/*
+ * @lc app=leetcode id=3525 lang=cpp
+ *
+ * [3525] Find X Value of Array II
+ */
+
+// @lc code=start
 class Solution {
-    struct Node {
-        int count[6]; // k <= 5
-        int total_prod;
-        
-        Node() {
-            for(int i=0; i<6; ++i) count[i] = 0;
-            total_prod = 1;
-        }
-    };
-    
-    vector<Node> tree;
-    int n;
+public:
     int K;
-    
-    Node merge(const Node& l, const Node& r) {
+
+    struct Node {
+        int prod;
+        array<int, 5> cnt;
+        Node(int p = 1) : prod(p) { cnt.fill(0); }
+    };
+
+    Node identity() {
+        Node n;
+        n.prod = (K == 1 ? 0 : 1 % K);
+        n.cnt.fill(0);
+        return n;
+    }
+
+    Node makeLeaf(int val) {
+        Node n;
+        n.prod = val % K;
+        n.cnt.fill(0);
+        n.cnt[n.prod] = 1; // the only non-empty prefix is itself
+        return n;
+    }
+
+    Node mergeNode(const Node &a, const Node &b) {
         Node res;
-        // Initialize with L counts (prefixes entirely within the left child)
-        for(int i=0; i<K; ++i) {
-            res.count[i] = l.count[i];
+        res.cnt.fill(0);
+        res.prod = (int)((1LL * a.prod * b.prod) % K);
+
+        // prefixes entirely in a
+        for (int r = 0; r < K; r++) res.cnt[r] += a.cnt[r];
+
+        // prefixes that include all of a and then a prefix of b
+        for (int rb = 0; rb < K; rb++) {
+            int r = (int)((1LL * a.prod * rb) % K);
+            res.cnt[r] += b.cnt[rb];
         }
-        // Add R counts adjusted by L product (prefixes extending into the right child)
-        for(int i=0; i<K; ++i) {
-            if (r.count[i] > 0) {
-                int val = (l.total_prod * i) % K;
-                res.count[val] += r.count[i];
-            }
-        }
-        res.total_prod = (l.total_prod * r.total_prod) % K;
         return res;
     }
-    
-    void build(const vector<int>& nums, int node, int start, int end) {
-        if (start == end) {
-            int val = nums[start] % K;
-            tree[node].total_prod = val;
-            for(int i=0; i<K; ++i) tree[node].count[i] = 0;
-            tree[node].count[val] = 1;
-        } else {
-            int mid = (start + end) / 2;
-            build(nums, 2*node, start, mid);
-            build(nums, 2*node+1, mid+1, end);
-            tree[node] = merge(tree[2*node], tree[2*node+1]);
-        }
-    }
-    
-    void update(int node, int start, int end, int idx, int val) {
-        if (start == end) {
-            int v = val % K;
-            tree[node].total_prod = v;
-            for(int i=0; i<K; ++i) tree[node].count[i] = 0;
-            tree[node].count[v] = 1;
-        } else {
-            int mid = (start + end) / 2;
-            if (start <= idx && idx <= mid) {
-                update(2*node, start, mid, idx, val);
-            } else {
-                update(2*node+1, mid+1, end, idx, val);
-            }
-            tree[node] = merge(tree[2*node], tree[2*node+1]);
-        }
-    }
-    
-    Node query(int node, int start, int end, int l, int r) {
-        if (r < start || end < l) {
-            Node identity;
-            identity.total_prod = 1;
-            for(int i=0; i<K; ++i) identity.count[i] = 0;
-            return identity;
-        }
-        if (l <= start && end <= r) {
-            return tree[node];
-        }
-        int mid = (start + end) / 2;
-        Node p1 = query(2*node, start, mid, l, r);
-        Node p2 = query(2*node+1, mid+1, end, l, r);
-        return merge(p1, p2);
-    }
-    
-public:
+
     vector<int> resultArray(vector<int>& nums, int k, vector<vector<int>>& queries) {
-        n = nums.size();
         K = k;
-        tree.resize(4 * n);
-        
-        build(nums, 1, 0, n-1);
-        
-        vector<int> results;
-        results.reserve(queries.size());
-        
-        for (const auto& q : queries) {
-            int index = q[0];
-            int value = q[1];
-            int start = q[2];
-            int x = q[3];
-            
-            update(1, 0, n-1, index, value);
-            
-            // We need the result for the subarray nums[start...n-1]
-            // We query the segment tree for range [start, n-1]
-            Node res = query(1, 0, n-1, start, n-1);
-            results.push_back(res.count[x]);
+        int n = (int)nums.size();
+
+        vector<Node> seg(2 * n);
+        for (int i = 0; i < n; i++) seg[n + i] = makeLeaf(nums[i]);
+        for (int i = n - 1; i >= 1; i--) seg[i] = mergeNode(seg[i << 1], seg[i << 1 | 1]);
+
+        auto update = [&](int pos, int val) {
+            int p = pos + n;
+            seg[p] = makeLeaf(val);
+            for (p >>= 1; p >= 1; p >>= 1) {
+                seg[p] = mergeNode(seg[p << 1], seg[p << 1 | 1]);
+                if (p == 1) break;
+            }
+        };
+
+        auto query = [&](int l, int r) { // [l, r)
+            Node left = identity();
+            Node right = identity();
+            for (l += n, r += n; l < r; l >>= 1, r >>= 1) {
+                if (l & 1) left = mergeNode(left, seg[l++]);
+                if (r & 1) right = mergeNode(seg[--r], right);
+            }
+            return mergeNode(left, right);
+        };
+
+        vector<int> ans;
+        ans.reserve(queries.size());
+
+        for (auto &q : queries) {
+            int index = q[0], value = q[1], start = q[2], x = q[3];
+            update(index, value);
+            Node res = query(start, n);
+            ans.push_back(res.cnt[x]);
         }
-        return results;
+
+        return ans;
     }
 };
-# @lc code=end
+// @lc code=end

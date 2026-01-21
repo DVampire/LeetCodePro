@@ -5,47 +5,34 @@
 #
 
 # @lc code=start
+#include <bits/stdc++.h>
+using namespace std;
+
 class Solution {
 public:
     int maxProfit(int n, vector<vector<int>>& edges, vector<int>& score) {
-        // Precompute parents bitmasks
-        // parents[i] contains a bitmask where the j-th bit is set if there is an edge j -> i
-        vector<int> parents(n, 0);
-        for (const auto& edge : edges) {
-            parents[edge[1]] |= (1 << edge[0]);
+        vector<int> pre(n, 0);
+        for (auto &e : edges) {
+            int u = e[0], v = e[1];
+            pre[v] |= (1 << u);
         }
 
-        // dp[mask] stores the max profit for the set of nodes in mask
-        // utilizing positions 1 to k, where k is the number of set bits in mask.
-        // Initialize with -1 to represent unreachable states.
-        vector<int> dp(1 << n, -1);
+        int N = 1 << n;
+        vector<long long> dp(N, -1);
         dp[0] = 0;
 
-        // Iterate through all masks
-        for (int mask = 0; mask < (1 << n); ++mask) {
-            if (dp[mask] == -1) continue;
-
-            // The position for the next node will be (number of nodes currently in mask) + 1
-            int next_pos = __builtin_popcount(mask) + 1;
-
-            // Try to add any node u that is not yet in mask
-            for (int u = 0; u < n; ++u) {
-                // If u is not in mask
-                if (!((mask >> u) & 1)) {
-                    // Check if all dependencies of u are already in mask
-                    // parents[u] must be a subset of mask
-                    if ((parents[u] & mask) == parents[u]) {
-                        int next_mask = mask | (1 << u);
-                        int new_profit = dp[mask] + score[u] * next_pos;
-                        if (new_profit > dp[next_mask]) {
-                            dp[next_mask] = new_profit;
-                        }
-                    }
-                }
+        for (int mask = 0; mask < N; ++mask) {
+            if (dp[mask] < 0) continue;
+            int k = __builtin_popcount((unsigned)mask);
+            for (int v = 0; v < n; ++v) {
+                if (mask & (1 << v)) continue;
+                if ( (pre[v] & mask) != pre[v]) continue;
+                int nmask = mask | (1 << v);
+                dp[nmask] = max(dp[nmask], dp[mask] + 1LL * score[v] * (k + 1));
             }
         }
 
-        return dp[(1 << n) - 1];
+        return (int)dp[N - 1];
     }
 };
 # @lc code=end

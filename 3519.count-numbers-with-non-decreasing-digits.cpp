@@ -1,122 +1,102 @@
-#
-# @lc app=leetcode id=3519 lang=cpp
-#
-# [3519] Count Numbers with Non-Decreasing Digits
-#
-
-# @lc code=start
-#include <iostream>
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <cstring>
-
+#include <bits/stdc++.h>
 using namespace std;
 
+// @lc code=start
 class Solution {
-    long long memo[110][11][2][2];
-    int MOD = 1e9 + 7;
-    int B;
-
-    // Converts a base-10 string to a base-B vector of digits
-    vector<int> toBaseB(string s, int b) {
-        vector<int> decimalDigits;
-        for (char c : s) decimalDigits.push_back(c - '0');
-
-        vector<int> baseBDigits;
-        while (!decimalDigits.empty()) {
-            long long remainder = 0;
-            vector<int> nextDecimal;
-            bool leadingZeros = true;
-            for (int digit : decimalDigits) {
-                long long current = remainder * 10 + digit;
-                int quotient = current / b;
-                remainder = current % b;
-                if (quotient > 0 || !leadingZeros) {
-                    nextDecimal.push_back(quotient);
-                    leadingZeros = false;
-                }
-            }
-            baseBDigits.push_back(remainder);
-            decimalDigits = nextDecimal;
-        }
-        reverse(baseBDigits.begin(), baseBDigits.end());
-        if (baseBDigits.empty()) return {0};
-        return baseBDigits;
-    }
-
-    // Decrements the number represented by the base-B vector
-    void decrement(vector<int>& num) {
-        int n = num.size();
-        int i = n - 1;
-        while (i >= 0) {
-            if (num[i] > 0) {
-                num[i]--;
-                break;
-            } else {
-                num[i] = B - 1;
-                i--;
-            }
-        }
-        // Remove leading zero if the number shrinks, unless it becomes just [0]
-        if (num.size() > 1 && num[0] == 0) {
-            num.erase(num.begin());
-        }
-    }
-
-    long long dp(int idx, int lastVal, bool isLimit, bool isStarted, const vector<int>& digits) {
-        if (idx == digits.size()) {
-            return 1;
-        }
-        if (memo[idx][lastVal][isLimit][isStarted] != -1) {
-            return memo[idx][lastVal][isLimit][isStarted];
-        }
-
-        long long ans = 0;
-        int up = isLimit ? digits[idx] : (B - 1);
-
-        for (int d = 0; d <= up; ++d) {
-            if (!isStarted) {
-                if (d == 0) {
-                    // Still haven't started (leading zeros)
-                    ans = (ans + dp(idx + 1, 0, isLimit && (d == up), false, digits)) % MOD;
-                } else {
-                    // Starting now, d > 0
-                    ans = (ans + dp(idx + 1, d, isLimit && (d == up), true, digits)) % MOD;
-                }
-            } else {
-                // Already started, must maintain non-decreasing order
-                if (d >= lastVal) {
-                    ans = (ans + dp(idx + 1, d, isLimit && (d == up), true, digits)) % MOD;
-                }
-            }
-        }
-
-        return memo[idx][lastVal][isLimit][isStarted] = ans;
-    }
-
-    long long solve(vector<int>& digits) {
-        memset(memo, -1, sizeof(memo));
-        // Special case: The DP counts 0 as a valid number implicitly if we consider the "empty" non-started path
-        // resolving to 1 at the end. However, the problem range is inclusive.
-        // The DP state `isStarted=false` reaching the end essentially counts the number 0.
-        // If the number is effectively 0 (vector is {0}), the logic should hold.
-        return dp(0, 0, true, false, digits);
-    }
-
 public:
+    static constexpr int MOD = 1000000007;
+
+    // Divide non-negative decimal string s by small int b.
+    // Returns {quotient_string, remainder}
+    pair<string,int> divmodDecString(const string& s, int b) {
+        long long carry = 0;
+        string q;
+        q.reserve(s.size());
+        for (char c : s) {
+            carry = carry * 10 + (c - '0');
+            int digit = (int)(carry / b);
+            carry %= b;
+            if (!q.empty() || digit != 0) q.push_back(char('0' + digit));
+        }
+        if (q.empty()) q = "0";
+        return {q, (int)carry};
+    }
+
+    vector<int> toBaseB(string x, int b) {
+        if (x == "0") return {0};
+        vector<int> rev;
+        while (x != "0") {
+            auto [q, rem] = divmodDecString(x, b);
+            rev.push_back(rem);
+            x = q;
+        }
+        reverse(rev.begin(), rev.end());
+        return rev;
+    }
+
+    string decMinusOne(string s) {
+        if (s == "0") return "-1";
+        int i = (int)s.size() - 1;
+        while (i >= 0 && s[i] == '0') {
+            s[i] = '9';
+            --i;
+        }
+        if (i < 0) return "-1";
+        s[i]--;
+        int p = 0;
+        while (p + 1 < (int)s.size() && s[p] == '0') ++p;
+        s = s.substr(p);
+        if (s.empty()) return "0";
+        return s;
+    }
+
+    int countUpTo(const string& xDec, int b) {
+        if (xDec == "-1") return 0;
+        vector<int> dig = toBaseB(xDec, b);
+        int n = (int)dig.size();
+
+        // memo[pos][prev][started][tight]
+        vector<vector<vector<vector<int>>>> memo(
+            n + 1,
+            vector<vector<vector<int>>>(b, vector<vector<int>>(2, vector<int>(2, -1)))
+        );
+
+        function<int(int,int,int,int)> dfs = [&](int pos, int prev, int started, int tight) -> int {
+            if (pos == n) return 1; // one number formed
+            int &res = memo[pos][prev][started][tight];
+            if (res != -1) return res;
+
+            long long ans = 0;
+            int lim = tight ? dig[pos] : (b - 1);
+            for (int d = 0; d <= lim; ++d) {
+                int ntight = (tight && d == lim);
+                if (!started) {
+                    if (d == 0) {
+                        ans += dfs(pos + 1, 0, 0, ntight);
+                    } else {
+                        ans += dfs(pos + 1, d, 1, ntight);
+                    }
+                } else {
+                    if (d >= prev) {
+                        ans += dfs(pos + 1, d, 1, ntight);
+                    }
+                }
+                if (ans >= (1LL<<62)) ans %= MOD;
+            }
+            res = (int)(ans % MOD);
+            return res;
+        };
+
+        return dfs(0, 0, 0, 1);
+    }
+
     int countNumbers(string l, string r, int b) {
-        B = b;
-        vector<int> rDigits = toBaseB(r, b);
-        vector<int> lDigits = toBaseB(l, b);
-        
-        // We want range [l, r], so we calculate solve(r) - solve(l - 1).
-        decrement(lDigits);
-        
-        long long ansR = solve(rDigits);
-        long long ansL = solve(lDigits);
-        
-        return (ansR - ansL + MOD) % MOD;
+        int right = countUpTo(r, b);
+        string lm1 = decMinusOne(l);
+        int left = countUpTo(lm1, b);
+        int ans = right - left;
+        if (ans < 0) ans += MOD;
+        return ans;
     }
 };
-# @lc code=end
+// @lc code=end
