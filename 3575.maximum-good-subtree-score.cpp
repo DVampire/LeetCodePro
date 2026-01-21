@@ -1,88 +1,86 @@
+#
+# @lc app=leetcode id=3575 lang=cpp
+#
+# [3575] Maximum Good Subtree Score
+#
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc app=leetcode id=3575 lang=cpp
-//
-// [3575] Maximum Good Subtree Score
-//
-
-// @lc code=start
 class Solution {
 public:
     int goodSubtreeSum(vector<int>& vals, vector<int>& par) {
-        static const int DIG = 10;
-        static const int M = 1 << DIG;
-        static const int MOD = 1'000'000'007;
-        const long long NEG = (long long)-4e18;
-
-        int n = (int)vals.size();
+        int n = vals.size();
         vector<vector<int>> children(n);
-        for (int i = 1; i < n; i++) children[par[i]].push_back(i);
-
-        auto getMask = [&](long long x) -> int {
-            int mask = 0;
-            while (x > 0) {
-                int d = (int)(x % 10);
-                if (mask & (1 << d)) return -1; // repeated digit inside the number
-                mask |= 1 << d;
-                x /= 10;
-            }
-            return mask;
-        };
-
-        vector<int> valMask(n);
-        for (int i = 0; i < n; i++) valMask[i] = getMask(vals[i]);
-
-        // postorder traversal
-        vector<int> order;
-        order.reserve(n);
-        vector<int> st = {0};
-        while (!st.empty()) {
-            int u = st.back(); st.pop_back();
-            order.push_back(u);
-            for (int v : children[u]) st.push_back(v);
+        for (int i = 1; i < n; ++i) {
+            children[par[i]].push_back(i);
         }
-        reverse(order.begin(), order.end());
-
-        vector<array<long long, M>> dp(n);
-        long long ans = 0;
-
-        for (int u : order) {
-            for (int i = 0; i < M; i++) dp[u][i] = NEG;
-            dp[u][0] = 0;
-            if (valMask[u] != -1) dp[u][valMask[u]] = max(dp[u][valMask[u]], (long long)vals[u]);
-
-            // merge each child
+        vector<int> masks(n, 0);
+        auto get_mask = [](int x) -> int {
+            int m = 0;
+            string s = to_string(x);
+            for (char c : s) {
+                int d = c - '0';
+                int bit = 1 << d;
+                if (m & bit) return 0;
+                m |= bit;
+            }
+            return m;
+        };
+        for (int i = 0; i < n; ++i) {
+            masks[i] = get_mask(vals[i]);
+        }
+        const long long INF = 1LL << 60;
+        const int MS = 1 << 10;
+        vector<vector<long long>> dp(n, vector<long long>(MS, -INF));
+        const int MOD = 1000000007;
+        long long answer = 0;
+        function<void(int)> dfs = [&](int u) {
+            vector<long long> curr(MS, -INF);
+            curr[0] = 0;
             for (int v : children[u]) {
-                vector<int> act1, act2;
-                act1.reserve(M);
-                act2.reserve(M);
-                for (int m = 0; m < M; m++) {
-                    if (dp[u][m] >= 0) act1.push_back(m);
-                    if (dp[v][m] >= 0) act2.push_back(m);
+                dfs(v);
+                vector<long long> nxt(MS, -INF);
+                vector<int> act_curr, act_v;
+                for (int j = 0; j < MS; ++j) {
+                    if (curr[j] != -INF) act_curr.push_back(j);
+                    if (dp[v][j] != -INF) act_v.push_back(j);
                 }
-
-                array<long long, M> ndp;
-                for (int i = 0; i < M; i++) ndp[i] = NEG;
-
-                for (int m1 : act1) {
-                    long long a = dp[u][m1];
-                    for (int m2 : act2) {
-                        if ((m1 & m2) != 0) continue;
-                        int nm = m1 | m2;
-                        ndp[nm] = max(ndp[nm], a + dp[v][m2]);
+                for (int pm : act_curr) {
+                    for (int cm : act_v) {
+                        if ((pm & cm) == 0) {
+                            int nm = pm | cm;
+                            nxt[nm] = max(nxt[nm], curr[pm] + dp[v][cm]);
+                        }
                     }
                 }
-                dp[u] = ndp;
+                curr = std::move(nxt);
             }
-
-            long long best = 0;
-            for (int m = 0; m < M; m++) best = max(best, dp[u][m]);
-            ans += best;
-            ans %= MOD;
-        }
-
-        return (int)(ans % MOD);
+            vector<long long> this_dp(MS, -INF);
+            int mu = masks[u];
+            long long vu = vals[u];
+            bool can = (mu != 0);
+            vector<int> act_c;
+            for (int j = 0; j < MS; ++j) {
+                if (curr[j] != -INF) act_c.push_back(j);
+            }
+            for (int m : act_c) {
+                this_dp[m] = max(this_dp[m], curr[m]);
+                if (can && (m & mu) == 0) {
+                    int nm = m | mu;
+                    this_dp[nm] = max(this_dp[nm], curr[m] + vu);
+                }
+            }
+            dp[u] = std::move(this_dp);
+            long long mx = 0;
+            for (int j = 0; j < MS; ++j) {
+                mx = max(mx, dp[u][j]);
+            }
+            answer = (answer + mx) % MOD;
+        };
+        dfs(0);
+        return answer;
     }
 };
-// @lc code=end
+# @lc code=end
