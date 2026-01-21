@@ -1,10 +1,9 @@
-#include <numeric>
-
 #
 # @lc app=leetcode id=2807 lang=cpp
 #
 # [2807] Insert Greatest Common Divisors in Linked List
 #
+#include <numeric>
 
 # @lc code=start
 /**
@@ -22,10 +21,12 @@ public:
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
         ListNode* cur = head;
         while (cur && cur->next) {
-            int g = std::gcd(cur->val, cur->next->val);
-            ListNode* ins = new ListNode(g, cur->next);
-            cur->next = ins;
-            cur = ins->next; // move to next original node
+            ListNode* nxt = cur->next;
+            int g = std::gcd(cur->val, nxt->val);
+            ListNode* mid = new ListNode(g);
+            cur->next = mid;
+            mid->next = nxt;
+            cur = nxt;
         }
         return head;
     }

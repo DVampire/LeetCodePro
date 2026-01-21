@@ -1,10 +1,7 @@
-#
-# @lc app=leetcode id=2816 lang=cpp
-#
-# [2816] Double a Number Represented as a Linked List
-#
-# @lc code=start
-/**
+#include <bits/stdc++.h>
+using namespace std;
+
+/*
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;
@@ -33,21 +30,21 @@ public:
 
         int carry = 0;
         ListNode* cur = head;
-        ListNode* last = nullptr;
+        ListNode* prev = nullptr;
 
         while (cur) {
             int v = cur->val * 2 + carry;
             cur->val = v % 10;
             carry = v / 10;
-            last = cur;
+            prev = cur;
             cur = cur->next;
         }
 
         if (carry) {
-            last->next = new ListNode(carry);
+            prev->next = new ListNode(carry);
         }
 
-        return reverseList(head);
+        head = reverseList(head);
+        return head;
     }
 };
-# @lc code=end

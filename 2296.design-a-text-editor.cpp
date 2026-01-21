@@ -1,25 +1,22 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=2296 lang=cpp
+#
+# [2296] Design a Text Editor
+#
 
-/*
- * @lc app=leetcode id=2296 lang=cpp
- *
- * [2296] Design a Text Editor
- */
-
-// @lc code=start
+# @lc code=start
 class TextEditor {
-    string left;   // text to the left of cursor (normal order)
-    string right;  // text to the right of cursor (reverse order, cursor-adjacent at back)
+    string left;   // text to the left of cursor
+    string right;  // text to the right of cursor, stored reversed (top near cursor)
 
     string last10Left() {
         int n = (int)left.size();
-        int start = max(0, n - 10);
-        return left.substr(start);
+        int take = min(10, n);
+        return left.substr(n - take, take);
     }
 
 public:
-    TextEditor() : left(""), right("") {}
+    TextEditor() {}
 
     void addText(string text) {
         left += text;
@@ -32,8 +29,7 @@ public:
     }
 
     string cursorLeft(int k) {
-        int move = min(k, (int)left.size());
-        while (move--) {
+        while (k-- > 0 && !left.empty()) {
             right.push_back(left.back());
             left.pop_back();
         }
@@ -41,8 +37,7 @@ public:
     }
 
     string cursorRight(int k) {
-        int move = min(k, (int)right.size());
-        while (move--) {
+        while (k-- > 0 && !right.empty()) {
             left.push_back(right.back());
             right.pop_back();
         }
@@ -58,4 +53,4 @@ public:
  * string param_3 = obj->cursorLeft(k);
  * string param_4 = obj->cursorRight(k);
  */
-// @lc code=end
+# @lc code=end

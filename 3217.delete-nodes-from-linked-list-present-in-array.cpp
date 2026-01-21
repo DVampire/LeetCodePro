@@ -17,20 +17,23 @@
 class Solution {
 public:
     ListNode* modifiedList(vector<int>& nums, ListNode* head) {
-        unordered_set<int> s;
-        s.reserve(nums.size() * 2);
-        for (int x : nums) s.insert(x);
+        static const int MAXV = 100000;
+        vector<char> present(MAXV + 1, 0);
+        for (int x : nums) present[x] = 1;
 
         ListNode dummy(0, head);
-        ListNode* cur = &dummy;
+        ListNode* prev = &dummy;
 
-        while (cur->next) {
-            if (s.count(cur->next->val)) {
-                cur->next = cur->next->next; // delete by bypassing
+        while (prev->next) {
+            if (present[prev->next->val]) {
+                ListNode* del = prev->next;
+                prev->next = del->next;
+                // Optional: delete del;  // not required on LeetCode
             } else {
-                cur = cur->next;
+                prev = prev->next;
             }
         }
+
         return dummy.next;
     }
 };
