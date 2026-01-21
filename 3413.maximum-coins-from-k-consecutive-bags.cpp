@@ -1,77 +1,77 @@
-#
-# @lc app=leetcode id=3413 lang=cpp
-#
-# [3413] Maximum Coins From K Consecutive Bags
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+/*
+ * @lc app=leetcode id=3413 lang=cpp
+ *
+ * [3413] Maximum Coins From K Consecutive Bags
+ */
+
+// @lc code=start
 class Solution {
-    struct Seg {
-        long long l, r, c;
-    };
+    using ll = long long;
 
-    static long long scanStartAtL(vector<Seg>& segs, long long k) {
-        sort(segs.begin(), segs.end(), [](const Seg& a, const Seg& b){
-            return a.l < b.l;
+    static ll solveLeftAnchored(vector<array<ll,3>> segs, ll k) {
+        // seg: [l, r, c], inclusive, non-overlapping
+        sort(segs.begin(), segs.end(), [](const auto& a, const auto& b){
+            return a[0] < b[0];
         });
 
         int n = (int)segs.size();
-        long long ans = 0;
-        long long curFull = 0; // sum of fully covered segments in [i, j)
-        int j = 0;
-
+        vector<ll> l(n), r(n), c(n);
         for (int i = 0; i < n; i++) {
-            if (j < i) {
-                j = i;
-                curFull = 0;
-            }
-            long long start = segs[i].l;
-            long long end = start + k - 1;
-
-            while (j < n && segs[j].r <= end) {
-                long long len = segs[j].r - segs[j].l + 1;
-                curFull += len * segs[j].c;
-                j++;
-            }
-
-            long long partial = 0;
-            if (j < n && segs[j].l <= end) {
-                long long overlap = end - segs[j].l + 1;
-                if (overlap > 0) partial = overlap * segs[j].c;
-            }
-
-            ans = max(ans, curFull + partial);
-
-            // remove seg i if it was fully included in curFull
-            if (i < j) {
-                long long len = segs[i].r - segs[i].l + 1;
-                curFull -= len * segs[i].c;
-            }
+            l[i] = segs[i][0];
+            r[i] = segs[i][1];
+            c[i] = segs[i][2];
         }
-        return ans;
+
+        vector<ll> pre(n + 1, 0); // pre[i] = total coins in segments [0..i-1]
+        for (int i = 0; i < n; i++) {
+            pre[i + 1] = pre[i] + (r[i] - l[i] + 1) * c[i];
+        }
+
+        ll best = 0;
+        int j = 0;
+        for (int i = 0; i < n; i++) {
+            if (j < i) j = i;
+            ll start = l[i];
+            ll end = start + k - 1;
+
+            while (j < n && r[j] <= end) j++;
+
+            ll sum = pre[j] - pre[i];
+            if (j < n && l[j] <= end) {
+                sum += (end - l[j] + 1) * c[j];
+            }
+            best = max(best, sum);
+        }
+        return best;
     }
 
 public:
     long long maximumCoins(vector<vector<int>>& coins, int k) {
+        ll K = (ll)k;
         int n = (int)coins.size();
-        vector<Seg> segs;
+
+        vector<array<ll,3>> segs;
         segs.reserve(n);
         for (auto &v : coins) {
-            segs.push_back({(long long)v[0], (long long)v[1], (long long)v[2]});
+            ll l = v[0], r = v[1], c = v[2];
+            segs.push_back({l, r, c});
         }
 
-        long long kk = (long long)k;
-        long long best1 = scanStartAtL(segs, kk);
+        ll ans = solveLeftAnchored(segs, K);
 
-        // mirrored pass to cover windows ending at some r_i
-        vector<Seg> rev;
-        rev.reserve(n);
+        // Transform for right-anchored windows: [l, r] -> [-r, -l]
+        vector<array<ll,3>> segs2;
+        segs2.reserve(n);
         for (auto &s : segs) {
-            rev.push_back({-s.r, -s.l, s.c});
+            ll l = s[0], r = s[1], c = s[2];
+            segs2.push_back({-r, -l, c});
         }
-        long long best2 = scanStartAtL(rev, kk);
+        ans = max(ans, solveLeftAnchored(segs2, K));
 
-        return max(best1, best2);
+        return ans;
     }
 };
-# @lc code=end
+// @lc code=end

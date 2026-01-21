@@ -1,11 +1,10 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-/*
- * @lc app=leetcode id=3398 lang=cpp
- *
- * [3398] Smallest Substring With Identical Characters I
- */
+// @lc app=leetcode id=3398 lang=cpp
+//
+// [3398] Smallest Substring With Identical Characters I
+//
 
 // @lc code=start
 class Solution {
@@ -17,29 +16,23 @@ public:
             const int INF = 1e9;
             vector<vector<int>> dp(2, vector<int>(L + 1, INF));
 
-            // Initialize at position 0
-            for (int c = 0; c < 2; c++) {
-                char ch = (c == 0 ? '0' : '1');
-                dp[c][1] = (s[0] != ch);
+            // i = 0 initialization
+            for (int c = 0; c <= 1; c++) {
+                int cost = ((s[0] - '0') != c);
+                dp[c][1] = min(dp[c][1], cost);
             }
 
             for (int i = 1; i < n; i++) {
                 vector<vector<int>> ndp(2, vector<int>(L + 1, INF));
-                for (int last = 0; last < 2; last++) {
+                for (int prev = 0; prev <= 1; prev++) {
                     for (int len = 1; len <= L; len++) {
-                        int cur = dp[last][len];
-                        if (cur == INF) continue;
-                        for (int nc = 0; nc < 2; nc++) {
-                            int nlen;
-                            if (nc == last) {
-                                if (len == L) continue;
-                                nlen = len + 1;
-                            } else {
-                                nlen = 1;
-                            }
-                            char want = (nc == 0 ? '0' : '1');
-                            int add = (s[i] != want);
-                            ndp[nc][nlen] = min(ndp[nc][nlen], cur + add);
+                        int cur = dp[prev][len];
+                        if (cur >= INF) continue;
+                        for (int c = 0; c <= 1; c++) {
+                            int nlen = (c == prev) ? (len + 1) : 1;
+                            if (nlen > L) continue;
+                            int add = ((s[i] - '0') != c);
+                            ndp[c][nlen] = min(ndp[c][nlen], cur + add);
                         }
                     }
                 }
@@ -47,11 +40,9 @@ public:
             }
 
             int best = INT_MAX;
-            for (int c = 0; c < 2; c++) {
-                for (int len = 1; len <= L; len++) {
+            for (int c = 0; c <= 1; c++)
+                for (int len = 1; len <= L; len++)
                     best = min(best, dp[c][len]);
-                }
-            }
             return best <= numOps;
         };
 

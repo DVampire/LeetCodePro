@@ -1,64 +1,88 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+// @lc app=leetcode id=3387 lang=cpp
+//
+// [3387] Maximize Amount After Two Days of Conversions
+//
+
 // @lc code=start
 class Solution {
-    using Graph = unordered_map<string, vector<pair<string,double>>>;
+    using ld = long double;
 
-    Graph buildGraph(const vector<vector<string>>& pairs, const vector<double>& rates) {
-        Graph g;
-        int n = (int)pairs.size();
-        for (int i = 0; i < n; i++) {
-            const string& a = pairs[i][0];
-            const string& b = pairs[i][1];
-            double r = rates[i];
-            g[a].push_back({b, r});
-            g[b].push_back({a, 1.0 / r});
-        }
-        return g;
-    }
+    struct Edge {
+        int u, v;
+        ld w;
+    };
 
-    unordered_map<string,double> computeFromStart(const Graph& g, const string& start) {
-        unordered_map<string,double> val;
-        val[start] = 1.0;
-        deque<string> dq;
-        dq.push_back(start);
+    vector<ld> bellmanMax(int source, int V, const vector<Edge>& edges) {
+        vector<ld> best(V, 0.0L);
+        best[source] = 1.0L;
 
-        while (!dq.empty()) {
-            string u = dq.front();
-            dq.pop_front();
-            auto it = g.find(u);
-            if (it == g.end()) continue;
-            for (auto &[v, w] : it->second) {
-                if (!val.count(v)) {
-                    val[v] = val[u] * w;
-                    dq.push_back(v);
+        for (int it = 0; it < V - 1; ++it) {
+            bool changed = false;
+            for (const auto& e : edges) {
+                if (best[e.u] <= 0.0L) continue;
+                ld cand = best[e.u] * e.w;
+                if (cand > best[e.v] + 1e-18L) {
+                    best[e.v] = cand;
+                    changed = true;
                 }
             }
+            if (!changed) break;
         }
-        return val;
+        return best;
     }
 
 public:
-    double maxAmount(string initialCurrency, vector<vector<string>>& pairs1, vector<double>& rates1,
+    double maxAmount(string initialCurrency,
+                     vector<vector<string>>& pairs1, vector<double>& rates1,
                      vector<vector<string>>& pairs2, vector<double>& rates2) {
-        Graph g1 = buildGraph(pairs1, rates1);
-        Graph g2 = buildGraph(pairs2, rates2);
+        unordered_map<string,int> id;
+        id.reserve(64);
+        auto getId = [&](const string& s) -> int {
+            auto it = id.find(s);
+            if (it != id.end()) return it->second;
+            int nid = (int)id.size();
+            id.emplace(s, nid);
+            return nid;
+        };
 
-        auto day1 = computeFromStart(g1, initialCurrency);           // initial -> X (day1)
-        auto day2FromInit = computeFromStart(g2, initialCurrency);   // initial -> X (day2)
+        int init = getId(initialCurrency);
+        for (auto &p : pairs1) { getId(p[0]); getId(p[1]); }
+        for (auto &p : pairs2) { getId(p[0]); getId(p[1]); }
+        int V = (int)id.size();
 
-        double ans = 1.0;
-        for (auto &kv : day1) {
-            const string& cur = kv.first;
-            double rateDay1 = kv.second;
-            auto it = day2FromInit.find(cur);
-            if (it == day2FromInit.end()) continue;
-            double rateDay2InitToCur = it->second;
-            // cur -> initial on day2 is inverse
-            ans = max(ans, rateDay1 / rateDay2InitToCur);
+        vector<Edge> edges1, edges2;
+        edges1.reserve(pairs1.size() * 2);
+        edges2.reserve(pairs2.size() * 2);
+
+        for (int i = 0; i < (int)pairs1.size(); ++i) {
+            int a = getId(pairs1[i][0]);
+            int b = getId(pairs1[i][1]);
+            ld r = (ld)rates1[i];
+            edges1.push_back({a, b, r});
+            edges1.push_back({b, a, 1.0L / r});
         }
-        return ans;
+        for (int i = 0; i < (int)pairs2.size(); ++i) {
+            int a = getId(pairs2[i][0]);
+            int b = getId(pairs2[i][1]);
+            ld r = (ld)rates2[i];
+            edges2.push_back({a, b, r});
+            edges2.push_back({b, a, 1.0L / r});
+        }
+
+        vector<ld> bestDay1 = bellmanMax(init, V, edges1);
+
+        ld ans = 1.0L; // do nothing both days
+        for (int x = 0; x < V; ++x) {
+            if (bestDay1[x] <= 0.0L) continue;
+            vector<ld> bestDay2FromX = bellmanMax(x, V, edges2);
+            if (bestDay2FromX[init] <= 0.0L) continue;
+            ans = max(ans, bestDay1[x] * bestDay2FromX[init]);
+        }
+
+        return (double)ans;
     }
 };
 // @lc code=end
