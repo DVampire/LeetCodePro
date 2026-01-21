@@ -8,96 +8,88 @@ class Skiplist {
 private:
     struct Node {
         int val;
-        vector<Node*> forward;
-        Node(int v, int level) : val(v), forward(level, nullptr) {}
+        Node* right;
+        Node* down;
+        Node(int v = INT_MIN, Node* r = nullptr, Node* d = nullptr) 
+            : val(v), right(r), down(d) {}
     };
     
     Node* head;
-    int maxLevel;
-    int currentLevel;
-    
-    int randomLevel() {
-        int level = 1;
-        while (rand() % 2 == 0 && level < maxLevel) {
-            level++;
-        }
-        return level;
-    }
     
 public:
     Skiplist() {
-        maxLevel = 16;
-        currentLevel = 1;
-        head = new Node(-1, maxLevel);
+        head = new Node();
     }
     
     bool search(int target) {
         Node* curr = head;
-        for (int i = currentLevel - 1; i >= 0; i--) {
-            while (curr->forward[i] && curr->forward[i]->val < target) {
-                curr = curr->forward[i];
+        while (curr) {
+            while (curr->right && curr->right->val < target) {
+                curr = curr->right;
             }
+            if (curr->right && curr->right->val == target) {
+                return true;
+            }
+            curr = curr->down;
         }
-        curr = curr->forward[0];
-        return curr && curr->val == target;
+        return false;
     }
     
     void add(int num) {
-        vector<Node*> update(maxLevel, nullptr);
+        vector<Node*> path;
         Node* curr = head;
         
-        for (int i = currentLevel - 1; i >= 0; i--) {
-            while (curr->forward[i] && curr->forward[i]->val < num) {
-                curr = curr->forward[i];
+        // Find insertion points at each level
+        while (curr) {
+            while (curr->right && curr->right->val < num) {
+                curr = curr->right;
             }
-            update[i] = curr;
+            path.push_back(curr);
+            curr = curr->down;
         }
         
-        int level = randomLevel();
-        if (level > currentLevel) {
-            for (int i = currentLevel; i < level; i++) {
-                update[i] = head;
-            }
-            currentLevel = level;
+        // Insert from bottom, moving up based on coin flip
+        bool insertUp = true;
+        Node* downNode = nullptr;
+        
+        for (int i = path.size() - 1; i >= 0 && insertUp; i--) {
+            Node* newNode = new Node(num, path[i]->right, downNode);
+            path[i]->right = newNode;
+            downNode = newNode;
+            insertUp = (rand() % 2 == 0);
         }
         
-        Node* newNode = new Node(num, level);
-        for (int i = 0; i < level; i++) {
-            newNode->forward[i] = update[i]->forward[i];
-            update[i]->forward[i] = newNode;
+        // Add new levels if coin flip continues
+        while (insertUp) {
+            Node* newNode = new Node(num, nullptr, downNode);
+            Node* newHead = new Node(INT_MIN, newNode, head);
+            head = newHead;
+            downNode = newNode;
+            insertUp = (rand() % 2 == 0);
         }
     }
     
     bool erase(int num) {
-        vector<Node*> update(maxLevel, nullptr);
         Node* curr = head;
+        bool found = false;
         
-        for (int i = currentLevel - 1; i >= 0; i--) {
-            while (curr->forward[i] && curr->forward[i]->val < num) {
-                curr = curr->forward[i];
+        while (curr) {
+            while (curr->right && curr->right->val < num) {
+                curr = curr->right;
             }
-            update[i] = curr;
-        }
-        
-        curr = curr->forward[0];
-        if (!curr || curr->val != num) {
-            return false;
-        }
-        
-        for (int i = 0; i < currentLevel; i++) {
-            if (update[i]->forward[i] != curr) {
-                break;
+            if (curr->right && curr->right->val == num) {
+                found = true;
+                curr->right = curr->right->right;
             }
-            update[i]->forward[i] = curr->forward[i];
+            curr = curr->down;
         }
         
-        delete curr;
-        
-        while (currentLevel > 1 && !head->forward[currentLevel - 1]) {
-            currentLevel--;
+        // Clean up empty top levels
+        while (head->right == nullptr && head->down != nullptr) {
+            head = head->down;
         }
         
-        return true;
+        return found;
     }
 };
 

@@ -3,29 +3,30 @@
 #
 # [2289] Steps to Make Array Non-decreasing
 #
+
 # @lc code=start
 class Solution {
 public:
     int totalSteps(vector<int>& nums) {
         int n = nums.size();
-        vector<int> steps(n, 0);
-        stack<int> st;
-        int maxSteps = 0;
+        stack<pair<int, int>> st; // (value, steps to be removed)
+        int ans = 0;
         
         for (int i = 0; i < n; i++) {
-            int currentSteps = 0;
-            while (!st.empty() && nums[st.top()] <= nums[i]) {
-                currentSteps = max(currentSteps, steps[st.top()]);
+            int maxTime = 0;
+            // Pop elements that won't kill current element (smaller or equal)
+            while (!st.empty() && st.top().first <= nums[i]) {
+                maxTime = max(maxTime, st.top().second);
                 st.pop();
             }
-            if (!st.empty()) {
-                steps[i] = currentSteps + 1;
-                maxSteps = max(maxSteps, steps[i]);
-            }
-            st.push(i);
+            // If stack is not empty, top is the killer of current element
+            // Current element will be removed after all elements between are removed
+            int curTime = st.empty() ? 0 : maxTime + 1;
+            ans = max(ans, curTime);
+            st.push({nums[i], curTime});
         }
         
-        return maxSteps;
+        return ans;
     }
 };
 # @lc code=end

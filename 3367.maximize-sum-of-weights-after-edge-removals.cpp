@@ -16,47 +16,31 @@ public:
             adj[v].push_back({u, w});
         }
         
-        function<pair<long long, long long>(int, int)> dfs = [&](int node, int parent) -> pair<long long, long long> {
+        function<pair<long long, long long>(int, int)> dfs = [&](int u, int parent) -> pair<long long, long long> {
             vector<long long> gains;
             long long base = 0;
             
-            for (auto& p : adj[node]) {
-                int child = p.first;
-                int weight = p.second;
-                if (child == parent) continue;
-                
-                pair<long long, long long> result = dfs(child, node);
-                long long dp0_child = result.first;
-                long long dp1_child = result.second;
-                
-                base += dp0_child;
-                long long gain = weight + dp1_child - dp0_child;
+            for (auto& [v, w] : adj[u]) {
+                if (v == parent) continue;
+                auto [child0, child1] = dfs(v, u);
+                base += child0;
+                long long gain = w + child1 - child0;
                 gains.push_back(gain);
             }
             
             sort(gains.rbegin(), gains.rend());
             
-            // dp0: can use at most k edges
-            long long dp0 = base;
-            for (int i = 0; i < min((int)gains.size(), k); i++) {
-                if (gains[i] > 0) {
-                    dp0 += gains[i];
-                }
+            long long res0 = base, res1 = base;
+            
+            for (int i = 0; i < (int)gains.size() && gains[i] > 0; i++) {
+                if (i < k) res0 += gains[i];
+                if (i < k - 1) res1 += gains[i];
             }
             
-            // dp1: can use at most k-1 edges
-            long long dp1 = base;
-            for (int i = 0; i < min((int)gains.size(), k - 1); i++) {
-                if (gains[i] > 0) {
-                    dp1 += gains[i];
-                }
-            }
-            
-            return {dp0, dp1};
+            return {res0, res1};
         };
         
-        pair<long long, long long> result = dfs(0, -1);
-        return result.first;
+        return dfs(0, -1).first;
     }
 };
 # @lc code=end
