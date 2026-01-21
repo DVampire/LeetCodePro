@@ -3,45 +3,60 @@
 #
 # [3367] Maximize Sum of Weights after Edge Removals
 #
-
 # @lc code=start
 class Solution {
 public:
     long long maximizeSumOfWeights(vector<vector<int>>& edges, int k) {
         int n = edges.size() + 1;
-        vector<vector<pair<int, int>>> g(n);
+        vector<vector<pair<int, int>>> adj(n);
+        
         for (auto& e : edges) {
             int u = e[0], v = e[1], w = e[2];
-            g[u].emplace_back(v, w);
-            g[v].emplace_back(u, w);
+            adj[u].push_back({v, w});
+            adj[v].push_back({u, w});
         }
-        function<pair<long long, long long>(int, int)> dfs = [&](int u, int p) -> pair<long long, long long> {
+        
+        function<pair<long long, long long>(int, int)> dfs = [&](int node, int parent) -> pair<long long, long long> {
             vector<long long> gains;
-            long long total_full = 0;
-            for (auto [v, w] : g[u]) {
-                if (v == p) continue;
-                auto [fmax, cmax] = dfs(v, u);
-                total_full += fmax;
-                long long gain = (long long)w + cmax - fmax;
+            long long base = 0;
+            
+            for (auto& p : adj[node]) {
+                int child = p.first;
+                int weight = p.second;
+                if (child == parent) continue;
+                
+                pair<long long, long long> result = dfs(child, node);
+                long long dp0_child = result.first;
+                long long dp1_child = result.second;
+                
+                base += dp0_child;
+                long long gain = weight + dp1_child - dp0_child;
                 gains.push_back(gain);
             }
+            
             sort(gains.rbegin(), gains.rend());
-            long long cur = 0;
-            long long maxf = 0;
-            long long maxc = 0;
-            int limf = min((int)gains.size(), k);
-            int limc = min((int)gains.size(), k - 1);
-            for (int j = 1; j <= (int)gains.size(); ++j) {
-                cur += gains[j - 1];
-                if (j <= limf) maxf = max(maxf, cur);
-                if (j <= limc) maxc = max(maxc, cur);
+            
+            // dp0: can use at most k edges
+            long long dp0 = base;
+            for (int i = 0; i < min((int)gains.size(), k); i++) {
+                if (gains[i] > 0) {
+                    dp0 += gains[i];
+                }
             }
-            long long full_u = total_full + maxf;
-            long long cons_u = total_full + maxc;
-            return {full_u, cons_u};
+            
+            // dp1: can use at most k-1 edges
+            long long dp1 = base;
+            for (int i = 0; i < min((int)gains.size(), k - 1); i++) {
+                if (gains[i] > 0) {
+                    dp1 += gains[i];
+                }
+            }
+            
+            return {dp0, dp1};
         };
-        auto [ans, _] = dfs(0, -1);
-        return ans;
+        
+        pair<long long, long long> result = dfs(0, -1);
+        return result.first;
     }
 };
 # @lc code=end
