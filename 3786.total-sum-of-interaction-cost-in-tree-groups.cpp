@@ -3,44 +3,46 @@
 #
 # [3786] Total Sum of Interaction Cost in Tree Groups
 #
-
 # @lc code=start
 class Solution {
+private:
+    void dfs(int node, int parent, vector<vector<int>>& adj, vector<int>& group, vector<int>& countV, vector<bool>& visited) {
+        visited[node] = true;
+        countV[group[node]]++;
+        for (int neighbor : adj[node]) {
+            if (neighbor != parent && !visited[neighbor]) {
+                dfs(neighbor, node, adj, group, countV, visited);
+            }
+        }
+    }
+    
 public:
     long long interactionCosts(int n, vector<vector<int>>& edges, vector<int>& group) {
         vector<vector<int>> adj(n);
-        for (auto& e : edges) {
-            int u = e[0], v = e[1];
-            adj[u].push_back(v);
-            adj[v].push_back(u);
+        for (auto& edge : edges) {
+            adj[edge[0]].push_back(edge[1]);
+            adj[edge[1]].push_back(edge[0]);
         }
-        vector<long long> total(21, 0LL);
+        
+        long long totalCost = 0;
+        vector<int> totalCount(21, 0);
         for (int i = 0; i < n; i++) {
-            total[group[i]]++;
+            totalCount[group[i]]++;
         }
-        vector<long long> contrib(21, 0LL);
-        std::function<vector<long long>(int, int)> dfs = [&](int node, int par) -> vector<long long> {
-            vector<long long> cnt(21, 0LL);
-            cnt[group[node]] = 1LL;
-            for (int child : adj[node]) {
-                if (child == par) continue;
-                vector<long long> child_cnt = dfs(child, node);
-                for (int g = 1; g <= 20; g++) {
-                    long long sz = child_cnt[g];
-                    contrib[g] += sz * (total[g] - sz);
-                }
-                for (int g = 1; g <= 20; g++) {
-                    cnt[g] += child_cnt[g];
-                }
+        
+        for (auto& edge : edges) {
+            int u = edge[0], v = edge[1];
+            vector<int> countV(21, 0);
+            vector<bool> visited(n, false);
+            dfs(v, u, adj, group, countV, visited);
+            
+            for (int g = 1; g <= 20; g++) {
+                int countU = totalCount[g] - countV[g];
+                totalCost += (long long)countU * countV[g];
             }
-            return cnt;
-        };
-        dfs(0, -1);
-        long long ans = 0;
-        for (int g = 1; g <= 20; g++) {
-            ans += contrib[g];
         }
-        return ans;
+        
+        return totalCost;
     }
 };
 # @lc code=end

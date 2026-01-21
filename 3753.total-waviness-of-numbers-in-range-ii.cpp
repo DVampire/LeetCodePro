@@ -3,72 +3,62 @@
 #
 # [3753] Total Waviness of Numbers in Range II
 #
-
 # @lc code=start
-#include <bits/stdc++.h>
-using namespace std;
-
 class Solution {
 public:
     long long totalWaviness(long long num1, long long num2) {
-        struct Res {
-            long long cnt, sumw;
-            Res(long long c = -1LL, long long s = 0LL) : cnt(c), sumw(s) {}
-        };
-
-        auto solve = [&](auto&& self, long long n) -> long long {
-            if (n <= 0) return 0LL;
-            string S = to_string(n);
-            int L = S.length();
-            const int MAX_POS = 17;
-            const int MAX_PV = 11;
-            int total_states = MAX_POS * 2 * 2 * MAX_PV * MAX_PV;
-            vector<Res> memo(total_states);
-
-            auto get_idx = [&](int pos, int tig, int lea, int p1, int p2) -> int {
-                return (((pos * 2 + tig) * 2 + lea) * MAX_PV + (p1 + 1)) * MAX_PV + (p2 + 1);
-            };
-
-            function<Res(int, int, int, int, int)> dfs = [&](int pos, int tight, int lead, int prev1, int prev2) -> Res {
-                if (pos == L) {
-                    return Res(1LL, 0LL);
+        return solve(num2) - solve(num1 - 1);
+    }
+    
+private:
+    map<tuple<int, int, int, int, int>, pair<long long, long long>> memo;
+    string numStr;
+    
+    pair<long long, long long> dp(int pos, int tight, int prev, int prevprev, int actualLen) {
+        if (pos == numStr.size()) {
+            return make_pair(actualLen > 0 ? 1LL : 0LL, 0LL);
+        }
+        
+        auto key = make_tuple(pos, tight, prev, prevprev, actualLen);
+        if (memo.find(key) != memo.end()) {
+            return memo[key];
+        }
+        
+        int limit = tight ? (numStr[pos] - '0') : 9;
+        long long totalCount = 0;
+        long long totalWaviness = 0;
+        
+        for (int digit = 0; digit <= limit; digit++) {
+            int newActualLen = actualLen;
+            if (actualLen > 0 || digit > 0) {
+                newActualLen = actualLen + 1;
+            }
+            int newTight = tight && (digit == limit);
+            
+            pair<long long, long long> result = dp(pos + 1, newTight, digit, prev, newActualLen);
+            long long count = result.first;
+            long long waviness = result.second;
+            
+            totalCount += count;
+            totalWaviness += waviness;
+            
+            if (actualLen >= 2 && prev != -1 && prevprev != -1) {
+                if ((prev > prevprev && prev > digit) || (prev < prevprev && prev < digit)) {
+                    totalWaviness += count;
                 }
-                int idx = get_idx(pos, tight, lead, prev1, prev2);
-                if (memo[idx].cnt != -1LL) {
-                    return memo[idx];
-                }
-                Res ans(0LL, 0LL);
-                int up = tight ? (S[pos] - '0') : 9;
-                for (int d = 0; d <= up; ++d) {
-                    int ntight = tight && (d == up);
-                    int nlead = lead && (d == 0);
-                    int np1 = -1;
-                    int np2 = -1;
-                    long long contrib = 0LL;
-                    if (!nlead) {
-                        int op1 = prev1;
-                        int op2 = prev2;
-                        np1 = d;
-                        np2 = op1;
-                        if (op2 != -1) {
-                            int mid = op1;
-                            if ((mid > op2 && mid > d) || (mid < op2 && mid < d)) {
-                                contrib = 1LL;
-                            }
-                        }
-                    }
-                    Res sub = dfs(pos + 1, ntight, nlead, np1, np2);
-                    ans.cnt += sub.cnt;
-                    ans.sumw += sub.sumw + contrib * sub.cnt;
-                }
-                memo[idx] = ans;
-                return ans;
-            };
-
-            return dfs(0, 1, 1, -1, -1).sumw;
-        };
-
-        return solve(solve, num2) - solve(solve, num1 - 1);
+            }
+        }
+        
+        memo[key] = make_pair(totalCount, totalWaviness);
+        return make_pair(totalCount, totalWaviness);
+    }
+    
+    long long solve(long long num) {
+        if (num < 0) return 0;
+        numStr = to_string(num);
+        memo.clear();
+        pair<long long, long long> result = dp(0, 1, -1, -1, 0);
+        return result.second;
     }
 };
 # @lc code=end
