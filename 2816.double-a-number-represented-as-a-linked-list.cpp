@@ -16,25 +16,26 @@
  */
 class Solution {
 public:
-    int doubleHelper(ListNode* node) {
-        if (!node) return 0;
-        
-        int carry = doubleHelper(node->next);
-        int doubled = node->val * 2 + carry;
-        node->val = doubled % 10;
-        return doubled / 10;
-    }
-    
     ListNode* doubleIt(ListNode* head) {
         int carry = doubleHelper(head);
-        
         if (carry > 0) {
             ListNode* newHead = new ListNode(carry);
             newHead->next = head;
             return newHead;
         }
-        
         return head;
+    }
+    
+private:
+    int doubleHelper(ListNode* node) {
+        if (node == nullptr) {
+            return 0;
+        }
+        
+        int carry = doubleHelper(node->next);
+        int doubled = node->val * 2 + carry;
+        node->val = doubled % 10;
+        return doubled / 10;
     }
 };
 # @lc code=end

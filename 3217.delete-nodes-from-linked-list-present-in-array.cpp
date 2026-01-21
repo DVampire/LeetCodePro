@@ -17,18 +17,23 @@
 class Solution {
 public:
     ListNode* modifiedList(vector<int>& nums, ListNode* head) {
-        unordered_set<int> toRemove(nums.begin(), nums.end());
+        // Create a set for O(1) lookup
+        unordered_set<int> numSet(nums.begin(), nums.end());
         
+        // Create a dummy node to simplify edge cases
         ListNode* dummy = new ListNode(0);
         dummy->next = head;
         
+        // Traverse the list
         ListNode* prev = dummy;
         ListNode* curr = head;
         
         while (curr != nullptr) {
-            if (toRemove.find(curr->val) != toRemove.end()) {
+            if (numSet.count(curr->val)) {
+                // Current node should be deleted
                 prev->next = curr->next;
             } else {
+                // Move prev forward
                 prev = curr;
             }
             curr = curr->next;

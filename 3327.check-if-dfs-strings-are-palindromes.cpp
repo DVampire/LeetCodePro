@@ -3,97 +3,87 @@
 #
 # [3327] Check if DFS Strings Are Palindromes
 #
-
 # @lc code=start
-#include <bits/stdc++.h>
-using namespace std;
-
 class Solution {
 public:
     vector<bool> findAnswer(vector<int>& parent, string s) {
-        int n = s.size();
-        vector<vector<int>> ch(n);
-        for (int i = 1; i < n; ++i) {
-            ch[parent[i]].push_back(i);
+        int n = parent.size();
+        vector<vector<int>> children(n);
+        
+        // Build adjacency list
+        for (int i = 1; i < n; i++) {
+            children[parent[i]].push_back(i);
         }
-        for (int i = 0; i < n; ++i) {
-            sort(ch[i].begin(), ch[i].end());
+        
+        // Sort children for each node
+        for (auto& child_list : children) {
+            sort(child_list.begin(), child_list.end());
         }
-
-        const long long MOD1 = 1000000007LL;
-        const long long MOD2 = 1000000009LL;
-        const long long B1 = 131LL;
-        const long long B2 = 137LL;
-
-        vector<long long> pow1(n + 1, 1LL);
-        vector<long long> pow2(n + 1, 1LL);
-        auto modmul = [](long long a, long long b, long long mod) -> long long {
-            long long res = ((__int128)a * b) % mod;
-            if (res < 0) res += mod;
-            return res;
+        
+        // Build global DFS string and track positions
+        string dfsStr;
+        vector<int> start(n), end(n);
+        
+        function<void(int)> dfs = [&](int x) {
+            start[x] = dfsStr.size();
+            for (int child : children[x]) {
+                dfs(child);
+            }
+            dfsStr += s[x];
+            end[x] = dfsStr.size() - 1;
         };
-        for (int i = 1; i <= n; ++i) {
-            pow1[i] = modmul(pow1[i - 1], B1, MOD1);
-            pow2[i] = modmul(pow2[i - 1], B2, MOD2);
+        
+        dfs(0);
+        
+        int m = dfsStr.size();
+        
+        // Use polynomial rolling hash with two modulos
+        const long long MOD1 = 1e9 + 7;
+        const long long MOD2 = 1e9 + 9;
+        const long long BASE = 31;
+        
+        vector<long long> hash1(m + 1, 0), hash2(m + 1, 0);
+        vector<long long> pow1(m + 1), pow2(m + 1);
+        pow1[0] = pow2[0] = 1;
+        
+        // Build forward hash
+        for (int i = 0; i < m; i++) {
+            hash1[i + 1] = (hash1[i] * BASE + (dfsStr[i] - 'a' + 1)) % MOD1;
+            hash2[i + 1] = (hash2[i] * BASE + (dfsStr[i] - 'a' + 1)) % MOD2;
+            pow1[i + 1] = (pow1[i] * BASE) % MOD1;
+            pow2[i + 1] = (pow2[i] * BASE) % MOD2;
         }
-
-        // Iterative post-order traversal to get processing order
-        vector<int> postorder;
-        stack<pair<int, int>> stk;
-        stk.push({0, 0});
-        while (!stk.empty()) {
-            auto& p = stk.top();
-            int u = p.first;
-            int& idx = p.second;
-            if (idx == (int)ch[u].size()) {
-                postorder.push_back(u);
-                stk.pop();
-            } else {
-                int v = ch[u][idx];
-                ++idx;
-                stk.push({v, 0});
-            }
+        
+        // Build reverse hash
+        string revStr(dfsStr.rbegin(), dfsStr.rend());
+        vector<long long> revHash1(m + 1, 0), revHash2(m + 1, 0);
+        
+        for (int i = 0; i < m; i++) {
+            revHash1[i + 1] = (revHash1[i] * BASE + (revStr[i] - 'a' + 1)) % MOD1;
+            revHash2[i + 1] = (revHash2[i] * BASE + (revStr[i] - 'a' + 1)) % MOD2;
         }
-
-        vector<int> lens(n);
-        vector<long long> fwd1(n), fwd2(n), rev1(n), rev2(n);
-
-        for (int u : postorder) {
-            long long val = (s[u] - 'a' + 1LL);
-
-            // Forward hash
-            long long h1 = 0;
-            long long h2 = 0;
-            int tot_len = 1;
-            for (int v : ch[u]) {
-                int lv = lens[v];
-                h1 = (modmul(h1, pow1[lv], MOD1) + fwd1[v]) % MOD1;
-                h2 = (modmul(h2, pow2[lv], MOD2) + fwd2[v]) % MOD2;
-                tot_len += lv;
-            }
-            h1 = (modmul(h1, pow1[1], MOD1) + val) % MOD1;
-            h2 = (modmul(h2, pow2[1], MOD2) + val) % MOD2;
-            lens[u] = tot_len;
-            fwd1[u] = h1;
-            fwd2[u] = h2;
-
-            // Reverse hash
-            long long hr1 = val % MOD1;
-            long long hr2 = val % MOD2;
-            for (int i = (int)ch[u].size() - 1; i >= 0; --i) {
-                int v = ch[u][i];
-                int lv = lens[v];
-                hr1 = (modmul(hr1, pow1[lv], MOD1) + rev1[v]) % MOD1;
-                hr2 = (modmul(hr2, pow2[lv], MOD2) + rev2[v]) % MOD2;
-            }
-            rev1[u] = hr1;
-            rev2[u] = hr2;
-        }
-
+        
         vector<bool> answer(n);
-        for (int i = 0; i < n; ++i) {
-            answer[i] = (fwd1[i] == rev1[i] && fwd2[i] == rev2[i]);
+        for (int i = 0; i < n; i++) {
+            int left = start[i];
+            int right = end[i];
+            int len = right - left + 1;
+            
+            // Hash of substring [left, right]
+            long long fHash1 = (hash1[right + 1] - (hash1[left] * pow1[len]) % MOD1 + MOD1) % MOD1;
+            long long fHash2 = (hash2[right + 1] - (hash2[left] * pow2[len]) % MOD2 + MOD2) % MOD2;
+            
+            // Corresponding positions in reversed string
+            int revLeft = m - 1 - right;
+            int revRight = m - 1 - left;
+            
+            // Hash of reversed substring
+            long long rHash1 = (revHash1[revRight + 1] - (revHash1[revLeft] * pow1[len]) % MOD1 + MOD1) % MOD1;
+            long long rHash2 = (revHash2[revRight + 1] - (revHash2[revLeft] * pow2[len]) % MOD2 + MOD2) % MOD2;
+            
+            answer[i] = (fHash1 == rHash1 && fHash2 == rHash2);
         }
+        
         return answer;
     }
 };

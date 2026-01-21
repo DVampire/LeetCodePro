@@ -12,12 +12,10 @@ public:
         
         // Priority queue: (time, row, col)
         priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<>> pq;
-        
-        // Distance array to track minimum time to reach each cell
-        vector<vector<int>> dist(n, vector<int>(m, INT_MAX));
-        
-        // Start at (0, 0) at time 0
         pq.push({0, 0, 0});
+        
+        // Distance array
+        vector<vector<int>> dist(n, vector<int>(m, INT_MAX));
         dist[0][0] = 0;
         
         // Directions: up, down, left, right
@@ -33,22 +31,17 @@ public:
                 return time;
             }
             
-            // Skip if we've already found a better path to this cell
-            if (time > dist[x][y]) {
-                continue;
-            }
+            // If we've already found a better path to this cell, skip
+            if (time > dist[x][y]) continue;
             
-            // Try all 4 directions
+            // Explore neighbors
             for (int i = 0; i < 4; i++) {
                 int nx = x + dx[i];
                 int ny = y + dy[i];
                 
-                // Check bounds
                 if (nx >= 0 && nx < n && ny >= 0 && ny < m) {
-                    // Calculate arrival time at (nx, ny)
                     int arrivalTime = max(time, moveTime[nx][ny]) + 1;
                     
-                    // If this is a better path, update and add to queue
                     if (arrivalTime < dist[nx][ny]) {
                         dist[nx][ny] = arrivalTime;
                         pq.push({arrivalTime, nx, ny});
@@ -57,7 +50,7 @@ public:
             }
         }
         
-        return dist[n - 1][m - 1];
+        return -1;
     }
 };
 # @lc code=end
