@@ -8,32 +8,22 @@ class Solution {
 public:
     vector<int> findSubtreeSizes(vector<int>& parent, string s) {
         int n = parent.size();
-        vector<int> newParent(n);
-        newParent[0] = -1;
+        vector<int> newParent = parent;
         
         // For each node from 1 to n-1, find its new parent
         for (int x = 1; x < n; x++) {
-            char ch = s[x];
+            // Traverse ancestors to find closest with same character
             int curr = parent[x];
-            int closestAncestor = -1;
-            
-            // Traverse up to find closest ancestor with same character
             while (curr != -1) {
-                if (s[curr] == ch) {
-                    closestAncestor = curr;
+                if (s[curr] == s[x]) {
+                    newParent[x] = curr;
                     break;
                 }
                 curr = parent[curr];
             }
-            
-            if (closestAncestor != -1) {
-                newParent[x] = closestAncestor;
-            } else {
-                newParent[x] = parent[x];
-            }
         }
         
-        // Build new tree adjacency list
+        // Build adjacency list for new tree
         vector<vector<int>> children(n);
         for (int i = 1; i < n; i++) {
             children[newParent[i]].push_back(i);
@@ -46,8 +36,7 @@ public:
             for (int child : children[node]) {
                 size += dfs(child);
             }
-            answer[node] = size;
-            return size;
+            return answer[node] = size;
         };
         
         dfs(0);

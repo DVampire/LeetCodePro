@@ -20,26 +20,32 @@ public:
         // Convert nums to a set for O(1) lookup
         unordered_set<int> toRemove(nums.begin(), nums.end());
         
-        // Create a dummy node to simplify head handling
-        ListNode* dummy = new ListNode(0);
-        dummy->next = head;
+        // Find the new head by skipping nodes to be removed
+        while (head != nullptr && toRemove.count(head->val)) {
+            head = head->next;
+        }
         
-        ListNode* prev = dummy;
-        ListNode* curr = head;
+        // If all nodes were removed
+        if (head == nullptr) {
+            return nullptr;
+        }
+        
+        // Remove nodes in the middle/end of the list
+        ListNode* prev = head;
+        ListNode* curr = head->next;
         
         while (curr != nullptr) {
             if (toRemove.count(curr->val)) {
-                // Remove current node by skipping it
+                // Skip this node
                 prev->next = curr->next;
             } else {
                 // Move prev forward
                 prev = curr;
             }
-            // Always move curr forward
             curr = curr->next;
         }
         
-        return dummy->next;
+        return head;
     }
 };
 # @lc code=end

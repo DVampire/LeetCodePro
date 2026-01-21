@@ -9,7 +9,7 @@ public:
     vector<int> remainingMethods(int n, int k, vector<vector<int>>& invocations) {
         // Build adjacency list
         vector<vector<int>> graph(n);
-        for (const auto& inv : invocations) {
+        for (auto& inv : invocations) {
             graph[inv[0]].push_back(inv[1]);
         }
         
@@ -32,30 +32,30 @@ public:
         }
         
         // Check if any non-suspicious method invokes a suspicious method
-        for (int i = 0; i < n; i++) {
-            if (suspicious.find(i) == suspicious.end()) {
-                // i is not suspicious
-                for (int next : graph[i]) {
-                    if (suspicious.find(next) != suspicious.end()) {
-                        // Non-suspicious method invokes suspicious method
-                        // Can't remove, return all methods
-                        vector<int> result;
-                        for (int j = 0; j < n; j++) {
-                            result.push_back(j);
-                        }
-                        return result;
-                    }
-                }
+        bool canRemove = true;
+        for (auto& inv : invocations) {
+            int from = inv[0];
+            int to = inv[1];
+            if (suspicious.find(from) == suspicious.end() && suspicious.find(to) != suspicious.end()) {
+                canRemove = false;
+                break;
             }
         }
         
-        // Can remove all suspicious methods
+        // Build result
         vector<int> result;
-        for (int i = 0; i < n; i++) {
-            if (suspicious.find(i) == suspicious.end()) {
+        if (canRemove) {
+            for (int i = 0; i < n; i++) {
+                if (suspicious.find(i) == suspicious.end()) {
+                    result.push_back(i);
+                }
+            }
+        } else {
+            for (int i = 0; i < n; i++) {
                 result.push_back(i);
             }
         }
+        
         return result;
     }
 };
