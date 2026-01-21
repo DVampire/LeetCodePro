@@ -1,48 +1,53 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=3677 lang=cpp
+#
+# [3677] Count Binary Palindromic Numbers
+#
 
-// @lc code=start
+# @lc code=start
 class Solution {
-    static long long makePal(long long x, int len) {
-        long long res = x;
-        long long y = x;
-        if (len & 1) y >>= 1; // drop the middle bit for odd length
-        while (y > 0) {
-            res = (res << 1) | (y & 1);
-            y >>= 1;
-        }
-        return res;
-    }
-
 public:
     int countBinaryPalindromes(long long n) {
-        if (n == 0) return 1; // only "0"
-
-        int L = 64 - __builtin_clzll((unsigned long long)n); // bit length of n
-        long long total = 0;
-
-        // Count all palindromes with length < L
-        total += 2; // len=1: {0,1}
-        for (int len = 2; len <= L - 1; ++len) {
-            int halfLen = (len + 1) / 2;
-            total += 1LL << (halfLen - 1);
+        std::string S;
+        long long temp = n;
+        if (temp == 0) {
+            S = "0";
+        } else {
+            while (temp > 0) {
+                S = char('0' + (temp & 1)) + S;
+                temp >>= 1;
+            }
         }
-
-        // Count palindromes of length == L and <= n
-        if (L == 1) {
-            // n >= 1 here, so {0,1}
-            return 2;
+        int Len = S.size();
+        long long ans = 1;  // for 0
+        for (int L = 1; L < Len; ++L) {
+            int exp = (L - 1) / 2;
+            ans += (1LL << exp);
         }
-        int halfLen = (L + 1) / 2;
-        long long base = 1LL << (halfLen - 1);
-        long long prefix = n >> (L - halfLen);
-
-        long long cnt = prefix - base;
-        long long cand = makePal(prefix, L);
-        if (cand <= n) cnt++;
-
-        total += cnt;
-        return (int)total;
+        // Now for length Len
+        int half_len = (Len + 1) / 2;
+        int free_bits = half_len - 1;
+        long long num_masks = free_bits >= 0 ? (1LL << free_bits) : 0;
+        for (long long mask = 0; mask < num_masks; ++mask) {
+            long long num = 0;
+            // Set s[0] = 1
+            num |= (1LL << (Len - 1));
+            // Set s[Len-1] = 1
+            num |= 1LL;
+            for (int j = 0; j < free_bits; ++j) {
+                int bit = (mask >> j) & 1;
+                int pos = j + 1;
+                // Set s[pos]
+                num |= ((long long)bit << (Len - 1 - pos));
+                // Set mirror s[Len-1-pos]
+                int mir_pos = Len - 1 - pos;
+                num |= ((long long)bit << (Len - 1 - mir_pos));
+            }
+            if (num <= n) {
+                ++ans;
+            }
+        }
+        return static_cast<int>(ans);
     }
 };
-// @lc code=end
+# @lc code=end
