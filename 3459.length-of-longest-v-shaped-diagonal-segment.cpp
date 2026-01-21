@@ -3,95 +3,73 @@
 #
 # [3459] Length of Longest V-Shaped Diagonal Segment
 #
-
 # @lc code=start
-#include <bits/stdc++.h>
-using namespace std;
 class Solution {
 public:
     int lenOfVDiagonal(vector<vector<int>>& grid) {
         int n = grid.size();
         int m = grid[0].size();
-        vector<int> dpp(n * m * 8, 0);
-        auto idx = [&](int r, int c, int d, int p) -> int {
-            return ((r * m + c) * 4 + d) * 2 + p;
+        int maxLen = 0;
+        
+        // Four diagonal directions: (dr, dc)
+        int dr[] = {1, 1, -1, -1};
+        int dc[] = {1, -1, -1, 1};
+        
+        // Clockwise 90-degree turn
+        int clockwise[] = {1, 2, 3, 0};
+        
+        auto expectedValue = [](int i) {
+            if (i == 0) return 1;
+            return (i % 2 == 1) ? 2 : 0;
         };
-        int dr[4] = {1, 1, -1, -1};
-        int dc[4] = {1, -1, -1, 1};
-        auto getv = [&](int r, int c, int d, int p) -> int {
-            return dpp[idx(r, c, d, p)];
-        };
-        auto setv = [&](int r, int c, int d, int p, int val) {
-            dpp[idx(r, c, d, p)] = val;
-        };
-        for (int d = 0; d < 4; ++d) {
-            auto compute = [&](int r, int c) {
-                for (int p = 0; p < 2; ++p) {
-                    int nr = r + dr[d];
-                    int nc = c + dc[d];
-                    if (nr < 0 || nr >= n || nc < 0 || nc >= m) {
-                        setv(r, c, d, p, 0);
-                        continue;
-                    }
-                    int need = (p == 0 ? 2 : 0);
-                    if (grid[nr][nc] != need) {
-                        setv(r, c, d, p, 0);
-                        continue;
-                    }
-                    int np = 1 - p;
-                    setv(r, c, d, p, 1 + getv(nr, nc, d, np));
-                }
-            };
-            if (d == 0) {
-                for (int r = n - 1; r >= 0; --r) {
-                    for (int c = m - 1; c >= 0; --c) {
-                        compute(r, c);
-                    }
-                }
-            } else if (d == 1) {
-                for (int r = n - 1; r >= 0; --r) {
-                    for (int c = 0; c < m; ++c) {
-                        compute(r, c);
-                    }
-                }
-            } else if (d == 2) {
-                for (int r = 0; r < n; ++r) {
-                    for (int c = 0; c < m; ++c) {
-                        compute(r, c);
-                    }
-                }
-            } else {
-                for (int r = 0; r < n; ++r) {
-                    for (int c = m - 1; c >= 0; --c) {
-                        compute(r, c);
-                    }
-                }
+        
+        // Function to extend in a direction from a given position
+        auto extend = [&](int r, int c, int dir, int startPos) {
+            int count = 0;
+            int pos = startPos;
+            while (r >= 0 && r < n && c >= 0 && c < m && grid[r][c] == expectedValue(pos)) {
+                count++;
+                pos++;
+                r += dr[dir];
+                c += dc[dir];
             }
-        }
-        int ans = 0;
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < m; ++j) {
+            return count;
+        };
+        
+        // Try starting from each cell with value 1
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
                 if (grid[i][j] != 1) continue;
-                ans = max(ans, 1);
-                for (int d = 0; d < 4; ++d) {
-                    int steps = getv(i, j, d, 0);
-                    ans = max(ans, 1 + steps);
-                    int td = (d + 1) % 4;
-                    int cr = i;
-                    int cc = j;
-                    int clen = 0;
-                    while (clen < steps) {
-                        cr += dr[d];
-                        cc += dc[d];
-                        ++clen;
-                        int pturn = (clen % 2 == 0 ? 0 : 1);
-                        int after = getv(cr, cc, td, pturn);
-                        ans = max(ans, 1 + clen + after);
+                
+                // Try each starting direction
+                for (int dir = 0; dir < 4; dir++) {
+                    // First, try without turning
+                    int len1 = extend(i, j, dir, 0);
+                    maxLen = max(maxLen, len1);
+                    
+                    // Now try turning at each position along the path
+                    int r = i, c = j, pos = 0;
+                    while (r >= 0 && r < n && c >= 0 && c < m && grid[r][c] == expectedValue(pos)) {
+                        // Current path length up to here (inclusive)
+                        int currentLen = pos + 1;
+                        
+                        // Try making a clockwise turn from here
+                        int newDir = clockwise[dir];
+                        int nr = r + dr[newDir];
+                        int nc = c + dc[newDir];
+                        int len2 = extend(nr, nc, newDir, pos + 1);
+                        maxLen = max(maxLen, currentLen + len2);
+                        
+                        // Move to next position
+                        pos++;
+                        r += dr[dir];
+                        c += dc[dir];
                     }
                 }
             }
         }
-        return ans;
+        
+        return maxLen;
     }
 };
 # @lc code=end
