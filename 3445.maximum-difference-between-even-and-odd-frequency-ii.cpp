@@ -7,35 +7,62 @@
 class Solution {
 public:
     int maxDifference(string s, int k) {
-        int n = s.length();
-        int maxDiff = INT_MIN;
+        int n = s.size();
+        int ans = INT_MIN;
         
-        for (int i = 0; i < n; i++) {
-            int freq[5] = {0}; // Only '0' to '4'
-            for (int j = i; j < n; j++) {
-                freq[s[j] - '0']++;
+        for (char a = '0'; a <= '4'; a++) {
+            for (char b = '0'; b <= '4'; b++) {
+                if (a == b) continue;
                 
-                if (j - i + 1 >= k) {
-                    // Find max odd frequency and min even frequency
-                    int maxOdd = INT_MIN;
-                    int minEven = INT_MAX;
-                    
-                    for (int c = 0; c < 5; c++) {
-                        if (freq[c] % 2 == 1) {
-                            maxOdd = max(maxOdd, freq[c]);
-                        } else if (freq[c] > 0) {
-                            minEven = min(minEven, freq[c]);
+                // Compute prefix sums
+                vector<int> prefix_a(n + 1, 0), prefix_b(n + 1, 0);
+                for (int i = 0; i < n; i++) {
+                    prefix_a[i + 1] = prefix_a[i] + (s[i] == a ? 1 : 0);
+                    prefix_b[i + 1] = prefix_b[i] + (s[i] == b ? 1 : 0);
+                }
+                
+                // min_diff[pa][pb] = minimum (prefix_a - prefix_b) for valid positions
+                vector<vector<int>> min_diff(2, vector<int>(2, INT_MAX));
+                vector<tuple<int, int, int>> pending; // waiting for a 'b' to appear
+                
+                for (int r = k; r <= n; r++) {
+                    // Flush pending if we just saw a 'b'
+                    if (s[r - 1] == b) {
+                        for (auto& [d, pa, pb] : pending) {
+                            min_diff[pa][pb] = min(min_diff[pa][pb], d);
                         }
+                        pending.clear();
                     }
                     
-                    if (maxOdd != INT_MIN && minEven != INT_MAX) {
-                        maxDiff = max(maxDiff, maxOdd - minEven);
+                    // Add l = r - k
+                    int l = r - k;
+                    int diff_l = prefix_a[l] - prefix_b[l];
+                    int pa_l = prefix_a[l] % 2;
+                    int pb_l = prefix_b[l] % 2;
+                    
+                    if (prefix_b[r] > prefix_b[l]) {
+                        // Already have a 'b' between l and r, add directly
+                        min_diff[pa_l][pb_l] = min(min_diff[pa_l][pb_l], diff_l);
+                    } else {
+                        // Wait for a 'b' to appear
+                        pending.push_back({diff_l, pa_l, pb_l});
+                    }
+                    
+                    // Query for current r
+                    int diff_r = prefix_a[r] - prefix_b[r];
+                    int pa_r = prefix_a[r] % 2;
+                    int pb_r = prefix_b[r] % 2;
+                    int target_pa = 1 - pa_r;  // opposite parity for odd freq_a
+                    int target_pb = pb_r;      // same parity for even freq_b
+                    
+                    if (min_diff[target_pa][target_pb] != INT_MAX) {
+                        ans = max(ans, diff_r - min_diff[target_pa][target_pb]);
                     }
                 }
             }
         }
         
-        return maxDiff;
+        return ans;
     }
 };
 # @lc code=end

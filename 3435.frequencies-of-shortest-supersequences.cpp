@@ -1,74 +1,110 @@
-#
-# @lc app=leetcode id=3435 lang=cpp
-#
-# [3435] Frequencies of Shortest Supersequences
-#
-# @lc code=start
+//
+// @lc app=leetcode id=3435 lang=cpp
+//
+// [3435] Frequencies of Shortest Supersequences
+//
+
+// @lc code=start
 class Solution {
 public:
     vector<vector<int>> supersequences(vector<string>& words) {
-        int n = words.size();
+        set<int> charSet;
+        for (const auto& w : words) {
+            charSet.insert(w[0] - 'a');
+            charSet.insert(w[1] - 'a');
+        }
         
-        // Collect unique characters
-        set<char> uniqueChars;
-        for (const string& word : words) {
-            for (char c : word) {
-                uniqueChars.insert(c);
+        map<int, int> compress;
+        vector<int> decompress;
+        for (int c : charSet) {
+            compress[c] = decompress.size();
+            decompress.push_back(c);
+        }
+        int n = decompress.size();
+        
+        int must_double = 0;
+        vector<vector<bool>> edge(n, vector<bool>(n, false));
+        
+        for (const auto& w : words) {
+            int u = compress[w[0] - 'a'];
+            int v = compress[w[1] - 'a'];
+            if (u == v) {
+                must_double |= (1 << u);
+            } else {
+                edge[u][v] = true;
             }
         }
         
-        // BFS level by level
-        // Map from state (word progress) to set of frequency arrays
-        map<vector<int>, set<vector<int>>> currentLevel;
-        vector<int> initial(n, 0);
-        vector<int> initialFreq(26, 0);
-        currentLevel[initial].insert(initialFreq);
-        
-        while (!currentLevel.empty()) {
-            // Check if any state is complete
-            set<vector<int>> completeFreqs;
-            for (const auto& [state, freqs] : currentLevel) {
-                bool allComplete = true;
-                for (int idx : state) {
-                    if (idx < 2) {
-                        allComplete = false;
-                        break;
-                    }
-                }
-                if (allComplete) {
-                    for (const auto& freq : freqs) {
-                        completeFreqs.insert(freq);
+        auto isAcyclic = [&](int mask) -> bool {
+            vector<int> inDegree(n, 0);
+            int nodeCount = 0;
+            for (int i = 0; i < n; i++) {
+                if (mask & (1 << i)) continue;
+                nodeCount++;
+                for (int j = 0; j < n; j++) {
+                    if (mask & (1 << j)) continue;
+                    if (edge[j][i]) {
+                        inDegree[i]++;
                     }
                 }
             }
             
-            if (!completeFreqs.empty()) {
-                return vector<vector<int>>(completeFreqs.begin(), completeFreqs.end());
+            queue<int> q;
+            for (int i = 0; i < n; i++) {
+                if (mask & (1 << i)) continue;
+                if (inDegree[i] == 0) {
+                    q.push(i);
+                }
             }
             
-            // Generate next level
-            map<vector<int>, set<vector<int>>> nextLevel;
-            for (const auto& [state, freqs] : currentLevel) {
-                for (char c : uniqueChars) {
-                    vector<int> newState = state;
-                    for (int i = 0; i < n; i++) {
-                        if (state[i] < 2 && words[i][state[i]] == c) {
-                            newState[i]++;
+            int processed = 0;
+            while (!q.empty()) {
+                int u = q.front();
+                q.pop();
+                processed++;
+                for (int v = 0; v < n; v++) {
+                    if (mask & (1 << v)) continue;
+                    if (edge[u][v]) {
+                        inDegree[v]--;
+                        if (inDegree[v] == 0) {
+                            q.push(v);
                         }
                     }
-                    
-                    for (const auto& freq : freqs) {
-                        vector<int> newFreq = freq;
-                        newFreq[c - 'a']++;
-                        nextLevel[newState].insert(newFreq);
-                    }
                 }
             }
             
-            currentLevel = nextLevel;
+            return processed == nodeCount;
+        };
+        
+        int minSize = n + 1;
+        vector<int> validMasks;
+        
+        for (int mask = 0; mask < (1 << n); mask++) {
+            if ((mask & must_double) != must_double) continue;
+            
+            if (isAcyclic(mask)) {
+                int sz = __builtin_popcount(mask);
+                if (sz < minSize) {
+                    minSize = sz;
+                    validMasks.clear();
+                    validMasks.push_back(mask);
+                } else if (sz == minSize) {
+                    validMasks.push_back(mask);
+                }
+            }
         }
         
-        return {};
+        set<vector<int>> resultSet;
+        for (int mask : validMasks) {
+            vector<int> freq(26, 0);
+            for (int i = 0; i < n; i++) {
+                int c = decompress[i];
+                freq[c] = (mask & (1 << i)) ? 2 : 1;
+            }
+            resultSet.insert(freq);
+        }
+        
+        return vector<vector<int>>(resultSet.begin(), resultSet.end());
     }
 };
-# @lc code=end
+// @lc code=end
