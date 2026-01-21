@@ -1,81 +1,70 @@
-#include <bits/stdc++.h>
-using namespace std;
-
 #
 # @lc app=leetcode id=3768 lang=cpp
 #
 # [3768] Minimum Inversion Count in Subarrays of Fixed Length
 #
 
-// @lc code=start
+# @lc code=start
 class Solution {
+public:
     struct Fenwick {
-        int n;
-        vector<int> bit;
-        Fenwick(int n = 0) { init(n); }
-        void init(int n_) {
-            n = n_;
-            bit.assign(n + 1, 0);
+        vector<long long> tree;
+        int sz;
+        Fenwick(int n) : sz(n), tree(n + 2, 0) {}
+        void update(int idx, long long val) {
+            while (idx <= sz) {
+                tree[idx] += val;
+                idx += idx & -idx;
+            }
         }
-        void add(int i, int delta) {
-            for (; i <= n; i += i & -i) bit[i] += delta;
+        long long query(int idx) {
+            long long sum = 0;
+            while (idx > 0) {
+                sum += tree[idx];
+                idx -= idx & -idx;
+            }
+            return sum;
         }
-        long long sumPrefix(int i) const {
-            long long s = 0;
-            for (; i > 0; i -= i & -i) s += bit[i];
-            return s;
+        long long query(int l, int r) {
+            if (l > r) return 0;
+            return query(r) - query(l - 1);
         }
-        long long total() const { return sumPrefix(n); }
     };
 
-public:
     long long minInversionCount(vector<int>& nums, int k) {
-        int n = (int)nums.size();
-        if (k <= 1) return 0;
-
-        // Coordinate compression
-        vector<int> vals(nums.begin(), nums.end());
+        int n = nums.size();
+        vector<int> vals = nums;
         sort(vals.begin(), vals.end());
         vals.erase(unique(vals.begin(), vals.end()), vals.end());
-        int m = (int)vals.size();
-
-        vector<int> rk(n);
+        int m = vals.size();
+        vector<int> rnk(n);
         for (int i = 0; i < n; i++) {
-            rk[i] = (int)(lower_bound(vals.begin(), vals.end(), nums[i]) - vals.begin()) + 1;
+            rnk[i] = lower_bound(vals.begin(), vals.end(), nums[i]) - vals.begin() + 1;
         }
-
-        Fenwick fw(m);
-
-        // Initial inversion count for first window [0..k-1]
+        Fenwick ft(m);
         long long inv = 0;
+        // Build first window [0, k-1]
         for (int i = 0; i < k; i++) {
-            int x = rk[i];
-            long long leq = fw.sumPrefix(x);
-            long long prev = i;
-            inv += (prev - leq); // previous elements greater than x
-            fw.add(x, 1);
+            int rk = rnk[i];
+            inv += ft.query(rk + 1, m);
+            ft.update(rk, 1);
         }
-
         long long ans = inv;
-
-        // Slide windows
-        for (int r = k; r < n; r++) {
-            int out = rk[r - k];
-            // remove leftmost: subtract inversions (out, y) where y < out
-            long long smaller = fw.sumPrefix(out - 1);
+        // Slide the window
+        for (int start = 1; start <= n - k; start++) {
+            int rem_idx = start - 1;
+            int rk_rem = rnk[rem_idx];
+            long long smaller = ft.query(1, rk_rem - 1);
             inv -= smaller;
-            fw.add(out, -1);
-
-            int in = rk[r];
-            // add rightmost: add inversions (y, in) where y > in
-            long long greater = fw.total() - fw.sumPrefix(in);
+            ft.update(rk_rem, -1);
+            int add_idx = start + k - 1;
+            int rk_add = rnk[add_idx];
+            long long greater = ft.query(rk_add + 1, m);
             inv += greater;
-            fw.add(in, 1);
-
+            ft.update(rk_add, 1);
             ans = min(ans, inv);
         }
-
         return ans;
     }
 };
-// @lc code=end
+# @lc code=end
