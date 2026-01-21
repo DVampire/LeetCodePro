@@ -1,6 +1,3 @@
-#include <bits/stdc++.h>
-using namespace std;
-
 #
 # @lc app=leetcode id=3509 lang=cpp
 #
@@ -11,145 +8,72 @@ using namespace std;
 class Solution {
 public:
     int maxProduct(vector<int>& nums, int k, int limit) {
-        int n = (int)nums.size();
-        int maxSum = 12 * n;
-        if (k < -maxSum || k > maxSum) return -1;
-
-        int offset = maxSum;
-        int range = 2 * maxSum + 1;
-        int W = limit / 64 + 1; // number of uint64_t blocks
-        size_t SZ = (size_t)range * W;
-
-        vector<uint64_t> dp[2], nxt[2];
-        dp[0].assign(SZ, 0); dp[1].assign(SZ, 0);
-        nxt[0].assign(SZ, 0); nxt[1].assign(SZ, 0);
-
-        vector<char> activeFlag[2], nextActiveFlag[2];
-        activeFlag[0].assign(range, 0); activeFlag[1].assign(range, 0);
-        nextActiveFlag[0].assign(range, 0); nextActiveFlag[1].assign(range, 0);
-
-        vector<int> active[2], nextActive[2];
-
-        auto ptrAt = [&](vector<uint64_t>& arr, int sumIdx) -> uint64_t* {
-            return arr.data() + (size_t)sumIdx * W;
-        };
-
-        auto activateIfNeeded = [&](int p, int sumIdx) {
-            if (!nextActiveFlag[p][sumIdx]) {
-                nextActiveFlag[p][sumIdx] = 1;
-                nextActive[p].push_back(sumIdx);
-            }
-        };
-
-        auto setBit = [&](uint64_t* bits, int prod) {
-            bits[prod >> 6] |= (1ULL << (prod & 63));
-        };
-
-        for (int x : nums) {
-            // next = dp (skip current element)
-            memcpy(nxt[0].data(), dp[0].data(), SZ * sizeof(uint64_t));
-            memcpy(nxt[1].data(), dp[1].data(), SZ * sizeof(uint64_t));
-            nextActiveFlag[0] = activeFlag[0];
-            nextActiveFlag[1] = activeFlag[1];
-            nextActive[0] = active[0];
-            nextActive[1] = active[1];
-
-            // Start new subsequence with [x]
-            if (x <= limit) {
-                int sumIdx = offset + x;
-                if (0 <= sumIdx && sumIdx < range) {
-                    activateIfNeeded(1, sumIdx);
-                    uint64_t* dst = ptrAt(nxt[1], sumIdx);
-                    setBit(dst, x);
-                }
-            }
-
-            // Extend existing subsequences
-            for (int p = 0; p <= 1; ++p) {
-                for (int sumIdx : active[p]) {
-                    uint64_t* src = ptrAt(dp[p], sumIdx);
-
-                    int delta = (p == 0 ? x : -x);
-                    int dstSum = sumIdx + delta;
-                    if (dstSum < 0 || dstSum >= range) continue;
-                    int np = 1 - p;
-
-                    if (x == 0) {
-                        // product becomes 0
-                        activateIfNeeded(np, dstSum);
-                        uint64_t* dst = ptrAt(nxt[np], dstSum);
-                        setBit(dst, 0);
-                        continue;
+        int n = nums.size();
+        const int OFFSET = 1800;
+        const int MAXS = 3600;
+        vector<vector<vector<int>>> dp(n + 1, vector<vector<int>>(MAXS + 1, vector<int>(2, -1)));
+        vector<vector<vector<char>>> exc(n + 1, vector<vector<char>>(MAXS + 1, vector<char>(2, 0)));
+        for (int i = 0; i < n; ++i) {
+            int x = nums[i];
+            // transitions
+            for (int ss = 0; ss <= MAXS; ++ss) {
+                for (int p = 0; p < 2; ++p) {
+                    int valid = dp[i][ss][p];
+                    char has_e = exc[i][ss][p];
+                    if (valid == -1 && has_e == 0) continue;
+                    int curs = ss - OFFSET;
+                    // skip
+                    {
+                        if (valid != -1) {
+                            dp[i + 1][ss][p] = max(dp[i + 1][ss][p], valid);
+                        }
+                        if (has_e) {
+                            exc[i + 1][ss][p] = 1;
+                        }
                     }
-
-                    uint64_t* dst = ptrAt(nxt[np], dstSum);
-
-                    if (x == 1) {
-                        // OR whole bitset (product unchanged)
-                        activateIfNeeded(np, dstSum);
-                        for (int wi = 0; wi < W; ++wi) dst[wi] |= src[wi];
-                        continue;
-                    }
-
-                    int maxPr = limit / x;
-                    bool activated = nextActiveFlag[np][dstSum];
-
-                    for (int wi = 0; wi < W; ++wi) {
-                        uint64_t word = src[wi];
-                        while (word) {
-                            int b = __builtin_ctzll(word);
-                            int pr = (wi << 6) + b;
-                            word &= (word - 1);
-                            if (pr > limit) continue;
-
-                            int newPr;
-                            if (pr == 0) newPr = 0;
-                            else {
-                                if (pr > maxPr) continue;
-                                newPr = pr * x;
+                    // take
+                    int sign = (p == 0 ? 1 : -1);
+                    int news = curs + sign * x;
+                    int nss = news + OFFSET;
+                    if (nss >= 0 && nss <= MAXS) {
+                        int np = 1 - p;
+                        // from valid
+                        if (valid != -1) {
+                            long long nprod = 1LL * valid * x;
+                            if (nprod <= limit) {
+                                dp[i + 1][nss][np] = max(dp[i + 1][nss][np], (int)nprod);
+                            } else {
+                                exc[i + 1][nss][np] = 1;
                             }
-                            if (newPr > limit) continue;
-
-                            if (!activated) {
-                                activateIfNeeded(np, dstSum);
-                                activated = true;
+                        }
+                        // from exc
+                        if (has_e) {
+                            if (x == 0) {
+                                dp[i + 1][nss][np] = max(dp[i + 1][nss][np], 0);
+                            } else {
+                                exc[i + 1][nss][np] = 1;
                             }
-                            setBit(dst, newPr);
                         }
                     }
                 }
             }
-
-            dp[0].swap(nxt[0]);
-            dp[1].swap(nxt[1]);
-            activeFlag[0].swap(nextActiveFlag[0]);
-            activeFlag[1].swap(nextActiveFlag[1]);
-            active[0].swap(nextActive[0]);
-            active[1].swap(nextActive[1]);
-        }
-
-        int targetIdx = offset + k;
-        if (targetIdx < 0 || targetIdx >= range) return -1;
-
-        auto getMaxProduct = [&](vector<uint64_t>& arr) -> int {
-            uint64_t* bits = ptrAt(arr, targetIdx);
-            int lastBits = (limit & 63);
-            uint64_t lastMask = (lastBits == 63) ? ~0ULL : ((1ULL << (lastBits + 1)) - 1ULL);
-
-            for (int wi = W - 1; wi >= 0; --wi) {
-                uint64_t word = bits[wi];
-                if (wi == W - 1) word &= lastMask;
-                if (!word) continue;
-                int msb = 63 - __builtin_clzll(word);
-                int prod = (wi << 6) + msb;
-                if (prod <= limit) return prod;
+            // start new
+            {
+                int starts = x + OFFSET;
+                if (starts >= 0 && starts <= MAXS) {
+                    long long nprod = x;
+                    if (nprod <= limit) {
+                        dp[i + 1][starts][1] = max(dp[i + 1][starts][1], (int)nprod);
+                    }
+                }
             }
-            return -1;
-        };
-
-        int a = getMaxProduct(dp[0]);
-        int b = getMaxProduct(dp[1]);
-        return max(a, b);
+        }
+        int ts = k + OFFSET;
+        int ans = -1;
+        if (ts >= 0 && ts <= MAXS) {
+            ans = max(dp[n][ts][0], dp[n][ts][1]);
+        }
+        return ans;
     }
 };
 # @lc code=end

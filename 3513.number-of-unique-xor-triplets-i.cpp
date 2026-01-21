@@ -8,12 +8,11 @@
 class Solution {
 public:
     int uniqueXorTriplets(vector<int>& nums) {
-        int n = (int)nums.size();
-        if (n < 3) return n; // n=1 ->1, n=2 ->2
-
-        // bit length b such that 2^(b-1) <= n < 2^b
-        int b = 32 - __builtin_clz((unsigned)n);
-        return 1 << b; // 2^b
+        int n = nums.size();
+        if (n == 1) return 1;
+        if (n == 2) return 2;
+        int l = 31 - __builtin_clz(n);
+        return 1 << (l + 1);
     }
 };
 # @lc code=end
