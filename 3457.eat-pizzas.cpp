@@ -8,26 +8,25 @@ class Solution {
 public:
     long long maxWeight(vector<int>& pizzas) {
         int n = pizzas.size();
-        int k = n / 4; // number of days
-        int odd = (k + 1) / 2; // number of odd days
-        int even = k / 2; // number of even days
-        
-        // Sort in descending order
         sort(pizzas.begin(), pizzas.end(), greater<int>());
         
-        long long ans = 0;
+        int d = n / 4;
+        int num_odd = (d + 1) / 2;
+        int num_even = d / 2;
         
-        // Z values from odd-day groups: indices 0 to odd-1
-        for (int i = 0; i < odd; i++) {
-            ans += pizzas[i];
+        long long sum = 0;
+        
+        // Add odd day Z values (largest pizzas)
+        for (int i = 0; i < num_odd; i++) {
+            sum += pizzas[i];
         }
         
-        // Y values from even-day groups: indices odd+1, odd+3, ...
-        for (int i = 0; i < even; i++) {
-            ans += pizzas[odd + 1 + 2 * i];
+        // Add even day Y values (second in each pair from remaining)
+        for (int i = 0; i < num_even; i++) {
+            sum += pizzas[num_odd + 1 + 2 * i];
         }
         
-        return ans;
+        return sum;
     }
 };
 # @lc code=end

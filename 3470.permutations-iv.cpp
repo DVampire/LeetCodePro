@@ -7,86 +7,79 @@
 class Solution {
 public:
     vector<int> permute(int n, long long k) {
-        const long long MAX_K = 1000000000000000LL;
+        const long long INF = 2e15;
         
-        vector<int> result;
-        vector<int> available;
+        // Precompute factorials with overflow protection
+        vector<long long> fact(n + 1);
+        fact[0] = 1;
         for (int i = 1; i <= n; i++) {
-            available.push_back(i);
+            if (fact[i - 1] > INF / i) {
+                fact[i] = INF;
+            } else {
+                fact[i] = fact[i - 1] * i;
+            }
         }
         
-        auto factorial = [&](int x) -> long long {
-            long long res = 1;
-            for (int i = 1; i <= x; i++) {
-                res *= i;
-                if (res > MAX_K) return MAX_K + 1;
-            }
-            return res;
-        };
+        // Separate odd and even numbers into sets
+        set<int> odd_set, even_set;
+        for (int i = 1; i <= n; i++) {
+            if (i % 2 == 1) odd_set.insert(i);
+            else even_set.insert(i);
+        }
         
-        auto countPerms = [&](const vector<int>& nums, bool needOdd) -> long long {
-            if (nums.empty()) return 1;
-            
-            int oddCount = 0, evenCount = 0;
-            for (int num : nums) {
-                if (num % 2 == 1) oddCount++;
-                else evenCount++;
-            }
-            
-            int len = nums.size();
-            int oddPosCount = 0, evenPosCount = 0;
-            bool currentNeedOdd = needOdd;
-            for (int i = 0; i < len; i++) {
-                if (currentNeedOdd) oddPosCount++;
-                else evenPosCount++;
-                currentNeedOdd = !currentNeedOdd;
-            }
-            
-            if (oddPosCount != oddCount || evenPosCount != evenCount) {
-                return 0;
-            }
-            
-            long long oddFact = factorial(oddCount);
-            long long evenFact = factorial(evenCount);
-            if (oddFact > MAX_K || evenFact > MAX_K) return MAX_K + 1;
-            if (oddFact > MAX_K / evenFact) return MAX_K + 1;
-            return oddFact * evenFact;
-        };
-        
-        bool needOdd = false;
+        vector<int> result;
+        int start_parity = -1; // -1: not determined, 0: even, 1: odd
         
         for (int pos = 0; pos < n; pos++) {
-            vector<int> validChoices;
+            vector<int> candidates;
             
-            if (pos == 0) {
-                for (int num : available) {
-                    validChoices.push_back(num);
-                }
+            if (start_parity == -1) {
+                // First position: try all numbers in sorted order
+                for (int c : odd_set) candidates.push_back(c);
+                for (int c : even_set) candidates.push_back(c);
+                sort(candidates.begin(), candidates.end());
             } else {
-                for (int num : available) {
-                    bool isOdd = (num % 2 == 1);
-                    if ((needOdd && isOdd) || (!needOdd && !isOdd)) {
-                        validChoices.push_back(num);
-                    }
+                // Later positions: only try numbers with required parity
+                int req_parity = (start_parity + pos) % 2;
+                if (req_parity == 1) {
+                    for (int c : odd_set) candidates.push_back(c);
+                } else {
+                    for (int c : even_set) candidates.push_back(c);
                 }
             }
             
             bool found = false;
-            for (int choice : validChoices) {
-                vector<int> remaining;
-                for (int num : available) {
-                    if (num != choice) remaining.push_back(num);
+            for (int c : candidates) {
+                int c_parity = c % 2;
+                int sp = (pos == 0) ? c_parity : start_parity;
+                
+                // Calculate remaining counts after placing c
+                int new_odd = (int)odd_set.size() - (c_parity == 1 ? 1 : 0);
+                int new_even = (int)even_set.size() - (c_parity == 0 ? 1 : 0);
+                
+                // Count positions needing odd/even from pos+1 to n-1
+                int odd_needed = 0, even_needed = 0;
+                for (int i = pos + 1; i < n; i++) {
+                    if ((sp + i) % 2 == 1) odd_needed++;
+                    else even_needed++;
                 }
                 
-                bool nextNeedOdd = !(choice % 2 == 1);
-                long long count = countPerms(remaining, nextNeedOdd);
+                // Calculate number of valid permutations
+                long long count = 0;
+                if (odd_needed == new_odd && even_needed == new_even) {
+                    long long a = fact[new_odd], b = fact[new_even];
+                    if (a <= INF / b) {
+                        count = a * b;
+                    } else {
+                        count = INF;
+                    }
+                }
                 
-                if (count == 0) continue;
-                
-                if (k <= count) {
-                    result.push_back(choice);
-                    available = remaining;
-                    needOdd = nextNeedOdd;
+                if (count >= k) {
+                    result.push_back(c);
+                    if (c_parity == 1) odd_set.erase(c);
+                    else even_set.erase(c);
+                    if (pos == 0) start_parity = c_parity;
                     found = true;
                     break;
                 } else {
@@ -94,9 +87,7 @@ public:
                 }
             }
             
-            if (!found) {
-                return {};
-            }
+            if (!found) return {};
         }
         
         return result;

@@ -8,33 +8,43 @@ class Solution {
 public:
     vector<int> solveQueries(vector<int>& nums, vector<int>& queries) {
         int n = nums.size();
-        
-        // Create a map from value to indices
         unordered_map<int, vector<int>> valueToIndices;
+        
+        // Group indices by their values
         for (int i = 0; i < n; i++) {
             valueToIndices[nums[i]].push_back(i);
         }
         
+        // Precompute minimum distances for each index
+        vector<int> minDist(n, -1);
+        
+        for (auto& [val, indices] : valueToIndices) {
+            int k = indices.size();
+            if (k == 1) continue; // Only one occurrence, no other index with same value
+            
+            // Indices are already sorted since we iterate from 0 to n-1
+            for (int j = 0; j < k; j++) {
+                int curr = indices[j];
+                int prev = indices[(j - 1 + k) % k];
+                int next = indices[(j + 1) % k];
+                
+                // Distance to previous neighbor (circular distance)
+                int directPrev = abs(curr - prev);
+                int distPrev = min(directPrev, n - directPrev);
+                
+                // Distance to next neighbor (circular distance)
+                int directNext = abs(next - curr);
+                int distNext = min(directNext, n - directNext);
+                
+                minDist[curr] = min(distPrev, distNext);
+            }
+        }
+        
+        // Answer queries
         vector<int> answer;
-        for (int queryIdx : queries) {
-            int value = nums[queryIdx];
-            vector<int>& indices = valueToIndices[value];
-            
-            // If only one index with this value, return -1
-            if (indices.size() == 1) {
-                answer.push_back(-1);
-                continue;
-            }
-            
-            int minDist = INT_MAX;
-            for (int j : indices) {
-                if (j != queryIdx) {
-                    int dist = min(abs(j - queryIdx), n - abs(j - queryIdx));
-                    minDist = min(minDist, dist);
-                }
-            }
-            
-            answer.push_back(minDist);
+        answer.reserve(queries.size());
+        for (int q : queries) {
+            answer.push_back(minDist[q]);
         }
         
         return answer;

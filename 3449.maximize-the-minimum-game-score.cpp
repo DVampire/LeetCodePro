@@ -8,64 +8,45 @@ class Solution {
 public:
     long long maxScore(vector<int>& points, int m) {
         int n = points.size();
+        long long M = m;
         
-        auto canAchieve = [&](long long T) -> bool {
-            if (T == 0) return true;
+        auto canAchieve = [&](long long target) -> bool {
+            if (target <= 0) return true;
             
-            long long moves = 1;  // Move to position 0
+            long long totalMoves = n - 1;  // traversal from -1 to n-2
             long long carry = 0;
             
             for (int i = 0; i < n - 1; i++) {
-                long long need = (T + points[i] - 1) / points[i];
+                long long need = (target + points[i] - 1) / points[i];
+                long long visits = (i == 0) ? 1 : carry + 1;
+                long long osc = max(0LL, need - visits);
+                totalMoves += 2 * osc;
+                carry = osc;
+                if (totalMoves > M) return false;
+            }
+            
+            // Check position n-1
+            long long need_last = (target + points[n-1] - 1) / points[n-1];
+            if (carry < need_last) {
+                totalMoves += 1;  // move from n-2 to n-1
                 long long visits = carry + 1;
-                
-                if (visits < need) {
-                    long long extra = need - visits;
-                    moves += 2 * extra;
-                    carry = extra;
-                } else {
-                    carry = 0;
-                }
-                
-                if (moves > m) return false;
-                
-                // Check if the last position is already satisfied by carry
-                if (i + 1 == n - 1) {
-                    long long need_last = (T + points[n-1] - 1) / points[n-1];
-                    if (carry >= need_last) {
-                        return moves <= m;
-                    }
-                }
-                
-                moves += 1;  // Move to position i+1
-                if (moves > m) return false;
+                long long osc = max(0LL, need_last - visits);
+                totalMoves += 2 * osc;
             }
             
-            // Process the last position
-            long long need_last = (T + points[n-1] - 1) / points[n-1];
-            long long visits_last = carry + 1;
-            
-            if (visits_last < need_last) {
-                long long extra = need_last - visits_last;
-                moves += 2 * extra;
-            }
-            
-            return moves <= m;
+            return totalMoves <= M;
         };
         
-        long long left = 0;
-        long long right = (long long)m * (*max_element(points.begin(), points.end()));
-        
-        while (left < right) {
-            long long mid = left + (right - left + 1) / 2;
+        long long lo = 0, hi = 1LL * (*max_element(points.begin(), points.end())) * M;
+        while (lo < hi) {
+            long long mid = lo + (hi - lo + 1) / 2;
             if (canAchieve(mid)) {
-                left = mid;
+                lo = mid;
             } else {
-                right = mid - 1;
+                hi = mid - 1;
             }
         }
-        
-        return left;
+        return lo;
     }
 };
 # @lc code=end
