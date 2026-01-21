@@ -3,62 +3,72 @@
 #
 # [3598] Longest Common Prefix Between Adjacent Strings After Removals
 #
-
 # @lc code=start
 class Solution {
 public:
-    int get_lcp(const string& a, const string& b) {
-        int len = min((int)a.size(), (int)b.size());
-        for (int k = 0; k < len; ++k) {
-            if (a[k] != b[k]) return k;
+    int commonPrefixLength(const string& s1, const string& s2) {
+        int len = 0;
+        int minLen = min(s1.length(), s2.length());
+        for (int i = 0; i < minLen; i++) {
+            if (s1[i] == s2[i]) {
+                len++;
+            } else {
+                break;
+            }
         }
         return len;
     }
-
+    
     vector<int> longestCommonPrefix(vector<string>& words) {
         int n = words.size();
-        if (n == 1) return {0};
-        int m = n - 1;
-        vector<int> prefix_len(m);
-        for (int j = 0; j < m; ++j) {
-            prefix_len[j] = get_lcp(words[j], words[j + 1]);
+        vector<int> answer(n, 0);
+        
+        if (n <= 1) {
+            return answer;
         }
-        vector<int> logg(m + 2, 0);
-        logg[1] = 0;
-        for (int i = 2; i <= m; ++i) {
-            logg[i] = logg[i / 2] + 1;
+        
+        // Pre-compute common prefix lengths for all adjacent pairs
+        vector<int> prefixLens(n - 1);
+        for (int i = 0; i < n - 1; i++) {
+            prefixLens[i] = commonPrefixLength(words[i], words[i + 1]);
         }
-        const int MAXLOG = 18;
-        vector<vector<int>> st(MAXLOG, vector<int>(m, 0));
-        for (int i = 0; i < m; ++i) {
-            st[0][i] = prefix_len[i];
+        
+        // prefixMax[i] = max of prefixLens[0...i]
+        vector<int> prefixMax(n - 1);
+        prefixMax[0] = prefixLens[0];
+        for (int i = 1; i < n - 1; i++) {
+            prefixMax[i] = max(prefixMax[i - 1], prefixLens[i]);
         }
-        for (int j = 1; j < MAXLOG; ++j) {
-            for (int i = 0; i + (1 << j) <= m; ++i) {
-                st[j][i] = max(st[j - 1][i], st[j - 1][i + (1 << (j - 1))]);
-            }
+        
+        // suffixMax[i] = max of prefixLens[i...n-2]
+        vector<int> suffixMax(n - 1);
+        suffixMax[n - 2] = prefixLens[n - 2];
+        for (int i = n - 3; i >= 0; i--) {
+            suffixMax[i] = max(suffixMax[i + 1], prefixLens[i]);
         }
-        auto query = [&](int L, int R) -> int {
-            if (L > R) return 0;
-            int len = R - L + 1;
-            int k = logg[len];
-            return max(st[k][L], st[k][R - (1 << k) + 1]);
-        };
-        vector<int> answer(n);
-        for (int i = 0; i < n; ++i) {
-            int cand = 0;
+        
+        for (int i = 0; i < n; i++) {
+            int maxLen = 0;
+            
+            // Max from pairs before (i-1, i)
             if (i >= 2) {
-                cand = max(cand, query(0, i - 2));
+                maxLen = max(maxLen, prefixMax[i - 2]);
             }
-            if (i + 1 <= m - 1) {
-                cand = max(cand, query(i + 1, m - 1));
+            
+            // Max from pairs after (i, i+1)
+            if (i <= n - 3) {
+                maxLen = max(maxLen, suffixMax[i + 1]);
             }
+            
+            // New pair created by removing i
             if (i > 0 && i < n - 1) {
-                int newl = get_lcp(words[i - 1], words[i + 1]);
-                cand = max(cand, newl);
+                int newPairLen = commonPrefixLength(words[i - 1], words[i + 1]);
+                maxLen = max(maxLen, newPairLen);
             }
-            answer[i] = cand;
+            
+            answer[i] = maxLen;
         }
+        
         return answer;
     }
 };

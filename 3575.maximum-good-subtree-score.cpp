@@ -7,85 +7,81 @@
 class Solution {
 public:
     const int MOD = 1e9 + 7;
-    vector<vector<int>> children;
-    vector<int> vals;
     
-    bool hasDuplicateDigits(int num) {
-        int digitCount[10] = {0};
-        if (num == 0) return false;
-        while (num > 0) {
-            int d = num % 10;
-            digitCount[d]++;
-            if (digitCount[d] > 1) return true;
-            num /= 10;
-        }
-        return false;
-    }
-    
-    int getDigitMask(int num) {
+    int getMask(int val) {
         int mask = 0;
-        if (num == 0) return 1;
-        while (num > 0) {
-            int d = num % 10;
-            mask |= (1 << d);
-            num /= 10;
+        while (val > 0) {
+            int digit = val % 10;
+            if (mask & (1 << digit)) {
+                return -1;
+            }
+            mask |= (1 << digit);
+            val /= 10;
         }
         return mask;
     }
     
-    map<int, long long> dfs(int node, vector<long long>& maxScore) {
-        map<int, long long> dp;
+    bool hasConflict(int mask1, int mask2) {
+        return (mask1 & mask2) != 0;
+    }
+    
+    unordered_map<int, long long> dfs(int node, vector<vector<int>>& children, vector<int>& vals, vector<long long>& maxScore) {
+        unordered_map<int, long long> dp;
         dp[0] = 0;
         
-        if (!hasDuplicateDigits(vals[node])) {
-            int nodeMask = getDigitMask(vals[node]);
-            dp[nodeMask] = vals[node];
-        }
-        
         for (int child : children[node]) {
-            map<int, long long> childDp = dfs(child, maxScore);
-            map<int, long long> newDp;
+            unordered_map<int, long long> childDp = dfs(child, children, vals, maxScore);
             
-            for (auto& [mask1, score1] : dp) {
-                newDp[mask1] = max(newDp[mask1], score1);
-                
-                for (auto& [mask2, score2] : childDp) {
-                    if ((mask1 & mask2) == 0) {
+            unordered_map<int, long long> newDp;
+            for (auto& [mask1, sum1] : dp) {
+                for (auto& [mask2, sum2] : childDp) {
+                    if (!hasConflict(mask1, mask2)) {
                         int newMask = mask1 | mask2;
-                        newDp[newMask] = max(newDp[newMask], score1 + score2);
+                        newDp[newMask] = max(newDp[newMask], sum1 + sum2);
                     }
                 }
             }
             dp = newDp;
         }
         
-        long long maxVal = 0;
-        for (auto& [mask, score] : dp) {
-            maxVal = max(maxVal, score);
+        int nodeMask = getMask(vals[node]);
+        if (nodeMask != -1) {
+            unordered_map<int, long long> newDp = dp;
+            for (auto& [mask, sum] : dp) {
+                if (!hasConflict(mask, nodeMask)) {
+                    int newMask = mask | nodeMask;
+                    newDp[newMask] = max(newDp[newMask], sum + vals[node]);
+                }
+            }
+            dp = newDp;
         }
-        maxScore[node] = maxVal;
+        
+        long long maxSum = 0;
+        for (auto& [mask, sum] : dp) {
+            maxSum = max(maxSum, sum);
+        }
+        maxScore[node] = maxSum;
         
         return dp;
     }
     
     int goodSubtreeSum(vector<int>& vals, vector<int>& par) {
         int n = vals.size();
-        this->vals = vals;
-        children.resize(n);
-        vector<long long> maxScore(n);
+        vector<vector<int>> children(n);
         
         for (int i = 1; i < n; i++) {
             children[par[i]].push_back(i);
         }
         
-        dfs(0, maxScore);
+        vector<long long> maxScore(n);
+        dfs(0, children, vals, maxScore);
         
-        long long totalSum = 0;
-        for (long long score : maxScore) {
-            totalSum = (totalSum + score) % MOD;
+        long long result = 0;
+        for (int i = 0; i < n; i++) {
+            result = (result + maxScore[i]) % MOD;
         }
         
-        return (int)totalSum;
+        return result;
     }
 };
 # @lc code=end

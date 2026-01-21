@@ -3,6 +3,7 @@
 #
 # [3544] Subtree Inversion Sum
 #
+
 # @lc code=start
 class Solution {
 public:
@@ -10,41 +11,45 @@ public:
         int n = nums.size();
         vector<vector<int>> adj(n);
         
-        for (auto& e : edges) {
-            adj[e[0]].push_back(e[1]);
-            adj[e[1]].push_back(e[0]);
+        // Build adjacency list
+        for (const auto& edge : edges) {
+            adj[edge[0]].push_back(edge[1]);
+            adj[edge[1]].push_back(edge[0]);
         }
         
-        map<tuple<int, int, int>, long long> memo;
+        // Memoization: memo[node][dist][parity]
+        const long long NEG_INF = LLONG_MIN / 2;
+        vector<vector<vector<long long>>> memo(n, vector<vector<long long>>(k + 1, vector<long long>(2, NEG_INF)));
         
-        function<long long(int, int, int, int)> dfs = [&](int u, int parent, int last_inv_dist, int ancestor_parity) -> long long {
-            auto key = make_tuple(u, last_inv_dist, ancestor_parity);
-            if (memo.count(key)) {
-                return memo[key];
+        function<long long(int, int, int, int)> dfs = [&](int node, int parent, int dist, int parity) -> long long {
+            // Check memoization
+            if (memo[node][dist][parity] != NEG_INF) {
+                return memo[node][dist][parity];
             }
             
-            long long result = LLONG_MIN;
+            long long result = NEG_INF;
             
-            // Choice 1: Don't invert u
-            long long sum1 = ancestor_parity == 0 ? (long long)nums[u] : -(long long)nums[u];
-            for (int v : adj[u]) {
-                if (v == parent) continue;
-                sum1 += dfs(v, u, min(last_inv_dist + 1, k), ancestor_parity);
-            }
-            result = max(result, sum1);
-            
-            // Choice 2: Invert u (if allowed)
-            if (last_inv_dist >= k) {
-                int new_parity = 1 - ancestor_parity;
-                long long sum2 = new_parity == 0 ? (long long)nums[u] : -(long long)nums[u];
-                for (int v : adj[u]) {
-                    if (v == parent) continue;
-                    sum2 += dfs(v, u, 1, new_parity);
+            // Option 1: Don't invert this node
+            long long sum = (parity == 0) ? nums[node] : -nums[node];
+            for (int child : adj[node]) {
+                if (child != parent) {
+                    sum += dfs(child, node, min(dist + 1, k), parity);
                 }
-                result = max(result, sum2);
+            }
+            result = max(result, sum);
+            
+            // Option 2: Invert this node (only if dist >= k)
+            if (dist >= k) {
+                sum = (parity == 1) ? nums[node] : -nums[node];
+                for (int child : adj[node]) {
+                    if (child != parent) {
+                        sum += dfs(child, node, 1, 1 - parity);
+                    }
+                }
+                result = max(result, sum);
             }
             
-            memo[key] = result;
+            memo[node][dist][parity] = result;
             return result;
         };
         
