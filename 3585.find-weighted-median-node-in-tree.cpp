@@ -1,140 +1,144 @@
+#
+# @lc app=leetcode id=3585 lang=cpp
+#
+# [3585] Find Weighted Median Node in Tree
+#
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc app=leetcode id=3585 lang=cpp
-//
-// [3585] Find Weighted Median Node in Tree
-//
-
-// @lc code=start
 class Solution {
 public:
     vector<int> findMedian(int n, vector<vector<int>>& edges, vector<vector<int>>& queries) {
-        vector<vector<pair<int,int>>> adj(n);
-        for (auto &e : edges) {
-            int u = e[0], v = e[1], w = e[2];
-            adj[u].push_back({v, w});
-            adj[v].push_back({u, w});
+        vector<vector<pair<int, long long>>> adj(n);
+        for (auto& e : edges) {
+            int u = e[0], v = e[1];
+            long long w = e[2];
+            adj[u].emplace_back(v, w);
+            adj[v].emplace_back(u, w);
         }
+        const int LOG = 18;
+        vector<vector<int>> parent(LOG, vector<int>(n, -1));
+        vector<vector<long long>> dist_up(LOG, vector<long long>(n, 0));
+        vector<long long> dist_root(n, 0);
+        vector<int> dep(n, 0);
 
-        int LOG = 1;
-        while ((1 << LOG) <= n) LOG++;
-
-        vector<int> depth(n, 0);
-        vector<long long> distRoot(n, 0);
-        vector<int> par(n, -1);
-        vector<long long> wPar(n, 0);
-
-        // Iterative DFS from root 0
-        vector<int> st;
-        st.reserve(n);
-        st.push_back(0);
-        par[0] = -1;
-        depth[0] = 0;
-        distRoot[0] = 0;
-        wPar[0] = 0;
-
-        while (!st.empty()) {
-            int u = st.back();
-            st.pop_back();
+        // BFS to compute dist_root, dep, parent[0]
+        vector<bool> vis(n, false);
+        queue<int> qu;
+        vis[0] = true;
+        parent[0][0] = -1;
+        dist_root[0] = 0;
+        dep[0] = 0;
+        qu.push(0);
+        while (!qu.empty()) {
+            int u = qu.front(); qu.pop();
             for (auto [v, w] : adj[u]) {
-                if (v == par[u]) continue;
-                par[v] = u;
-                wPar[v] = w;
-                depth[v] = depth[u] + 1;
-                distRoot[v] = distRoot[u] + (long long)w;
-                st.push_back(v);
+                if (!vis[v]) {
+                    vis[v] = true;
+                    parent[0][v] = u;
+                    dist_root[v] = dist_root[u] + w;
+                    dep[v] = dep[u] + 1;
+                    qu.push(v);
+                }
             }
         }
 
-        vector<vector<int>> up(LOG, vector<int>(n, -1));
-        vector<vector<long long>> wup(LOG, vector<long long>(n, 0));
-        for (int i = 0; i < n; i++) {
-            up[0][i] = par[i];
-            wup[0][i] = wPar[i];
+        // Compute dist_up[0]
+        for (int u = 0; u < n; ++u) {
+            int p = parent[0][u];
+            if (p != -1) {
+                dist_up[0][u] = dist_root[u] - dist_root[p];
+            }
         }
-        for (int k = 1; k < LOG; k++) {
-            for (int v = 0; v < n; v++) {
-                int mid = up[k-1][v];
-                if (mid == -1) {
-                    up[k][v] = -1;
-                    wup[k][v] = wup[k-1][v];
+
+        // Fill binary lifting tables
+        for (int k = 1; k < LOG; ++k) {
+            for (int u = 0; u < n; ++u) {
+                int mid = parent[k - 1][u];
+                if (mid != -1) {
+                    parent[k][u] = parent[k - 1][mid];
+                    dist_up[k][u] = dist_up[k - 1][u] + dist_up[k - 1][mid];
                 } else {
-                    up[k][v] = up[k-1][mid];
-                    wup[k][v] = wup[k-1][v] + wup[k-1][mid];
+                    parent[k][u] = -1;
+                    dist_up[k][u] = 0;
                 }
             }
         }
 
-        auto lca = [&](int a, int b) -> int {
-            if (depth[a] < depth[b]) swap(a, b);
-            int diff = depth[a] - depth[b];
-            for (int k = 0; k < LOG; k++) {
-                if (diff & (1 << k)) a = up[k][a];
-            }
-            if (a == b) return a;
-            for (int k = LOG - 1; k >= 0; k--) {
-                if (up[k][a] != up[k][b]) {
-                    a = up[k][a];
-                    b = up[k][b];
+        // LCA lambda
+        auto get_lca = [&](int u, int v) -> int {
+            if (dep[u] > dep[v]) swap(u, v);
+            int diff = dep[v] - dep[u];
+            for (int k = 0; k < LOG; ++k) {
+                if (diff & (1 << k)) {
+                    v = parent[k][v];
                 }
             }
-            return up[0][a];
-        };
-
-        // Case A helper: on u->ancestor direction, find first node with dist(u, x) >= T
-        auto firstUpAtLeast = [&](int u, long long T) -> int {
-            if (T <= 0) return u;
-            long long acc = 0;
-            int node = u;
-            for (int k = LOG - 1; k >= 0; k--) {
-                int anc = up[k][node];
-                if (anc != -1 && acc + wup[k][node] < T) {
-                    acc += wup[k][node];
-                    node = anc;
+            if (u == v) return u;
+            for (int k = LOG - 1; k >= 0; --k) {
+                if (parent[k][u] != parent[k][v]) {
+                    u = parent[k][u];
+                    v = parent[k][v];
                 }
             }
-            return up[0][node];
+            return parent[0][u];
         };
 
-        // Case B helper: a is ancestor of v. Find highest node on path a->v with dist(a,node) >= need.
-        auto highestWithPrefixAtLeast = [&](int v, int a, long long need) -> int {
-            int node = v;
-            for (int k = LOG - 1; k >= 0; k--) {
-                int anc = up[k][node];
-                if (anc == -1) continue;
-                if (depth[anc] < depth[a]) continue;
-                long long pref = distRoot[anc] - distRoot[a];
-                if (pref >= need) node = anc;
+        // Lift strict less for up case
+        auto lift_strict_less = [&](int node, long long target_dist) -> int {
+            int x = node;
+            long long rem = target_dist;
+            for (int k = LOG - 1; k >= 0; --k) {
+                if (parent[k][x] != -1 && dist_up[k][x] < rem) {
+                    rem -= dist_up[k][x];
+                    x = parent[k][x];
+                }
             }
-            return node;
+            return x;
+        };
+
+        // Lift <= for down case
+        auto lift_leq = [&](int node, long long max_dist) -> int {
+            int x = node;
+            long long rem = max_dist;
+            for (int k = LOG - 1; k >= 0; --k) {
+                if (parent[k][x] != -1 && dist_up[k][x] <= rem) {
+                    rem -= dist_up[k][x];
+                    x = parent[k][x];
+                }
+            }
+            return x;
         };
 
         vector<int> ans;
-        ans.reserve(queries.size());
-        for (auto &q : queries) {
+        for (auto& q : queries) {
             int u = q[0], v = q[1];
             if (u == v) {
                 ans.push_back(u);
                 continue;
             }
-            int L = lca(u, v);
-            long long total = distRoot[u] + distRoot[v] - 2LL * distRoot[L];
-            long long T = (total + 1) / 2; // ceil(total/2)
-            if (T == 0) {
-                ans.push_back(u);
-                continue;
-            }
-
-            long long du = distRoot[u] - distRoot[L];
-            if (T <= du) {
-                ans.push_back(firstUpAtLeast(u, T));
+            int l = get_lca(u, v);
+            long long du = dist_root[u] - dist_root[l];
+            long long dv_ = dist_root[v] - dist_root[l];
+            long long total = du + dv_;
+            long long target = (total + 1LL) / 2;
+            int med;
+            if (du >= target) {
+                // Up path
+                int y = lift_strict_less(u, target);
+                med = parent[0][y];
             } else {
-                long long need = T - du;
-                ans.push_back(highestWithPrefixAtLeast(v, L, need));
+                // Down path
+                long long need = target - du;
+                long long maxd_from_v = dv_ - need;
+                int y = lift_leq(v, maxd_from_v);
+                med = y;
             }
+            ans.push_back(med);
         }
         return ans;
     }
 };
-// @lc code=end
+# @lc code=end

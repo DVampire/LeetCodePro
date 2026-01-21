@@ -1,54 +1,65 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=3598 lang=cpp
+#
+# [3598] Longest Common Prefix Between Adjacent Strings After Removals
+#
 
-/*
- * @lc app=leetcode id=3598 lang=cpp
- *
- * [3598] Longest Common Prefix Between Adjacent Strings After Removals
- */
-
-// @lc code=start
+# @lc code=start
 class Solution {
-    static int lcpLen(const string& a, const string& b) {
-        int m = (int)min(a.size(), b.size());
-        int i = 0;
-        while (i < m && a[i] == b[i]) ++i;
-        return i;
+public:
+    int get_lcp(const string& a, const string& b) {
+        int len = min((int)a.size(), (int)b.size());
+        for (int k = 0; k < len; ++k) {
+            if (a[k] != b[k]) return k;
+        }
+        return len;
     }
 
-public:
     vector<int> longestCommonPrefix(vector<string>& words) {
-        int n = (int)words.size();
-        if (n == 1) return vector<int>(1, 0);
-
-        vector<int> adj(max(0, n - 1), 0);
-        for (int i = 0; i + 1 < n; ++i) {
-            adj[i] = lcpLen(words[i], words[i + 1]);
+        int n = words.size();
+        if (n == 1) return {0};
+        int m = n - 1;
+        vector<int> prefix_len(m);
+        for (int j = 0; j < m; ++j) {
+            prefix_len[j] = get_lcp(words[j], words[j + 1]);
         }
-
-        int m = (int)adj.size();
-        vector<int> pref(m, 0), suf(m, 0);
-        if (m > 0) {
-            pref[0] = adj[0];
-            for (int i = 1; i < m; ++i) pref[i] = max(pref[i - 1], adj[i]);
-            suf[m - 1] = adj[m - 1];
-            for (int i = m - 2; i >= 0; --i) suf[i] = max(suf[i + 1], adj[i]);
+        vector<int> logg(m + 2, 0);
+        logg[1] = 0;
+        for (int i = 2; i <= m; ++i) {
+            logg[i] = logg[i / 2] + 1;
         }
-
-        vector<int> ans(n, 0);
-        for (int i = 0; i < n; ++i) {
-            int leftMax = (i >= 2) ? pref[i - 2] : 0;
-            int rightMax = (i + 1 <= n - 2) ? suf[i + 1] : 0;
-            int base = max(leftMax, rightMax);
-
-            int bridge = 0;
-            if (i > 0 && i < n - 1) {
-                bridge = lcpLen(words[i - 1], words[i + 1]);
+        const int MAXLOG = 18;
+        vector<vector<int>> st(MAXLOG, vector<int>(m, 0));
+        for (int i = 0; i < m; ++i) {
+            st[0][i] = prefix_len[i];
+        }
+        for (int j = 1; j < MAXLOG; ++j) {
+            for (int i = 0; i + (1 << j) <= m; ++i) {
+                st[j][i] = max(st[j - 1][i], st[j - 1][i + (1 << (j - 1))]);
             }
-
-            ans[i] = max(base, bridge);
         }
-        return ans;
+        auto query = [&](int L, int R) -> int {
+            if (L > R) return 0;
+            int len = R - L + 1;
+            int k = logg[len];
+            return max(st[k][L], st[k][R - (1 << k) + 1]);
+        };
+        vector<int> answer(n);
+        for (int i = 0; i < n; ++i) {
+            int cand = 0;
+            if (i >= 2) {
+                cand = max(cand, query(0, i - 2));
+            }
+            if (i + 1 <= m - 1) {
+                cand = max(cand, query(i + 1, m - 1));
+            }
+            if (i > 0 && i < n - 1) {
+                int newl = get_lcp(words[i - 1], words[i + 1]);
+                cand = max(cand, newl);
+            }
+            answer[i] = cand;
+        }
+        return answer;
     }
 };
-// @lc code=end
+# @lc code=end
