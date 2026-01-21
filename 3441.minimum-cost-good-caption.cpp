@@ -10,120 +10,110 @@ public:
         int n = caption.size();
         if (n < 3) return "";
         
-        // Precompute prefix costs
-        vector<vector<int>> prefix(n + 1, vector<int>(26, 0));
+        vector<vector<long long>> prefix(n + 1, vector<long long>(26, 0));
         for (int i = 0; i < n; i++) {
             for (int c = 0; c < 26; c++) {
-                prefix[i + 1][c] = prefix[i][c] + abs(caption[i] - 'a' - c);
+                prefix[i + 1][c] = prefix[i][c] + abs((caption[i] - 'a') - c);
             }
         }
         
-        auto getCost = [&](int start, int end, int c) {
-            return prefix[end][c] - prefix[start][c];
+        auto segmentCost = [&](int i, int j, int c) -> long long {
+            return prefix[j][c] - prefix[i][c];
         };
         
-        const int INF = 1e9;
+        const long long INF = 1e18;
+        vector<long long> dp(n + 1, INF);
+        dp[n] = 0;
         
-        // Backward DP: suffix[i] = min cost to make caption[i..n-1] a good caption
-        vector<int> suffix(n + 1, INF);
-        suffix[n] = 0;
-        
-        for (int i = n - 3; i >= 0; i--) {
-            for (int len = 3; len <= 5 && i + len <= n; len++) {
-                if (suffix[i + len] == INF) continue;
+        for (int i = n - 1; i >= 0; i--) {
+            int remaining = n - i;
+            if (remaining < 3) continue;
+            
+            if (remaining <= 5) {
                 for (int c = 0; c < 26; c++) {
-                    suffix[i] = min(suffix[i], getCost(i, i + len, c) + suffix[i + len]);
+                    dp[i] = min(dp[i], segmentCost(i, n, c));
+                }
+            } else {
+                for (int L = 3; L <= 5; L++) {
+                    for (int c = 0; c < 26; c++) {
+                        dp[i] = min(dp[i], segmentCost(i, i + L, c) + dp[i + L]);
+                    }
                 }
             }
         }
         
-        if (suffix[0] == INF) return "";
+        if (dp[0] == INF) return "";
         
-        // Track best_c[i] and best_len[i] for lex smallest suffix
-        vector<int> best_c(n + 1, -1), best_len(n + 1, 0);
+        vector<int> first_char(n + 1, -1);
+        vector<int> char_prefix_len(n + 1, 0);
+        vector<pair<int, int>> choice(n + 1, {-1, -1});
         
-        for (int i = n - 3; i >= 0; i--) {
-            if (suffix[i] == INF) continue;
+        for (int i = n - 1; i >= 0; i--) {
+            int remaining = n - i;
+            if (remaining < 3 || dp[i] == INF) continue;
             
-            // Find smallest valid character
-            int min_c = -1;
-            for (int c = 0; c < 26 && min_c == -1; c++) {
-                for (int len = 3; len <= 5 && i + len <= n; len++) {
-                    if (suffix[i + len] != INF && getCost(i, i + len, c) + suffix[i + len] == suffix[i]) {
-                        min_c = c;
-                        break;
+            int best_c = -1, best_L = -1, best_prefix_len = 0;
+            
+            vector<int> valid_L;
+            if (remaining <= 5) {
+                valid_L.push_back(remaining);
+            } else {
+                valid_L = {3, 4, 5};
+            }
+            
+            for (int c = 0; c < 26; c++) {
+                for (int L : valid_L) {
+                    long long cost = segmentCost(i, i + L, c);
+                    if (i + L < n) cost += dp[i + L];
+                    if (cost != dp[i]) continue;
+                    
+                    int len_new = L;
+                    if (i + L < n && first_char[i + L] == c) {
+                        len_new += char_prefix_len[i + L];
+                    }
+                    
+                    bool is_better = false;
+                    if (best_c == -1) {
+                        is_better = true;
+                    } else if (c < best_c) {
+                        is_better = true;
+                    } else if (c == best_c) {
+                        if (len_new < best_prefix_len) {
+                            int pos = i + len_new;
+                            if (pos == n || first_char[pos] < c) {
+                                is_better = true;
+                            }
+                        } else if (len_new > best_prefix_len) {
+                            int pos = i + best_prefix_len;
+                            if (pos < n && c < first_char[pos]) {
+                                is_better = true;
+                            }
+                        }
+                    }
+                    
+                    if (is_better) {
+                        best_c = c;
+                        best_L = L;
+                        best_prefix_len = len_new;
                     }
                 }
             }
             
-            // Find valid lengths for this character
-            vector<int> valid_lens;
-            for (int len = 3; len <= 5 && i + len <= n; len++) {
-                if (suffix[i + len] != INF && getCost(i, i + len, min_c) + suffix[i + len] == suffix[i]) {
-                    valid_lens.push_back(len);
-                }
-            }
-            
-            // Find the length that gives lex smallest suffix
-            int best = valid_lens[0];
-            for (size_t k = 1; k < valid_lens.size(); k++) {
-                if (compareSuffixes(i, min_c, best, min_c, valid_lens[k], best_c, best_len, n) > 0) {
-                    best = valid_lens[k];
-                }
-            }
-            
-            best_c[i] = min_c;
-            best_len[i] = best;
+            first_char[i] = best_c;
+            char_prefix_len[i] = best_prefix_len;
+            choice[i] = {best_L, best_c};
         }
         
-        // Reconstruct the result
         string result;
-        for (int pos = 0; pos < n; ) {
-            result += string(best_len[pos], 'a' + best_c[pos]);
-            pos += best_len[pos];
+        int pos = 0;
+        while (pos < n) {
+            int L = choice[pos].first;
+            int c = choice[pos].second;
+            result += string(L, 'a' + c);
+            pos += L;
         }
         
         return result;
-    }
-    
-private:
-    int compareSuffixes(int i, int c_a, int len_a, int c_b, int len_b, 
-                         vector<int>& best_c, vector<int>& best_len, int n) {
-        int seg_start_a = i, seg_len_a = len_a, seg_char_a = c_a, seg_offset_a = 0;
-        int seg_start_b = i, seg_len_b = len_b, seg_char_b = c_b, seg_offset_b = 0;
-        
-        while (true) {
-            if (seg_char_a != seg_char_b) return (seg_char_a < seg_char_b) ? -1 : 1;
-            
-            int rem_a = seg_len_a - seg_offset_a;
-            int rem_b = seg_len_b - seg_offset_b;
-            int advance = min(rem_a, rem_b);
-            seg_offset_a += advance;
-            seg_offset_b += advance;
-            
-            if (seg_offset_a == seg_len_a) {
-                int next_a = seg_start_a + seg_len_a;
-                if (next_a >= n) {
-                    if (seg_offset_b == seg_len_b && seg_start_b + seg_len_b >= n) return 0;
-                    return -1;
-                }
-                seg_start_a = next_a;
-                seg_len_a = best_len[seg_start_a];
-                seg_char_a = best_c[seg_start_a];
-                seg_offset_a = 0;
-            }
-            
-            if (seg_offset_b == seg_len_b) {
-                int next_b = seg_start_b + seg_len_b;
-                if (next_b >= n) {
-                    return 1;
-                }
-                seg_start_b = next_b;
-                seg_len_b = best_len[seg_start_b];
-                seg_char_b = best_c[seg_start_b];
-                seg_offset_b = 0;
-            }
-        }
     }
 };
 # @lc code=end
