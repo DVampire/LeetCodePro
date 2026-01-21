@@ -1,51 +1,58 @@
-#
-# @lc app=leetcode id=3503 lang=cpp
-#
-# [3503] Longest Palindrome After Substring Concatenation I
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+/*
+ * @lc app=leetcode id=3503 lang=cpp
+ *
+ * [3503] Longest Palindrome After Substring Concatenation I
+ */
+
+// @lc code=start
 class Solution {
 public:
-    bool isPalindrome(const string& str) {
-        int left = 0;
-        int right = str.length() - 1;
-        while (left < right) {
-            if (str[left] != str[right]) {
-                return false;
-            }
-            left++;
-            right--;
-        }
-        return true;
-    }
-
     int longestPalindrome(string s, string t) {
-        int n = s.length();
-        int m = t.length();
-        int maxLen = 0;
+        int n = (int)s.size(), m = (int)t.size();
 
-        // Iterate over all substrings of s (including empty)
-        for (int i = 0; i <= n; ++i) {
-            for (int len_s = 0; i + len_s <= n; ++len_s) {
-                string sub_s = s.substr(i, len_s);
-                
-                // Iterate over all substrings of t (including empty)
-                for (int j = 0; j <= m; ++j) {
-                    for (int len_t = 0; j + len_t <= m; ++len_t) {
-                        string sub_t = t.substr(j, len_t);
-                        
-                        if (sub_s.empty() && sub_t.empty()) continue;
+        // store substrings as (start, length), include empty substring
+        vector<pair<int,int>> subS, subT;
+        subS.reserve(n * (n + 1) / 2 + 1);
+        subT.reserve(m * (m + 1) / 2 + 1);
 
-                        string combined = sub_s + sub_t;
-                        if (isPalindrome(combined)) {
-                            maxLen = max(maxLen, (int)combined.length());
-                        }
-                    }
-                }
+        subS.push_back({0, 0});
+        for (int i = 0; i < n; i++) {
+            for (int len = 1; i + len <= n; len++) {
+                subS.push_back({i, len});
             }
         }
-        return maxLen;
+
+        subT.push_back({0, 0});
+        for (int i = 0; i < m; i++) {
+            for (int len = 1; i + len <= m; len++) {
+                subT.push_back({i, len});
+            }
+        }
+
+        auto isPalConcat = [&](int si, int sl, int ti, int tl) -> bool {
+            int L = sl + tl;
+            int l = 0, r = L - 1;
+            while (l < r) {
+                char cl = (l < sl) ? s[si + l] : t[ti + (l - sl)];
+                char cr = (r < sl) ? s[si + r] : t[ti + (r - sl)];
+                if (cl != cr) return false;
+                ++l; --r;
+            }
+            return true;
+        };
+
+        int best = 0;
+        for (auto [si, sl] : subS) {
+            for (auto [ti, tl] : subT) {
+                int L = sl + tl;
+                if (L <= best) continue;
+                if (isPalConcat(si, sl, ti, tl)) best = L;
+            }
+        }
+        return best;
     }
 };
-# @lc code=end
+// @lc code=end

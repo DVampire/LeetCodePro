@@ -1,103 +1,123 @@
-#
-# @lc app=leetcode id=3510 lang=cpp
-#
-# [3510] Minimum Pair Removal to Sort Array II
-#
-
-# @lc code=start
-#include <vector>
-#include <queue>
-#include <tuple>
-
+#include <bits/stdc++.h>
 using namespace std;
 
+/*
+ * @lc app=leetcode id=3510 lang=cpp
+ *
+ * [3510] Minimum Pair Removal to Sort Array II
+ */
+
+// @lc code=start
 class Solution {
+public:
     struct Node {
         long long val;
-        int prev;
-        int next;
-        bool removed;
+        int prev = -1, next = -1;
+        int pos = 0;      // leftmost original index of this segment
+        int ver = 0;      // increments when val changes
+        bool alive = true;
     };
 
-public:
+    struct Entry {
+        long long sum;
+        int pos;
+        int left, lver;
+        int right, rver;
+    };
+
+    struct Cmp {
+        bool operator()(const Entry& a, const Entry& b) const {
+            if (a.sum != b.sum) return a.sum > b.sum;   // min-heap by sum
+            return a.pos > b.pos;                       // tie: leftmost
+        }
+    };
+
     int minimumPairRemoval(vector<int>& nums) {
-        int n = nums.size();
+        int n = (int)nums.size();
         if (n <= 1) return 0;
 
         vector<Node> nodes(n);
-        int unsorted_cnt = 0;
-        
-        // Priority Queue: {sum, left_idx, right_idx}
-        // We use a min-heap. The default priority_queue is a max-heap, so we use 'greater'.
-        // Tuple comparison is lexicographical: sum first, then left_idx, then right_idx.
-        // This satisfies the condition: minimum sum, then leftmost (smallest index).
-        using Element = tuple<long long, int, int>;
-        priority_queue<Element, vector<Element>, greater<Element>> pq;
-
-        for (int i = 0; i < n; ++i) {
-            nodes[i].val = nums[i];
+        for (int i = 0; i < n; i++) {
+            nodes[i].val = (long long)nums[i];
+            nodes[i].pos = i;
             nodes[i].prev = i - 1;
-            nodes[i].next = (i == n - 1) ? -1 : i + 1;
-            nodes[i].removed = false;
-            
-            if (i < n - 1) {
-                if (nums[i] > nums[i+1]) unsorted_cnt++;
-                pq.push({(long long)nums[i] + nums[i+1], i, i + 1});
-            }
+            nodes[i].next = (i + 1 < n ? i + 1 : -1);
         }
 
-        // If already sorted, return 0
-        if (unsorted_cnt == 0) return 0;
+        long long inversions = 0;
+        for (int i = 0; i + 1 < n; i++) {
+            if ((long long)nums[i] > (long long)nums[i + 1]) inversions++;
+        }
+        if (inversions == 0) return 0;
+
+        priority_queue<Entry, vector<Entry>, Cmp> pq;
+
+        auto pushPair = [&](int left) {
+            if (left == -1 || !nodes[left].alive) return;
+            int right = nodes[left].next;
+            if (right == -1 || !nodes[right].alive) return;
+            pq.push(Entry{
+                nodes[left].val + nodes[right].val,
+                nodes[left].pos,
+                left, nodes[left].ver,
+                right, nodes[right].ver
+            });
+        };
+
+        for (int i = 0; i + 1 < n; i++) pushPair(i);
+
+        auto isInv = [&](int a, int b) -> bool {
+            if (a == -1 || b == -1) return false;
+            // a and b are expected alive when called
+            return nodes[a].val > nodes[b].val;
+        };
 
         int ops = 0;
-        while (unsorted_cnt > 0 && !pq.empty()) {
-            auto [sum, u, v] = pq.top();
-            pq.pop();
-
-            // Validity check:
-            // 1. Nodes must not be removed.
-            // 2. Nodes must still be adjacent.
-            // 3. The sum must match current values (handles stale entries where values changed but sum didn't update in heap yet)
-            if (nodes[u].removed || nodes[v].removed || nodes[u].next != v) {
-                continue;
-            }
-            if (nodes[u].val + nodes[v].val != sum) {
-                continue;
-            }
-
-            // Remove contributions of current connections to unsorted_cnt before merging
-            int prev = nodes[u].prev;
-            int next = nodes[v].next;
-
-            if (prev != -1 && nodes[prev].val > nodes[u].val) unsorted_cnt--;
-            if (nodes[u].val > nodes[v].val) unsorted_cnt--;
-            if (next != -1 && nodes[v].val > nodes[next].val) unsorted_cnt--;
-
-            // Perform Merge: u absorbs v
-            long long newVal = nodes[u].val + nodes[v].val;
-            nodes[u].val = newVal;
-            nodes[u].next = next;
-            nodes[v].removed = true;
-            if (next != -1) {
-                nodes[next].prev = u;
+        while (true) {
+            // get valid minimum pair
+            Entry e;
+            while (true) {
+                e = pq.top();
+                pq.pop();
+                int l = e.left, r = e.right;
+                if (l == -1 || r == -1) continue;
+                if (!nodes[l].alive || !nodes[r].alive) continue;
+                if (nodes[l].ver != e.lver || nodes[r].ver != e.rver) continue;
+                if (nodes[l].next != r) continue;
+                // valid
+                break;
             }
 
-            // Add contributions of new connections to unsorted_cnt after merging
-            if (prev != -1 && nodes[prev].val > nodes[u].val) unsorted_cnt++;
-            if (next != -1 && nodes[u].val > nodes[next].val) unsorted_cnt++;
+            int x = e.left;
+            int y = e.right;           // y == nodes[x].next
+            int p = nodes[x].prev;
+            int nn = nodes[y].next;
 
-            // Push new potential merges to heap
-            if (prev != -1) {
-                pq.push({nodes[prev].val + nodes[u].val, prev, u});
-            }
-            if (next != -1) {
-                pq.push({nodes[u].val + nodes[next].val, u, next});
-            }
+            // remove old inversion contributions
+            if (p != -1 && isInv(p, x)) inversions--;
+            if (isInv(x, y)) inversions--;
+            if (nn != -1 && isInv(y, nn)) inversions--;
+
+            // merge y into x
+            nodes[x].val += nodes[y].val;
+            nodes[x].ver++;
+            nodes[x].next = nn;
+            if (nn != -1) nodes[nn].prev = x;
+
+            nodes[y].alive = false;
+            nodes[y].prev = nodes[y].next = -1;
+
+            // add new inversion contributions
+            if (p != -1 && isInv(p, x)) inversions++;
+            if (nn != -1 && isInv(x, nn)) inversions++;
+
+            // update affected pairs in heap
+            if (p != -1) pushPair(p);
+            pushPair(x);
 
             ops++;
+            if (inversions == 0) return ops;
         }
-
-        return ops;
     }
 };
-# @lc code=end
+// @lc code=end

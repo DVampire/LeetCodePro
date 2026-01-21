@@ -1,171 +1,166 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+// @lc app=leetcode id=3486 lang=cpp
+//
+// [3486] Longest Special Path II
+//
+
+// @lc code=start
 class Solution {
 public:
-    vector<vector<pair<int, int>>> adj;
-    vector<int> nums;
-    vector<vector<int>> pos;
-    vector<long long> path_dists;
-    int max_len = -1;
-    int min_nodes = 1;
-
-    void dfs(int u, int p, int depth, long long current_dist, int start, int repeat_start) {
-        int val = nums[u];
-        
-        // Step A: Handle 3rd occurrence constraint
-        if (pos[val].size() >= 2) {
-            int second_last = pos[val][pos[val].size() - 2];
-            start = max(start, second_last + 1);
-            // If the window moved past the existing duplicate pair start, reset it
-            if (repeat_start != -1 && repeat_start < start) {
-                repeat_start = -1;
-            }
-        }
-
-        // Step B: Handle 2nd occurrence constraint (duplicate pairs)
-        if (!pos[val].empty()) {
-            int last = pos[val].back();
-            if (last >= start) {
-                // We have a duplicate pair for 'val' in the current window
-                if (repeat_start != -1) {
-                    // There was already a duplicate pair. We now have two.
-                    // We must remove the one that starts earliest to maximize window size.
-                    start = max(start, min(last, repeat_start) + 1);
-                    repeat_start = max(last, repeat_start);
-                } else {
-                    // This is the first duplicate pair
-                    repeat_start = last;
-                }
-            }
-        }
-
-        // Update result
-        long long len = current_dist - path_dists[start];
-        int nodes = depth - start + 1;
-        if (len > max_len) {
-            max_len = len;
-            min_nodes = nodes;
-        } else if (len == max_len) {
-            min_nodes = min(min_nodes, nodes);
-        }
-
-        // Prepare for recursion
-        pos[val].push_back(depth);
-        path_dists.push_back(current_dist);
-
-        for (auto& edge : adj[u]) {
-            int v = edge.first;
-            int w = edge.second;
-            if (v != p) {
-                dfs(v, u, depth + 1, current_dist + w, start, repeat_start);
-            }
-        }
-
-        // Backtrack
-        path_dists.pop_back();
-        pos[val].pop_back();
-    }
-
     vector<int> longestSpecialPath(vector<vector<int>>& edges, vector<int>& nums) {
-        int n = nums.size();
-        this->nums = nums;
-        adj.resize(n);
-        pos.resize(50005); // Values are up to 50000
-        
-        for (const auto& e : edges) {
-            adj[e[0]].push_back({e[1], e[2]});
-            adj[e[1]].push_back({e[0], e[2]});
+        int n = (int)nums.size();
+        vector<vector<pair<int,int>>> g(n);
+        for (auto &e : edges) {
+            int u = e[0], v = e[1], w = e[2];
+            g[u].push_back({v, w});
+            g[v].push_back({u, w});
         }
 
-        // Initial call: depth 0, dist 0, start 0, no repeat (-1)
-        // path_dists needs to have dist for index 0 initially? 
-        // No, we push current_dist *after* calculation but we need dist[start].
-        // Actually, path_dists should store dists for indices 0, 1, ... depth.
-        // Before processing u, path_dists has size `depth`. 
-        // Wait, if start=0, we need path_dists[0] which is 0. 
-        // Let's push 0 initially for the conceptual "root's parent" or handle index carefully.
-        // Easier: path_dists[i] is distance from root to node at depth i.
-        // When at node u (depth d), path_dists has 0..d-1. We compute len using path_dists[start].
-        // So we must push current_dist to path_dists *before* recursing, but *after* using it?
-        // No, for the current node `u`, `dist[u]` is `current_dist`. `dist[start]` is in `path_dists[start]`.
-        // If `start == depth`, dist is `current_dist`. 
-        // So `path_dists` should contain distances for 0 to depth-1. For `depth`, use `current_dist`.
-        // BUT, `start` can be `depth`. Then `path_dists[depth]` is not in vector yet. 
-        // Let's just push `current_dist` into `path_dists` *before* calculation? 
-        // If we do that, `path_dists[start]` is valid for `start <= depth`.
-        
-        // Correct flow:
-        // 1. Enter node u.
-        // 2. Push current_dist to path_dists.
-        // 3. Do calculations. path_dists[start] is valid.
-        // 4. Recurse.
-        // 5. Pop.
-        
-        path_dists.reserve(n);
-        
-        // Wrapper for DFS to handle the push/pop logic cleanly
-        // Actually, I can just do it inside DFS.
-        
-        // Re-adjust DFS logic slightly for path_dists:
-        // path_dists.push_back(current_dist); // Now size is depth + 1
-        // ... logic ... len = current_dist - path_dists[start]
-        // ... recurse ...
-        // path_dists.pop_back()
+        int maxVal = 0;
+        for (int x : nums) maxVal = max(maxVal, x);
+        vector<vector<int>> occ(maxVal + 1);
 
-        // But wait, the update logic depends on history. History is updated *after* logic in the previous thought.
-        // "Prepare for recursion: pos[val].push_back(depth)". This must be *after* logic checks.
-        // "path_dists.push_back" can be done before logic to simplify indexing.
-        
-        dfs_wrapper(0, -1, 0, 0, 0, -1);
+        multiset<int> ms2; // second-from-last depth for values with >=2 occurrences
+        multiset<int> ms3; // third-from-last depth for values with >=3 occurrences
 
-        return {max_len, min_nodes};
-    }
+        vector<int> nodeStack;
+        vector<long long> distStack;
+        nodeStack.reserve(n);
+        distStack.reserve(n);
 
-    void dfs_wrapper(int u, int p, int depth, long long current_dist, int start, int repeat_start) {
-        path_dists.push_back(current_dist);
-        
-        int val = nums[u];
-        
-        // Step A
-        if (pos[val].size() >= 2) {
-            int second_last = pos[val][pos[val].size() - 2];
-            start = max(start, second_last + 1);
-            if (repeat_start != -1 && repeat_start < start) {
-                repeat_start = -1;
+        long long bestLen = 0;
+        int bestNodes = 1;
+
+        auto addValueAtDepth = [&](int val, int depth) {
+            auto &vec = occ[val];
+            int k = (int)vec.size();
+
+            // Remove old contributions
+            if (k >= 2) {
+                auto it = ms2.find(vec[k - 2]);
+                if (it != ms2.end()) ms2.erase(it);
+            }
+            if (k >= 3) {
+                auto it = ms3.find(vec[k - 3]);
+                if (it != ms3.end()) ms3.erase(it);
+            }
+
+            // Insert new contributions after push (based on previous elements)
+            if (k >= 1) {
+                ms2.insert(vec[k - 1]);
+            }
+            if (k >= 2) {
+                ms3.insert(vec[k - 2]);
+            }
+
+            vec.push_back(depth);
+        };
+
+        auto removeValueAtDepth = [&](int val) {
+            auto &vec = occ[val];
+            int k = (int)vec.size();
+            // k >= 1
+
+            // Remove current contributions (before pop)
+            if (k >= 2) {
+                auto it = ms2.find(vec[k - 2]);
+                if (it != ms2.end()) ms2.erase(it);
+            }
+            if (k >= 3) {
+                auto it = ms3.find(vec[k - 3]);
+                if (it != ms3.end()) ms3.erase(it);
+            }
+
+            // Insert new contributions after pop
+            if (k >= 3) {
+                ms2.insert(vec[k - 3]);
+            }
+            if (k >= 4) {
+                ms3.insert(vec[k - 4]);
+            }
+
+            vec.pop_back();
+        };
+
+        auto currentLeftBoundary = [&]() -> int {
+            int l = 0;
+            if (!ms3.empty()) {
+                l = max(l, *ms3.rbegin() + 1);
+            }
+            if ((int)ms2.size() >= 2) {
+                auto rit = ms2.rbegin();
+                ++rit; // second largest
+                l = max(l, *rit + 1);
+            }
+            return l;
+        };
+
+        struct Frame {
+            int u, p;
+            int it;
+            long long dist;
+        };
+
+        vector<Frame> st;
+        st.reserve(n);
+
+        // enter root
+        st.push_back({0, -1, 0, 0LL});
+        {
+            int depth = 0;
+            nodeStack.push_back(0);
+            distStack.push_back(0LL);
+            addValueAtDepth(nums[0], depth);
+
+            int l = currentLeftBoundary();
+            long long len = distStack[depth] - distStack[l];
+            int nodes = depth - l + 1;
+            if (len > bestLen) {
+                bestLen = len;
+                bestNodes = nodes;
+            } else if (len == bestLen) {
+                bestNodes = min(bestNodes, nodes);
             }
         }
 
-        // Step B
-        if (!pos[val].empty()) {
-            int last = pos[val].back();
-            if (last >= start) {
-                if (repeat_start != -1) {
-                    start = max(start, min(last, repeat_start) + 1);
-                    repeat_start = max(last, repeat_start);
-                } else {
-                    repeat_start = last;
-                }
+        while (!st.empty()) {
+            Frame &fr = st.back();
+            int u = fr.u;
+            if (fr.it == (int)g[u].size()) {
+                // exit node
+                int depth = (int)nodeStack.size() - 1;
+                removeValueAtDepth(nums[u]);
+                nodeStack.pop_back();
+                distStack.pop_back();
+                st.pop_back();
+                continue;
+            }
+
+            auto [v, w] = g[u][fr.it++];
+            if (v == fr.p) continue;
+
+            long long ndist = fr.dist + w;
+            st.push_back({v, u, 0, ndist});
+
+            int depth = (int)nodeStack.size();
+            nodeStack.push_back(v);
+            distStack.push_back(ndist);
+            addValueAtDepth(nums[v], depth);
+
+            int l = currentLeftBoundary();
+            long long len = distStack[depth] - distStack[l];
+            int nodes = depth - l + 1;
+            if (len > bestLen) {
+                bestLen = len;
+                bestNodes = nodes;
+            } else if (len == bestLen) {
+                bestNodes = min(bestNodes, nodes);
             }
         }
 
-        long long len = current_dist - path_dists[start];
-        int nodes = depth - start + 1;
-        if (len > max_len) {
-            max_len = len;
-            min_nodes = nodes;
-        } else if (len == max_len) {
-            min_nodes = min(min_nodes, nodes);
-        }
-
-        pos[val].push_back(depth);
-        
-        for (auto& edge : adj[u]) {
-            int v = edge.first;
-            int w = edge.second;
-            if (v != p) {
-                dfs_wrapper(v, u, depth + 1, current_dist + w, start, repeat_start);
-            }
-        }
-
-        pos[val].pop_back();
-        path_dists.pop_back();
+        return { (int)bestLen, bestNodes };
     }
 };
+// @lc code=end

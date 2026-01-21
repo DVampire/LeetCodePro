@@ -1,3 +1,6 @@
+#include <bits/stdc++.h>
+using namespace std;
+
 #
 # @lc app=leetcode id=3509 lang=cpp
 #
@@ -5,115 +8,148 @@
 #
 
 # @lc code=start
-#include <vector>
-#include <bitset>
-#include <cmath>
-#include <numeric>
-#include <algorithm>
-
-using namespace std;
-
 class Solution {
 public:
     int maxProduct(vector<int>& nums, int k, int limit) {
-        long long sum_vals = 0;
-        for(int x : nums) sum_vals += x;
-        // The alternating sum cannot exceed the sum of absolute values of elements.
-        if (abs(k) > sum_vals) return -1;
+        int n = (int)nums.size();
+        int maxSum = 12 * n;
+        if (k < -maxSum || k > maxSum) return -1;
 
-        const int OFFSET = 2000;
-        // dp[product][parity]
-        // parity 0: next element will be added (even index in subsequence)
-        // parity 1: next element will be subtracted (odd index in subsequence)
-        // We use bitsets to track reachable alternating sums.
-        // Size 4002 is sufficient since max sum is ~1800 and min is ~-1800.
-        vector<vector<bitset<4002>>> dp(limit + 1, vector<bitset<4002>>(2));
+        int offset = maxSum;
+        int range = 2 * maxSum + 1;
+        int W = limit / 64 + 1; // number of uint64_t blocks
+        size_t SZ = (size_t)range * W;
 
-        // Base case: empty subsequence has product 1, sum 0, and next sign is +
-        dp[1][0][OFFSET] = 1;
+        vector<uint64_t> dp[2], nxt[2];
+        dp[0].assign(SZ, 0); dp[1].assign(SZ, 0);
+        nxt[0].assign(SZ, 0); nxt[1].assign(SZ, 0);
 
-        int count_ones = 0;
-        bool has_zero = false;
-        vector<int> non_zero_nums;
-        for(int x : nums) {
-            if(x == 0) has_zero = true;
-            else {
-                non_zero_nums.push_back(x);
-                if(x == 1) count_ones++;
+        vector<char> activeFlag[2], nextActiveFlag[2];
+        activeFlag[0].assign(range, 0); activeFlag[1].assign(range, 0);
+        nextActiveFlag[0].assign(range, 0); nextActiveFlag[1].assign(range, 0);
+
+        vector<int> active[2], nextActive[2];
+
+        auto ptrAt = [&](vector<uint64_t>& arr, int sumIdx) -> uint64_t* {
+            return arr.data() + (size_t)sumIdx * W;
+        };
+
+        auto activateIfNeeded = [&](int p, int sumIdx) {
+            if (!nextActiveFlag[p][sumIdx]) {
+                nextActiveFlag[p][sumIdx] = 1;
+                nextActive[p].push_back(sumIdx);
             }
-        }
+        };
 
-        for(int x : non_zero_nums) {
-            if (x == 1) {
-                // For x=1, product p stays p. We update states based on previous states at same p.
-                for(int p = 1; p <= limit; ++p) {
-                    bitset<4002> old_0 = dp[p][0];
-                    bitset<4002> old_1 = dp[p][1];
-                    // Transition from state 0 (next +) -> state 1 (next -), sum increases by 1
-                    dp[p][1] |= (old_0 << 1);
-                    // Transition from state 1 (next -) -> state 0 (next +), sum decreases by 1
-                    dp[p][0] |= (old_1 >> 1);
+        auto setBit = [&](uint64_t* bits, int prod) {
+            bits[prod >> 6] |= (1ULL << (prod & 63));
+        };
+
+        for (int x : nums) {
+            // next = dp (skip current element)
+            memcpy(nxt[0].data(), dp[0].data(), SZ * sizeof(uint64_t));
+            memcpy(nxt[1].data(), dp[1].data(), SZ * sizeof(uint64_t));
+            nextActiveFlag[0] = activeFlag[0];
+            nextActiveFlag[1] = activeFlag[1];
+            nextActive[0] = active[0];
+            nextActive[1] = active[1];
+
+            // Start new subsequence with [x]
+            if (x <= limit) {
+                int sumIdx = offset + x;
+                if (0 <= sumIdx && sumIdx < range) {
+                    activateIfNeeded(1, sumIdx);
+                    uint64_t* dst = ptrAt(nxt[1], sumIdx);
+                    setBit(dst, x);
                 }
-            } else {
-                // For x > 1, product increases. Iterate downwards to avoid using same element multiple times.
-                for(int p = limit / x; p >= 1; --p) {
-                    int np = p * x;
-                    // Transition from state 0 (next +) -> state 1 (next -), sum increases by x
-                    dp[np][1] |= (dp[p][0] << x);
-                    // Transition from state 1 (next -) -> state 0 (next +), sum decreases by x
-                    dp[np][0] |= (dp[p][1] >> x);
+            }
+
+            // Extend existing subsequences
+            for (int p = 0; p <= 1; ++p) {
+                for (int sumIdx : active[p]) {
+                    uint64_t* src = ptrAt(dp[p], sumIdx);
+
+                    int delta = (p == 0 ? x : -x);
+                    int dstSum = sumIdx + delta;
+                    if (dstSum < 0 || dstSum >= range) continue;
+                    int np = 1 - p;
+
+                    if (x == 0) {
+                        // product becomes 0
+                        activateIfNeeded(np, dstSum);
+                        uint64_t* dst = ptrAt(nxt[np], dstSum);
+                        setBit(dst, 0);
+                        continue;
+                    }
+
+                    uint64_t* dst = ptrAt(nxt[np], dstSum);
+
+                    if (x == 1) {
+                        // OR whole bitset (product unchanged)
+                        activateIfNeeded(np, dstSum);
+                        for (int wi = 0; wi < W; ++wi) dst[wi] |= src[wi];
+                        continue;
+                    }
+
+                    int maxPr = limit / x;
+                    bool activated = nextActiveFlag[np][dstSum];
+
+                    for (int wi = 0; wi < W; ++wi) {
+                        uint64_t word = src[wi];
+                        while (word) {
+                            int b = __builtin_ctzll(word);
+                            int pr = (wi << 6) + b;
+                            word &= (word - 1);
+                            if (pr > limit) continue;
+
+                            int newPr;
+                            if (pr == 0) newPr = 0;
+                            else {
+                                if (pr > maxPr) continue;
+                                newPr = pr * x;
+                            }
+                            if (newPr > limit) continue;
+
+                            if (!activated) {
+                                activateIfNeeded(np, dstSum);
+                                activated = true;
+                            }
+                            setBit(dst, newPr);
+                        }
+                    }
                 }
             }
+
+            dp[0].swap(nxt[0]);
+            dp[1].swap(nxt[1]);
+            activeFlag[0].swap(nextActiveFlag[0]);
+            activeFlag[1].swap(nextActiveFlag[1]);
+            active[0].swap(nextActive[0]);
+            active[1].swap(nextActive[1]);
         }
 
-        int target_idx = k + OFFSET;
-        // Check products from limit down to 2
-        for(int p = limit; p >= 2; --p) {
-            if (dp[p][0].test(target_idx) || dp[p][1].test(target_idx)) {
-                return p;
+        int targetIdx = offset + k;
+        if (targetIdx < 0 || targetIdx >= range) return -1;
+
+        auto getMaxProduct = [&](vector<uint64_t>& arr) -> int {
+            uint64_t* bits = ptrAt(arr, targetIdx);
+            int lastBits = (limit & 63);
+            uint64_t lastMask = (lastBits == 63) ? ~0ULL : ((1ULL << (lastBits + 1)) - 1ULL);
+
+            for (int wi = W - 1; wi >= 0; --wi) {
+                uint64_t word = bits[wi];
+                if (wi == W - 1) word &= lastMask;
+                if (!word) continue;
+                int msb = 63 - __builtin_clzll(word);
+                int prod = (wi << 6) + msb;
+                if (prod <= limit) return prod;
             }
-        }
+            return -1;
+        };
 
-        // Check product 1
-        // Product 1 is only possible with a sequence of 1s.
-        // Alternating sum of 1s is 1 (odd length) or 0 (even length).
-        if (k == 0) {
-            // Need at least two 1s for sum 0 (e.g. 1-1=0)
-            if (count_ones >= 2) return 1;
-        } else if (k == 1) {
-            // Need at least one 1 for sum 1
-            if (count_ones >= 1) return 1;
-        }
-
-        // Check product 0
-        // If we have a zero, we can achieve product 0.
-        // We need to check if sum k is achievable with ANY subsequence of nums (including 0s).
-        if (has_zero) {
-            bitset<4002> r[2];
-            r[0][OFFSET] = 1;
-            
-            for(int x : nums) {
-                bitset<4002> next_r0 = r[0];
-                bitset<4002> next_r1 = r[1];
-                
-                if (x == 0) {
-                    // 0 allows switching parity without changing sum
-                    next_r0 |= r[1];
-                    next_r1 |= r[0];
-                } else {
-                    next_r1 |= (r[0] << x);
-                    next_r0 |= (r[1] >> x);
-                }
-                r[0] = next_r0;
-                r[1] = next_r1;
-            }
-            
-            if (r[0].test(target_idx) || r[1].test(target_idx)) {
-                return 0;
-            }
-        }
-
-        return -1;
+        int a = getMaxProduct(dp[0]);
+        int b = getMaxProduct(dp[1]);
+        return max(a, b);
     }
 };
 # @lc code=end
