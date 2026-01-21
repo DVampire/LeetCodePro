@@ -1,94 +1,67 @@
-#
-# @lc app=leetcode id=3609 lang=cpp
-#
-# [3609] Minimum Moves to Reach Target in Grid
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+/*
+ * @lc app=leetcode id=3609 lang=cpp
+ *
+ * [3609] Minimum Moves to Reach Target in Grid
+ */
+
+// @lc code=start
 class Solution {
 public:
     int minMoves(int sx, int sy, int tx, int ty) {
-        // If target is smaller than start, impossible
-        if (tx < sx || ty < sy) return -1;
-        
-        int moves = 0;
-        
-        // While both coordinates are larger than start
-        while (tx > sx && ty > sy) {
-            if (tx > ty) {
-                if (tx % 2 == 0 && tx / 2 >= ty) {
-                    tx /= 2;
-                    moves++;
-                } else {
-                    tx -= ty;
-                    moves++;
+        using ll = long long;
+        const ll INF = (1LL<<60);
+
+        auto keyOf = [&](ll x, ll y) -> uint64_t {
+            return (uint64_t(x) << 32) | uint32_t(y);
+        };
+
+        unordered_map<uint64_t, ll> memo;
+        memo.reserve(1 << 16);
+
+        function<ll(ll,ll)> dfs = [&](ll x, ll y) -> ll {
+            if (x < sx || y < sy) return INF;
+            if (x == sx && y == sy) return 0;
+            if (x == 0 && y == 0) return INF; // cannot come from elsewhere unless start is (0,0) (handled above)
+
+            uint64_t key = keyOf(x, y);
+            auto it = memo.find(key);
+            if (it != memo.end()) return it->second;
+
+            ll ans = INF;
+
+            if (x == y) {
+                // x == y == k > 0
+                ans = min(ans, 1 + dfs(x, 0));
+                ans = min(ans, 1 + dfs(0, y));
+            } else if (x > y) {
+                // Predecessor by halving x (reverse of doubling x)
+                if ((x % 2LL) == 0) {
+                    ll px = x / 2;
+                    if (px >= y) ans = min(ans, 1 + dfs(px, y));
                 }
-            } else if (ty > tx) {
-                if (ty % 2 == 0 && ty / 2 >= tx) {
-                    ty /= 2;
-                    moves++;
-                } else {
-                    ty -= tx;
-                    moves++;
+                // Predecessor by subtracting y (reverse of adding y to x)
+                if (2LL * y > x) {
+                    ans = min(ans, 1 + dfs(x - y, y));
                 }
-            } else {
-                // tx == ty
-                // Can only be reached from (0, ty) or (tx, 0)
-                // If sx == 0, we can reduce tx. If sy == 0, we can reduce ty.
-                if (sx == 0) {
-                    tx -= ty;
-                    moves++;
-                } else if (sy == 0) {
-                    ty -= tx;
-                    moves++;
-                } else {
-                    return -1;
+            } else { // y > x
+                if ((y % 2LL) == 0) {
+                    ll py = y / 2;
+                    if (py >= x) ans = min(ans, 1 + dfs(x, py));
                 }
-            }
-        }
-        
-        // Now we are at the boundary for at least one coordinate
-        if (tx == sx) {
-            while (ty > sy) {
-                if (ty > tx) {
-                    if (ty % 2 == 0 && ty / 2 >= tx) {
-                        ty /= 2;
-                        moves++;
-                    } else {
-                        ty -= tx;
-                        moves++;
-                    }
-                } else {
-                    // ty <= tx
-                    // We can only subtract tx. 
-                    ty -= tx;
-                    moves++;
+                if (2LL * x > y) {
+                    ans = min(ans, 1 + dfs(x, y - x));
                 }
             }
-            if (ty != sy) return -1;
-        } else if (ty == sy) {
-            while (tx > sx) {
-                if (tx > ty) {
-                    if (tx % 2 == 0 && tx / 2 >= ty) {
-                        tx /= 2;
-                        moves++;
-                    } else {
-                        tx -= ty;
-                        moves++;
-                    }
-                } else {
-                    // tx <= ty
-                    tx -= ty;
-                    moves++;
-                }
-            }
-            if (tx != sx) return -1;
-        } else {
-            // Should not happen if loop logic is correct and we return -1 on impossible tx==ty
-            return -1;
-        }
-        
-        return moves;
+
+            memo[key] = ans;
+            return ans;
+        };
+
+        ll res = dfs(tx, ty);
+        return (res >= INF/2) ? -1 : (int)res;
     }
 };
-# @lc code=end
+// @lc code=end
