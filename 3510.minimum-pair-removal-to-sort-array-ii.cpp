@@ -3,97 +3,46 @@
 #
 # [3510] Minimum Pair Removal to Sort Array II
 #
-
 # @lc code=start
-#include <bits/stdc++.h>
-using namespace std;
-
 class Solution {
 public:
     int minimumPairRemoval(vector<int>& nums) {
-        using ll = long long;
-        struct Node {
-            ll val;
-            int id;
-            Node *prev, *next;
-            bool active;
-            Node(ll v, int i) : val(v), id(i), prev(nullptr), next(nullptr), active(true) {}
-        };
         int n = nums.size();
         if (n <= 1) return 0;
-        vector<Node> all_nodes;
-        all_nodes.reserve(2 * n + 10);
-        Node* head = nullptr;
-        Node* tail = nullptr;
-        for (int i = 0; i < n; ++i) {
-            all_nodes.emplace_back(nums[i], i);
-            Node* nd = &all_nodes.back();
-            if (tail) {
-                tail->next = nd;
-                nd->prev = tail;
-            } else {
-                head = nd;
+        
+        vector<long long> arr(nums.begin(), nums.end());
+        
+        auto isSorted = [](const vector<long long>& a) {
+            for (size_t i = 1; i < a.size(); i++) {
+                if (a[i] < a[i-1]) return false;
             }
-            tail = nd;
-        }
-        set<tuple<ll, int, Node*>> pq;
-        Node* cur = head;
-        while (cur && cur->next) {
-            ll s = cur->val + cur->next->val;
-            pq.insert({s, cur->id, cur});
-            cur = cur->next;
-        }
-        int violations = 0;
-        cur = head;
-        while (cur && cur->next) {
-            if (cur->val > cur->next->val) ++violations;
-            cur = cur->next;
-        }
-        int ops = 0;
-        while (violations > 0) {
-            bool found = false;
-            while (!pq.empty() && !found) {
-                auto [s, idd, l] = *pq.begin();
-                pq.erase(pq.begin());
-                if (!l->active || l->next == nullptr || !l->next->active ||
-                    l->val + l->next->val != s || l->id != idd) {
-                    continue;
+            return true;
+        };
+        
+        if (isSorted(arr)) return 0;
+        
+        int operations = 0;
+        
+        while (!isSorted(arr)) {
+            // Find minimum sum pair (leftmost if tie)
+            size_t min_idx = 0;
+            long long min_sum = LLONG_MAX;
+            
+            for (size_t i = 0; i < arr.size() - 1; i++) {
+                long long sum = arr[i] + arr[i+1];
+                if (sum < min_sum) {
+                    min_sum = sum;
+                    min_idx = i;
                 }
-                found = true;
-                Node* r = l->next;
-                Node* prevv = l->prev;
-                Node* postt = r->next;
-                bool hp = prevv != nullptr;
-                bool hpo = postt != nullptr;
-                int delta = 0;
-                if (hp && prevv->val > l->val) --delta;
-                if (l->val > r->val) --delta;
-                if (hpo && r->val > postt->val) --delta;
-                all_nodes.emplace_back(l->val + r->val, l->id);
-                Node* newer = &all_nodes.back();
-                newer->prev = prevv;
-                newer->next = postt;
-                if (prevv) prevv->next = newer;
-                if (postt) postt->prev = newer;
-                if (l == head) head = newer;
-                l->active = false;
-                r->active = false;
-                if (hp && prevv->val > newer->val) ++delta;
-                if (hpo && newer->val > postt->val) ++delta;
-                violations += delta;
-                if (hp) {
-                    ll ns = prevv->val + newer->val;
-                    pq.insert({ns, prevv->id, prevv});
-                }
-                if (hpo) {
-                    ll ns = newer->val + postt->val;
-                    pq.insert({ns, newer->id, newer});
-                }
-                ++ops;
             }
-            if (!found) break;
+            
+            // Merge arr[min_idx] and arr[min_idx+1]
+            arr[min_idx] = arr[min_idx] + arr[min_idx + 1];
+            arr.erase(arr.begin() + min_idx + 1);
+            operations++;
         }
-        return ops;
+        
+        return operations;
     }
 };
 # @lc code=end
