@@ -6,19 +6,22 @@
 # @lc code=start
 class Solution {
 public:
+    bool isConsecutive(char a, char b) {
+        int diff = abs(a - b);
+        return diff == 1 || diff == 25;
+    }
+    
     string lexicographicallySmallestString(string s) {
+        set<string> visited;
         queue<string> q;
-        unordered_set<string> visited;
-        string result = s;
-        
         q.push(s);
         visited.insert(s);
+        string result = s;
         
         while (!q.empty()) {
             string curr = q.front();
             q.pop();
             
-            // Update result if current is smaller
             if (curr < result) {
                 result = curr;
             }
@@ -26,7 +29,7 @@ public:
             // Try all possible removals
             for (int i = 0; i < (int)curr.length() - 1; i++) {
                 if (isConsecutive(curr[i], curr[i+1])) {
-                    string next = curr.substr(0, i) + curr.substr(i+2);
+                    string next = curr.substr(0, i) + curr.substr(i + 2);
                     if (visited.find(next) == visited.end()) {
                         visited.insert(next);
                         q.push(next);
@@ -36,13 +39,6 @@ public:
         }
         
         return result;
-    }
-    
-private:
-    bool isConsecutive(char a, char b) {
-        // Check if two characters are consecutive in circular alphabet
-        int diff = abs(a - b);
-        return diff == 1 || diff == 25;  // 25 = 'z' - 'a'
     }
 };
 # @lc code=end

@@ -6,89 +6,73 @@
 # @lc code=start
 class Solution {
 public:
+    const int MOD = 1e9 + 7;
+    
+    int findPathLength(int u, int v, vector<vector<int>>& adj, int n) {
+        if (u == v) return 0;
+        
+        vector<int> parent(n + 1, -1);
+        queue<int> q;
+        q.push(u);
+        parent[u] = u;
+        
+        while (!q.empty()) {
+            int node = q.front();
+            q.pop();
+            
+            if (node == v) break;
+            
+            for (int neighbor : adj[node]) {
+                if (parent[neighbor] == -1) {
+                    parent[neighbor] = node;
+                    q.push(neighbor);
+                }
+            }
+        }
+        
+        int length = 0;
+        int curr = v;
+        while (curr != u) {
+            length++;
+            curr = parent[curr];
+        }
+        return length;
+    }
+    
+    long long power(long long base, long long exp, long long mod) {
+        long long result = 1;
+        while (exp > 0) {
+            if (exp % 2 == 1) {
+                result = (result * base) % mod;
+            }
+            base = (base * base) % mod;
+            exp /= 2;
+        }
+        return result;
+    }
+    
     vector<int> assignEdgeWeights(vector<vector<int>>& edges, vector<vector<int>>& queries) {
         int n = edges.size() + 1;
-        const int MOD = 1e9 + 7;
-        
-        // Build adjacency list
         vector<vector<int>> adj(n + 1);
-        for (auto& e : edges) {
-            adj[e[0]].push_back(e[1]);
-            adj[e[1]].push_back(e[0]);
-        }
         
-        // Preprocess: compute depth and parent for LCA
-        int LOG = 20;
-        vector<int> depth(n + 1, 0);
-        vector<vector<int>> parent(n + 1, vector<int>(LOG, 0));
-        
-        // DFS to compute depth and direct parent
-        function<void(int, int)> dfs = [&](int u, int p) {
-            parent[u][0] = p;
-            for (int v : adj[u]) {
-                if (v != p) {
-                    depth[v] = depth[u] + 1;
-                    dfs(v, u);
-                }
-            }
-        };
-        
-        dfs(1, 0);
-        
-        // Binary lifting preprocessing
-        for (int j = 1; j < LOG; j++) {
-            for (int i = 1; i <= n; i++) {
-                if (parent[i][j-1] != 0) {
-                    parent[i][j] = parent[parent[i][j-1]][j-1];
-                }
-            }
-        }
-        
-        // LCA function
-        auto lca = [&](int u, int v) -> int {
-            if (depth[u] < depth[v]) swap(u, v);
-            
-            // Bring u to the same level as v
-            int diff = depth[u] - depth[v];
-            for (int i = 0; i < LOG; i++) {
-                if ((diff >> i) & 1) {
-                    u = parent[u][i];
-                }
-            }
-            
-            if (u == v) return u;
-            
-            // Binary search for LCA
-            for (int i = LOG - 1; i >= 0; i--) {
-                if (parent[u][i] != parent[v][i]) {
-                    u = parent[u][i];
-                    v = parent[v][i];
-                }
-            }
-            
-            return parent[u][0];
-        };
-        
-        // Precompute powers of 2
-        vector<long long> pow2(n);
-        pow2[0] = 1;
-        for (int i = 1; i < n; i++) {
-            pow2[i] = (pow2[i-1] * 2) % MOD;
+        for (auto& edge : edges) {
+            adj[edge[0]].push_back(edge[1]);
+            adj[edge[1]].push_back(edge[0]);
         }
         
         vector<int> result;
-        for (auto& q : queries) {
-            int u = q[0], v = q[1];
+        for (auto& query : queries) {
+            int u = query[0];
+            int v = query[1];
             
-            if (u == v) {
+            int edgeCount = findPathLength(u, v, adj, n);
+            
+            if (edgeCount == 0) {
                 result.push_back(0);
-                continue;
+            } else {
+                long long ans = power(2, edgeCount - 1, MOD);
+                result.push_back(ans);
             }
-            
-            int l = lca(u, v);
-            int pathLen = depth[u] + depth[v] - 2 * depth[l];
-            
-            result.push_back(pow2[pathLen - 1]);
         }
         
         return result;

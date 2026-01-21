@@ -9,55 +9,46 @@ public:
     long long subtreeInversionSum(vector<vector<int>>& edges, vector<int>& nums, int k) {
         int n = nums.size();
         vector<vector<int>> adj(n);
+        
         for (auto& e : edges) {
             adj[e[0]].push_back(e[1]);
             adj[e[1]].push_back(e[0]);
         }
         
-        // Build tree structure
-        vector<vector<int>> children(n);
-        function<void(int, int)> build = [&](int u, int parent) {
+        map<tuple<int, int, int>, long long> memo;
+        
+        function<long long(int, int, int, int)> dfs = [&](int u, int parent, int last_inv_dist, int ancestor_parity) -> long long {
+            auto key = make_tuple(u, last_inv_dist, ancestor_parity);
+            if (memo.count(key)) {
+                return memo[key];
+            }
+            
+            long long result = LLONG_MIN;
+            
+            // Choice 1: Don't invert u
+            long long sum1 = ancestor_parity == 0 ? (long long)nums[u] : -(long long)nums[u];
             for (int v : adj[u]) {
-                if (v != parent) {
-                    children[u].push_back(v);
-                    build(v, u);
-                }
+                if (v == parent) continue;
+                sum1 += dfs(v, u, min(last_inv_dist + 1, k), ancestor_parity);
             }
-        };
-        build(0, -1);
-        
-        // dp[u][d][parity]
-        vector<vector<vector<long long>>> dp(n, vector<vector<long long>>(k+1, vector<long long>(2, LLONG_MIN)));
-        vector<vector<vector<bool>>> computed(n, vector<vector<bool>>(k+1, vector<bool>(2, false)));
-        
-        function<long long(int, int, int)> solve = [&](int u, int dist, int parity) -> long long {
-            if (computed[u][dist][parity]) return dp[u][dist][parity];
-            computed[u][dist][parity] = true;
+            result = max(result, sum1);
             
-            long long current_val = (parity == 0) ? nums[u] : -nums[u];
-            
-            // Option 1: Don't invert u
-            long long sum1 = current_val;
-            for (int v : children[u]) {
-                int next_dist = min(dist + 1, k);
-                sum1 += solve(v, next_dist, parity);
-            }
-            long long result = sum1;
-            
-            // Option 2: Invert u (only if dist >= k)
-            if (dist >= k) {
-                long long sum2 = -current_val;
-                for (int v : children[u]) {
-                    sum2 += solve(v, 1, 1 - parity);
+            // Choice 2: Invert u (if allowed)
+            if (last_inv_dist >= k) {
+                int new_parity = 1 - ancestor_parity;
+                long long sum2 = new_parity == 0 ? (long long)nums[u] : -(long long)nums[u];
+                for (int v : adj[u]) {
+                    if (v == parent) continue;
+                    sum2 += dfs(v, u, 1, new_parity);
                 }
                 result = max(result, sum2);
             }
             
-            dp[u][dist][parity] = result;
+            memo[key] = result;
             return result;
         };
         
-        return solve(0, k, 0);
+        return dfs(0, -1, k, 0);
     }
 };
 # @lc code=end
