@@ -1,67 +1,60 @@
+#
+# @lc app=leetcode id=3609 lang=cpp
+#
+# [3609] Minimum Moves to Reach Target in Grid
+#
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
+using ll = long long;
 
-/*
- * @lc app=leetcode id=3609 lang=cpp
- *
- * [3609] Minimum Moves to Reach Target in Grid
- */
-
-// @lc code=start
 class Solution {
 public:
-    int minMoves(int sx, int sy, int tx, int ty) {
-        using ll = long long;
-        const ll INF = (1LL<<60);
+    int minMoves(int sx_, int sy_, int tx_, int ty_) {
+        ll sx = sx_, sy = sy_, tx = tx_, ty = ty_;
+        if (sx == tx && sy == ty) return 0;
 
-        auto keyOf = [&](ll x, ll y) -> uint64_t {
-            return (uint64_t(x) << 32) | uint32_t(y);
+        auto get_prev = [](ll x, ll y) -> vector<pair<ll, ll>> {
+            vector<pair<ll, ll>> res;
+            // Undo x-move
+            if (x % 2 == 0 && x / 2 >= y) {
+                res.emplace_back(x / 2, y);
+            }
+            if (x >= y && x < 2 * y) {
+                res.emplace_back(x - y, y);
+            }
+            // Undo y-move
+            if (y % 2 == 0 && y / 2 >= x) {
+                res.emplace_back(x, y / 2);
+            }
+            if (y >= x && y < 2 * x) {
+                res.emplace_back(x, y - x);
+            }
+            return res;
         };
 
-        unordered_map<uint64_t, ll> memo;
-        memo.reserve(1 << 16);
+        queue<pair<ll, ll>> q;
+        map<pair<ll, ll>, int> dist;
+        q.emplace(tx, ty);
+        dist[{tx, ty}] = 0;
 
-        function<ll(ll,ll)> dfs = [&](ll x, ll y) -> ll {
-            if (x < sx || y < sy) return INF;
-            if (x == sx && y == sy) return 0;
-            if (x == 0 && y == 0) return INF; // cannot come from elsewhere unless start is (0,0) (handled above)
-
-            uint64_t key = keyOf(x, y);
-            auto it = memo.find(key);
-            if (it != memo.end()) return it->second;
-
-            ll ans = INF;
-
-            if (x == y) {
-                // x == y == k > 0
-                ans = min(ans, 1 + dfs(x, 0));
-                ans = min(ans, 1 + dfs(0, y));
-            } else if (x > y) {
-                // Predecessor by halving x (reverse of doubling x)
-                if ((x % 2LL) == 0) {
-                    ll px = x / 2;
-                    if (px >= y) ans = min(ans, 1 + dfs(px, y));
-                }
-                // Predecessor by subtracting y (reverse of adding y to x)
-                if (2LL * y > x) {
-                    ans = min(ans, 1 + dfs(x - y, y));
-                }
-            } else { // y > x
-                if ((y % 2LL) == 0) {
-                    ll py = y / 2;
-                    if (py >= x) ans = min(ans, 1 + dfs(x, py));
-                }
-                if (2LL * x > y) {
-                    ans = min(ans, 1 + dfs(x, y - x));
+        while (!q.empty()) {
+            auto [x, y] = q.front(); q.pop();
+            int d = dist[{x, y}];
+            auto pres = get_prev(x, y);
+            for (auto [nx, ny] : pres) {
+                if (nx < 0 || ny < 0) continue;
+                pair<ll, ll> np = {nx, ny};
+                if (dist.count(np)) continue;
+                dist[np] = d + 1;
+                q.emplace(nx, ny);
+                if (nx == sx && ny == sy) {
+                    return d + 1;
                 }
             }
-
-            memo[key] = ans;
-            return ans;
-        };
-
-        ll res = dfs(tx, ty);
-        return (res >= INF/2) ? -1 : (int)res;
+        }
+        return -1;
     }
 };
-// @lc code=end
+# @lc code=end

@@ -1,39 +1,38 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=3670 lang=cpp
+#
+# [3670] Maximum Product of Two Integers With No Common Bits
+#
 
-/*
- * @lc app=leetcode id=3670 lang=cpp
- *
- * [3670] Maximum Product of Two Integers With No Common Bits
- */
-
-// @lc code=start
+# @lc code=start
 class Solution {
 public:
     long long maxProduct(vector<int>& nums) {
-        static constexpr int B = 20;                 // since 1e6 < 2^20
-        static constexpr int FULL = (1 << B) - 1;
-        const int SZ = 1 << B;
-
-        vector<int> best(SZ, 0);
-        for (int x : nums) best[x] = max(best[x], x);
-
-        // dp[mask] = maximum value present among all submasks of mask
-        vector<int> dp = best;
-        for (int i = 0; i < B; ++i) {
-            for (int mask = 0; mask < SZ; ++mask) {
-                if (mask & (1 << i)) {
-                    dp[mask] = max(dp[mask], dp[mask ^ (1 << i)]);
+        const int BITS = 20;
+        const int MAXM = 1 << BITS;
+        vector<long long> maxval(MAXM, 0);
+        for (int num : nums) {
+            int mask = num;
+            maxval[mask] = max(maxval[mask], (long long)num);
+        }
+        auto dp = maxval;
+        for (int b = 0; b < BITS; ++b) {
+            for (int s = 0; s < MAXM; ++s) {
+                if (s & (1 << b)) {
+                    dp[s] = max(dp[s], dp[s ^ (1 << b)]);
                 }
             }
         }
-
+        int ALL = MAXM - 1;
         long long ans = 0;
-        for (int a : nums) {
-            int b = dp[FULL ^ a];
-            ans = max(ans, 1LL * a * b);
+        for (int m = 0; m < MAXM; ++m) {
+            if (maxval[m] > 0) {
+                int comp = ALL ^ m;
+                long long prod = maxval[m] * dp[comp];
+                ans = max(ans, prod);
+            }
         }
         return ans;
     }
 };
-// @lc code=end
+# @lc code=end

@@ -1,80 +1,66 @@
-#include <bits/stdc++.h>
+#
+# @lc app=leetcode id=3630 lang=cpp
+#
+# [3630] Partition Array for Maximum XOR and AND
+#
+
+# @lc code=start
+#include <vector>
+#include <algorithm>
 using namespace std;
 
-// @lc app=leetcode id=3630 lang=cpp
-//
-// [3630] Partition Array for Maximum XOR and AND
-//
-
-// @lc code=start
 class Solution {
 public:
     long long maximizeXorAndXor(vector<int>& nums) {
-        int n = (int)nums.size();
-        int full = 1 << n;
-
-        // nums[i] <= 1e9 < 2^30
-        const int BITS = 30;
-        const int ALL = (1 << BITS) - 1;
-
-        vector<int> xr(full, 0);
-        vector<int> andv(full, 0);
-        andv[0] = ALL; // identity for AND when building; empty handled separately later
-
-        for (int mask = 1; mask < full; ++mask) {
-            int lsb = mask & -mask;
-            int i = __builtin_ctz(lsb);
-            int pm = mask ^ lsb;
-            xr[mask] = xr[pm] ^ nums[i];
-            andv[mask] = andv[pm] & nums[i];
-        }
-
-        auto insertBasis = [&](int x, array<int, BITS>& basis) {
-            for (int b = BITS - 1; b >= 0 && x; --b) {
-                if (((x >> b) & 1) == 0) continue;
-                if (basis[b] == 0) {
-                    basis[b] = x;
-                    return;
-                }
-                x ^= basis[b];
-            }
-        };
-
-        auto maxSubsetXor = [&](const array<int, BITS>& basis) {
-            int res = 0;
-            for (int b = BITS - 1; b >= 0; --b) {
-                if (basis[b] == 0) continue;
-                res = max(res, res ^ basis[b]);
-            }
-            return res;
-        };
-
+        int n = nums.size();
+        long long total_xor = 0;
+        for (int x : nums) total_xor ^= x;
         long long ans = 0;
-        int allMask = full - 1;
-
-        for (int B = 0; B < full; ++B) {
-            int R = allMask ^ B;
-
-            int X = xr[R];
-            int M = ALL ^ X; // ~X within 30 bits
-
-            array<int, BITS> basis{};
-            int tmp = R;
-            while (tmp) {
-                int lsb = tmp & -tmp;
-                int i = __builtin_ctz(lsb);
-                tmp ^= lsb;
-                int v = nums[i] & M;
-                insertBasis(v, basis);
+        int full = (1 << n) - 1;
+        const long long LOW_MASK = (1LL << 32) - 1;
+        for (int maskB = 0; maskB <= full; ++maskB) {
+            long long xorB = 0;
+            long long andB = ~0LL;
+            bool b_empty = true;
+            for (int i = 0; i < n; ++i) {
+                if (maskB & (1 << i)) {
+                    b_empty = false;
+                    xorB ^= nums[i];
+                    andB &= nums[i];
+                }
             }
-            int mx = maxSubsetXor(basis);
-            long long bestXorSum = (long long)X + 2LL * (long long)mx;
-
-            long long andB = (B == 0 ? 0LL : (long long)andv[B]);
-            ans = max(ans, bestXorSum + andB);
+            if (b_empty) andB = 0;
+            long long Z = total_xor ^ xorB;
+            long long M = (~Z) & LOW_MASK;
+            // Build basis for R
+            vector<long long> basis(32, 0);
+            int maskR = full ^ maskB;
+            for (int i = 0; i < n; ++i) {
+                if ((maskR & (1 << i)) == 0) continue;
+                long long val = nums[i];
+                for (int j = 31; j >= 0; --j) {
+                    if ((val & (1LL << j)) == 0) continue;
+                    if (basis[j] != 0) {
+                        val ^= basis[j];
+                    } else {
+                        basis[j] = val;
+                        break;
+                    }
+                }
+            }
+            // Query max x & M
+            long long max_and = 0;
+            for (int j = 31; j >= 0; --j) {
+                if ((M & (1LL << j)) && basis[j] != 0 && (max_and & (1LL << j)) == 0) {
+                    max_and ^= basis[j];
+                }
+            }
+            long long comp = max_and & M;
+            long long max_ac = Z + 2LL * comp;
+            long long current = max_ac + andB;
+            if (current > ans) ans = current;
         }
-
         return ans;
     }
 };
-// @lc code=end
+# @lc code=end
