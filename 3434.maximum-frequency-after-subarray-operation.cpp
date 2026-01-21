@@ -14,24 +14,21 @@ public:
         int totalK = 0;
         for (int x : nums) if (x == k) totalK++;
 
-        int bestOverallGain = 0;
-
+        int bestGain = 0;
+        // Try converting each possible value v into k by choosing x = k - v
         for (int v = 1; v <= 50; v++) {
             if (v == k) continue;
-
             int cur = 0, best = 0;
-            for (int x : nums) {
-                int w = 0;
-                if (x == v) w = 1;
-                else if (x == k) w = -1;
-
-                cur = max(0, cur + w);
+            for (int a : nums) {
+                int delta = 0;
+                if (a == v) delta = 1;
+                else if (a == k) delta = -1;
+                cur = max(0, cur + delta);
                 best = max(best, cur);
             }
-            bestOverallGain = max(bestOverallGain, best);
+            bestGain = max(bestGain, best);
         }
-
-        return totalK + bestOverallGain;
+        return totalK + bestGain;
     }
 };
 // @lc code=end

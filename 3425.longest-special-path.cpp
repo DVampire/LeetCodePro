@@ -1,13 +1,10 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=3425 lang=cpp
+#
+# [3425] Longest Special Path
+#
 
-/*
- * @lc app=leetcode id=3425 lang=cpp
- *
- * [3425] Longest Special Path
- */
-
-// @lc code=start
+# @lc code=start
 class Solution {
 public:
     vector<int> longestSpecialPath(vector<vector<int>>& edges, vector<int>& nums) {
@@ -20,75 +17,69 @@ public:
             g[v].push_back({u, w});
         }
 
-        const int MAXV = 50000;
-        vector<int> lastPos(MAXV + 1, -1);
-
-        vector<long long> pathDist; // dist from root along current path, indexed by depth
-        pathDist.reserve(n);
-
-        int L = 0; // current sliding window start (depth index)
-        long long bestLen = 0;
-        int bestNodes = 1;
+        int maxVal = 50001; // nums[i] <= 5e4
+        vector<int> last(maxVal, -1);
 
         struct Frame {
             int u, p;
-            long long dist;
-            int state;   // 0 enter, 1 exit
+            int idx;
+            int L_before;
+            int L_after;
             int prevLast;
-            int prevL;
-            int val;
+            long long dist;
         };
 
+        long long bestLen = 0;
+        int bestNodes = 1;
+
+        vector<long long> pathDist; // distance from root to node at each stack position
+        pathDist.reserve(n);
+
         vector<Frame> st;
-        st.reserve(2 * n);
-        st.push_back({0, -1, 0LL, 0, 0, 0, 0});
+        st.reserve(n);
+
+        auto enterNode = [&](int u, int p, long long dist, int L_before) {
+            int pos = (int)pathDist.size();
+            int v = nums[u];
+            int prevLast = last[v];
+            int L_after = L_before;
+            if (prevLast != -1) L_after = max(L_after, prevLast + 1);
+
+            last[v] = pos;
+            pathDist.push_back(dist);
+
+            long long len = dist - pathDist[L_after];
+            int nodesCnt = pos - L_after + 1;
+            if (len > bestLen) {
+                bestLen = len;
+                bestNodes = nodesCnt;
+            } else if (len == bestLen) {
+                bestNodes = min(bestNodes, nodesCnt);
+            }
+
+            st.push_back(Frame{u, p, 0, L_before, L_after, prevLast, dist});
+        };
+
+        enterNode(0, -1, 0LL, 0);
 
         while (!st.empty()) {
-            Frame cur = st.back();
-            st.pop_back();
+            Frame &f = st.back();
+            int u = f.u;
 
-            if (cur.state == 0) {
-                int u = cur.u;
-                int val = nums[u];
-                int depth = (int)pathDist.size();
-
-                int prevLast = lastPos[val];
-                int prevL = L;
-
-                // enter
-                pathDist.push_back(cur.dist);
-                L = max(L, prevLast + 1);
-                lastPos[val] = depth;
-
-                long long len = cur.dist - pathDist[L];
-                int nodes = depth - L + 1;
-
-                if (len > bestLen) {
-                    bestLen = len;
-                    bestNodes = nodes;
-                } else if (len == bestLen) {
-                    bestNodes = min(bestNodes, nodes);
-                }
-
-                // exit frame
-                st.push_back({u, cur.p, cur.dist, 1, prevLast, prevL, val});
-
-                // children
-                for (auto &pr : g[u]) {
-                    int v = pr.first;
-                    int w = pr.second;
-                    if (v == cur.p) continue;
-                    st.push_back({v, u, cur.dist + w, 0, 0, 0, 0});
-                }
+            if (f.idx < (int)g[u].size()) {
+                auto [v, w] = g[u][f.idx++];
+                if (v == f.p) continue;
+                enterNode(v, u, f.dist + (long long)w, f.L_after);
             } else {
-                // exit: rollback
-                lastPos[cur.val] = cur.prevLast;
-                L = cur.prevL;
+                // exit node: restore state
+                int val = nums[u];
+                last[val] = f.prevLast;
                 pathDist.pop_back();
+                st.pop_back();
             }
         }
 
-        return {(int)bestLen, bestNodes};
+        return { (int)bestLen, bestNodes };
     }
 };
-// @lc code=end
+# @lc code=end

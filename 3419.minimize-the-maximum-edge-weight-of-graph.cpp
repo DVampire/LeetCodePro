@@ -1,50 +1,59 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc app=leetcode id=3419 lang=cpp
-//
-// [3419] Minimize the Maximum Edge Weight of Graph
-//
+/*
+# @lc app=leetcode id=3419 lang=cpp
+#
+# [3419] Minimize the Maximum Edge Weight of Graph
+#
+*/
 
 // @lc code=start
 class Solution {
 public:
     int minMaxWeight(int n, vector<vector<int>>& edges, int threshold) {
-        (void)threshold; // threshold >= 1; not additionally constraining as discussed.
+        (void)threshold; // threshold >= 1, and we can always keep outdegree <= 1 by choosing a tree.
 
         vector<vector<pair<int,int>>> rev(n);
-        rev.reserve(n);
+        int maxW = 0;
         for (auto &e : edges) {
             int a = e[0], b = e[1], w = e[2];
-            rev[b].push_back({a, w}); // reverse edge
+            rev[b].push_back({a, w});
+            maxW = max(maxW, w);
         }
 
-        const int INF = 1e9 + 7;
-        vector<int> dist(n, INF);
-        dist[0] = 0;
+        auto feasible = [&](int X) -> bool {
+            vector<char> vis(n, 0);
+            queue<int> q;
+            vis[0] = 1;
+            q.push(0);
+            int seen = 1;
 
-        using P = pair<int,int>; // (dist, node)
-        priority_queue<P, vector<P>, greater<P>> pq;
-        pq.push({0, 0});
-
-        while (!pq.empty()) {
-            auto [d, u] = pq.top();
-            pq.pop();
-            if (d != dist[u]) continue;
-
-            for (auto &[v, w] : rev[u]) {
-                int nd = max(d, w);
-                if (nd < dist[v]) {
-                    dist[v] = nd;
-                    pq.push({nd, v});
+            while (!q.empty()) {
+                int u = q.front();
+                q.pop();
+                for (auto &[v, w] : rev[u]) {
+                    if (w <= X && !vis[v]) {
+                        vis[v] = 1;
+                        q.push(v);
+                        if (++seen == n) return true;
+                    }
                 }
             }
-        }
+            return seen == n;
+        };
 
-        int ans = 0;
-        for (int i = 0; i < n; i++) {
-            if (dist[i] >= INF) return -1;
-            ans = max(ans, dist[i]);
+        if (!feasible(maxW)) return -1;
+
+        int lo = 0, hi = maxW, ans = maxW;
+        while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (feasible(mid)) {
+                ans = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
         }
         return ans;
     }
