@@ -19,29 +19,30 @@ class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
         vector<int> crit;
-        ListNode* prev = nullptr;
-        ListNode* cur = head;
+        if (!head || !head->next) return {-1, -1};
         int pos = 1;
-        while (cur && cur->next) {
-            if (prev && cur->next &&
-                ((cur->val > prev->val && cur->val > cur->next->val) ||
-                 (cur->val < prev->val && cur->val < cur->next->val))) {
-                crit.push_back(pos);
+        ListNode* prev = nullptr;
+        ListNode* curr = head;
+        while (curr) {
+            if (curr->next && prev) {
+                int v = curr->val;
+                int p = prev->val;
+                int n = curr->next->val;
+                if ((v > p && v > n) || (v < p && v < n)) {
+                    crit.push_back(pos);
+                }
             }
-            prev = cur;
-            cur = cur->next;
+            prev = curr;
+            curr = curr->next;
             ++pos;
         }
-        if (crit.size() < 2) {
-            return {-1, -1};
-        }
-        int minDist = INT_MAX;
+        if (crit.size() < 2) return {-1, -1};
+        int minD = INT_MAX;
+        int maxD = crit.back() - crit.front();
         for (size_t i = 1; i < crit.size(); ++i) {
-            int dist = crit[i] - crit[i - 1];
-            minDist = min(minDist, dist);
+            minD = min(minD, crit[i] - crit[i - 1]);
         }
-        int maxDist = crit.back() - crit.front();
-        return {minDist, maxDist};
+        return {minD, maxD};
     }
 };
 # @lc code=end

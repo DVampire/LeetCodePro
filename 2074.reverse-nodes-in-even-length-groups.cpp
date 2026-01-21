@@ -18,39 +18,42 @@
 class Solution {
 public:
     ListNode* reverseEvenLengthGroups(ListNode* head) {
-        ListNode* dummy = new ListNode(0);
-        dummy->next = head;
+        ListNode* dummy = new ListNode(0, head);
         ListNode* prev = dummy;
-        int k = 1;
-        while (true) {
-            ListNode* group_start = prev->next;
-            if (!group_start) break;
-            ListNode* cur = group_start;
-            int len = 0;
-            ListNode* group_tail = nullptr;
-            while (cur != nullptr && len < k) {
-                group_tail = cur;
-                cur = cur->next;
-                ++len;
+        ListNode* node = head;
+        int group_size = 1;
+        while (node != nullptr) {
+            ListNode* group_start = node;
+            ListNode* group_end = group_start;
+            int actual_len = 1;
+            for (int i = 1; i < group_size; ++i) {
+                if (group_end->next == nullptr) break;
+                group_end = group_end->next;
+                ++actual_len;
             }
-            ListNode* next_group_start = cur;
-            if (len % 2 == 0) {
-                ListNode* old_start = group_start;
-                ListNode* new_head = nullptr;
-                cur = group_start;
-                while (cur != next_group_start) {
-                    ListNode* nxt = cur->next;
-                    cur->next = new_head;
-                    new_head = cur;
-                    cur = nxt;
+            ListNode* next_group = group_end->next;
+            if (actual_len % 2 == 0) {
+                // Reverse the group
+                ListNode* prev_rev = nullptr;
+                ListNode* curr_rev = group_start;
+                while (curr_rev != next_group) {
+                    ListNode* temp = curr_rev->next;
+                    curr_rev->next = prev_rev;
+                    prev_rev = curr_rev;
+                    curr_rev = temp;
                 }
-                prev->next = new_head;
-                old_start->next = next_group_start;
-                prev = old_start;
+                // Connect prev to new start (old end)
+                prev->next = prev_rev;
+                // Connect old start (new end) to next group
+                group_start->next = next_group;
+                // Update prev to new end of group
+                prev = group_start;
             } else {
-                prev = group_tail;
+                // No reversal, update prev to group_end
+                prev = group_end;
             }
-            ++k;
+            node = next_group;
+            ++group_size;
         }
         return dummy->next;
     }

@@ -5,8 +5,6 @@
 #
 
 # @lc code=start
-#include <numeric> // for std::gcd
-
 /**
  * Definition for singly-linked list.
  * struct ListNode {
@@ -20,15 +18,20 @@
 class Solution {
 public:
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
-        if (!head || !head->next) return head;
-
+        auto gcd = [](int a, int b) -> int {
+            while (b) {
+                int t = b;
+                b = a % b;
+                a = t;
+            }
+            return a;
+        };
         ListNode* cur = head;
-        while (cur && cur->next) {
-            int g = std::gcd(cur->val, cur->next->val);
+        while (cur != nullptr && cur->next != nullptr) {
+            int g = gcd(cur->val, cur->next->val);
             ListNode* nxt = cur->next;
-            ListNode* mid = new ListNode(g, nxt);
-            cur->next = mid;
-            cur = nxt; // move to the original next node
+            cur->next = new ListNode(g, nxt);
+            cur = nxt;
         }
         return head;
     }

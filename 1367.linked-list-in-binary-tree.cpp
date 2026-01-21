@@ -3,6 +3,7 @@
 #
 # [1367] Linked List in Binary Tree
 #
+
 # @lc code=start
 /**
  * Definition for singly-linked list.
@@ -28,35 +29,17 @@
 class Solution {
 public:
     bool isSubPath(ListNode* head, TreeNode* root) {
-        // Build pattern from linked list
-        vector<int> pat;
-        for (ListNode* p = head; p; p = p->next) pat.push_back(p->val);
-        int m = (int)pat.size();
-
-        // Build LPS array (KMP prefix function)
-        vector<int> lps(m, 0);
-        for (int i = 1, len = 0; i < m; ) {
-            if (pat[i] == pat[len]) {
-                lps[i++] = ++len;
-            } else if (len > 0) {
-                len = lps[len - 1];
-            } else {
-                lps[i++] = 0;
-            }
-        }
-
-        function<bool(TreeNode*, int)> dfs = [&](TreeNode* node, int j) -> bool {
-            if (!node) return false;
-
-            int x = node->val;
-            while (j > 0 && pat[j] != x) j = lps[j - 1];
-            if (pat[j] == x) ++j;
-            if (j == m) return true;
-
-            return dfs(node->left, j) || dfs(node->right, j);
+        auto match = [&](auto&& self, ListNode* list, TreeNode* tree) -> bool {
+            if (!list) return true;
+            if (!tree || list->val != tree->val) return false;
+            return self(self, list->next, tree->left) || self(self, list->next, tree->right);
         };
-
-        return dfs(root, 0);
+        auto traverse = [&](auto&& self, TreeNode* node, ListNode* listHead) -> bool {
+            if (!node) return false;
+            if (match(match, listHead, node)) return true;
+            return self(self, node->left, listHead) || self(self, node->right, listHead);
+        };
+        return traverse(traverse, root, head);
     }
 };
 # @lc code=end
