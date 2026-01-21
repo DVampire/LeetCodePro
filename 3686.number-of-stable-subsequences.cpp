@@ -1,51 +1,31 @@
-#
-# @lc app=leetcode id=3686 lang=cpp
-#
-# [3686] Number of Stable Subsequences
-#
+#include <vector>
+using namespace std;
 
-# @lc code=start
+/*
+ * @lc app=leetcode id=3686 lang=cpp
+ *
+ * [3686] Number of Stable Subsequences
+ */
+
+// @lc code=start
 class Solution {
 public:
     int countStableSubsequences(vector<int>& nums) {
-        long long dp[2][3] = {0}; // dp[parity][streak_length]
-        // dp[0][1]: ends with Even, streak 1
-        // dp[0][2]: ends with Even, streak 2
-        // dp[1][1]: ends with Odd, streak 1
-        // dp[1][2]: ends with Odd, streak 2
-        
-        const int MOD = 1e9 + 7;
-        
+        static const int MOD = 1'000'000'007;
+        long long dp[2][3] = {}; // dp[p][1], dp[p][2]
+
         for (int x : nums) {
-            int p = (x % 2 + 2) % 2; // Handle potential negative numbers if any, though constraints say >= 1
-            
-            if (p == 0) {
-                // Current number is Even
-                // 1. Form streak 1: Append to any Odd-ending subsequence or start new
-                long long added_streak_1 = (dp[1][1] + dp[1][2] + 1) % MOD;
-                
-                // 2. Form streak 2: Append to any Even-ending subsequence with streak 1
-                long long added_streak_2 = dp[0][1];
-                
-                // Update DP table
-                dp[0][1] = (dp[0][1] + added_streak_1) % MOD;
-                dp[0][2] = (dp[0][2] + added_streak_2) % MOD;
-            } else {
-                // Current number is Odd
-                // 1. Form streak 1: Append to any Even-ending subsequence or start new
-                long long added_streak_1 = (dp[0][1] + dp[0][2] + 1) % MOD;
-                
-                // 2. Form streak 2: Append to any Odd-ending subsequence with streak 1
-                long long added_streak_2 = dp[1][1];
-                
-                // Update DP table
-                dp[1][1] = (dp[1][1] + added_streak_1) % MOD;
-                dp[1][2] = (dp[1][2] + added_streak_2) % MOD;
-            }
+            int q = x & 1;
+            long long add1 = 1; // start from empty
+            add1 = (add1 + dp[1 - q][1] + dp[1 - q][2]) % MOD;
+            long long add2 = dp[q][1] % MOD; // must use old dp[q][1]
+
+            dp[q][2] = (dp[q][2] + add2) % MOD;
+            dp[q][1] = (dp[q][1] + add1) % MOD;
         }
-        
-        long long total = (dp[0][1] + dp[0][2] + dp[1][1] + dp[1][2]) % MOD;
-        return (int)total;
+
+        long long ans = (dp[0][1] + dp[0][2] + dp[1][1] + dp[1][2]) % MOD;
+        return (int)ans;
     }
 };
-# @lc code=end
+// @lc code=end
