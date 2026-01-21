@@ -1,78 +1,82 @@
-#
-# @lc app=leetcode id=3327 lang=cpp
-#
-# [3327] Check if DFS Strings Are Palindromes
-#
-
-# @lc code=start
+//
+// @lc app=leetcode id=3327 lang=cpp
+//
+// [3327] Check if DFS Strings Are Palindromes
+//
+// @lc code=start
 class Solution {
 public:
     vector<bool> findAnswer(vector<int>& parent, string s) {
         int n = parent.size();
         vector<vector<int>> children(n);
         
-        // Build adjacency list
         for (int i = 1; i < n; i++) {
             children[parent[i]].push_back(i);
         }
         
-        // Sort children to visit in increasing order
+        // Sort children for each node
         for (int i = 0; i < n; i++) {
             sort(children[i].begin(), children[i].end());
         }
         
-        // Perform DFS from root to build global DFS string
+        // Iterative DFS to build the string and record intervals
         string dfsStr;
-        vector<int> start(n), end(n);
+        dfsStr.reserve(n);
+        vector<int> startIdx(n, -1), endIdx(n);
+        vector<int> childIdx(n, 0);
+        stack<int> stk;
+        stk.push(0);
         
-        function<void(int)> dfs = [&](int x) {
-            start[x] = dfsStr.size();
-            for (int child : children[x]) {
-                dfs(child);
+        while (!stk.empty()) {
+            int x = stk.top();
+            
+            if (startIdx[x] == -1) {
+                startIdx[x] = dfsStr.size();
             }
-            dfsStr += s[x];
-            end[x] = dfsStr.size();
-        };
+            
+            if (childIdx[x] < (int)children[x].size()) {
+                int y = children[x][childIdx[x]++];
+                stk.push(y);
+            } else {
+                dfsStr += s[x];
+                endIdx[x] = dfsStr.size() - 1;
+                stk.pop();
+            }
+        }
         
-        dfs(0);
+        // Manacher's algorithm
+        string t = "#";
+        for (char c : dfsStr) {
+            t += c;
+            t += '#';
+        }
         
-        // Polynomial hashing for palindrome checking
-        int m = dfsStr.size();
-        const long long MOD = 1e9 + 7;
-        const long long BASE = 31;
-        
-        vector<long long> hashFwd(m + 1, 0);
-        vector<long long> hashBwd(m + 1, 0);
-        vector<long long> powBase(m + 1);
-        powBase[0] = 1;
+        int m = t.size();
+        vector<int> p(m);
+        int center = 0, right = 0;
         
         for (int i = 0; i < m; i++) {
-            powBase[i + 1] = (powBase[i] * BASE) % MOD;
-            hashFwd[i + 1] = (hashFwd[i] * BASE + (dfsStr[i] - 'a' + 1)) % MOD;
+            if (i < right) {
+                p[i] = min(right - i, p[2 * center - i]);
+            }
+            while (i - p[i] - 1 >= 0 && i + p[i] + 1 < m && t[i - p[i] - 1] == t[i + p[i] + 1]) {
+                p[i]++;
+            }
+            if (i + p[i] > right) {
+                center = i;
+                right = i + p[i];
+            }
         }
         
-        for (int i = m - 1; i >= 0; i--) {
-            hashBwd[i] = (hashBwd[i + 1] * BASE + (dfsStr[i] - 'a' + 1)) % MOD;
-        }
-        
-        auto getHashFwd = [&](int l, int r) -> long long {
-            long long h = (hashFwd[r] - hashFwd[l] * powBase[r - l]) % MOD;
-            if (h < 0) h += MOD;
-            return h;
-        };
-        
-        auto getHashBwd = [&](int l, int r) -> long long {
-            long long h = (hashBwd[l] - hashBwd[r] * powBase[r - l]) % MOD;
-            if (h < 0) h += MOD;
-            return h;
-        };
-        
+        // Check each interval
         vector<bool> answer(n);
         for (int i = 0; i < n; i++) {
-            answer[i] = (getHashFwd(start[i], end[i]) == getHashBwd(start[i], end[i]));
+            int l = startIdx[i], r = endIdx[i];
+            int centerInT = l + r + 1;
+            answer[i] = (p[centerInT] >= r - l);
         }
         
         return answer;
     }
 };
-# @lc code=end
+// @lc code=end

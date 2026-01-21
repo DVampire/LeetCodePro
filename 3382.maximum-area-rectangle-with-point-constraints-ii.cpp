@@ -3,59 +3,73 @@
 #
 # [3382] Maximum Area Rectangle With Point Constraints II
 #
+
 # @lc code=start
 class Solution {
 public:
     long long maxRectangleArea(vector<int>& xCoord, vector<int>& yCoord) {
         int n = xCoord.size();
-        set<pair<int, int>> pointSet;
         
+        // Compress y-coordinates
+        vector<int> sortedY = yCoord;
+        sort(sortedY.begin(), sortedY.end());
+        sortedY.erase(unique(sortedY.begin(), sortedY.end()), sortedY.end());
+        int m = sortedY.size();
+        
+        auto compressY = [&](int y) -> int {
+            return lower_bound(sortedY.begin(), sortedY.end(), y) - sortedY.begin();
+        };
+        
+        // Group points by x-coordinate
+        map<int, vector<int>> pointsByX;
         for (int i = 0; i < n; i++) {
-            pointSet.insert({xCoord[i], yCoord[i]});
+            pointsByX[xCoord[i]].push_back(compressY(yCoord[i]));
         }
+        
+        // Segment tree for range max query
+        vector<int> tree(4 * m + 4, -1);
+        
+        function<void(int, int, int, int, int)> update = [&](int node, int start, int end, int idx, int val) {
+            if (start == end) {
+                tree[node] = val;
+                return;
+            }
+            int mid = (start + end) / 2;
+            if (idx <= mid) update(2*node, start, mid, idx, val);
+            else update(2*node+1, mid+1, end, idx, val);
+            tree[node] = max(tree[2*node], tree[2*node+1]);
+        };
+        
+        function<int(int, int, int, int, int)> query = [&](int node, int start, int end, int l, int r) -> int {
+            if (l > r || r < start || end < l) return -1;
+            if (l <= start && end <= r) return tree[node];
+            int mid = (start + end) / 2;
+            return max(query(2*node, start, mid, l, r), query(2*node+1, mid+1, end, l, r));
+        };
         
         long long maxArea = -1;
         
-        // Try all pairs of points as potential diagonal corners
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                int x1 = xCoord[i], y1 = yCoord[i];
-                int x2 = xCoord[j], y2 = yCoord[j];
+        for (auto& [x, ys] : pointsByX) {
+            sort(ys.begin(), ys.end());
+            
+            // Check all adjacent pairs
+            for (int i = 0; i + 1 < (int)ys.size(); i++) {
+                int y1 = ys[i], y2 = ys[i + 1];
+                int lastX1 = query(1, 0, m - 1, y1, y1);
+                int lastX2 = query(1, 0, m - 1, y2, y2);
                 
-                // Must have different x and y to be diagonal
-                if (x1 == x2 || y1 == y2) continue;
-                
-                int minX = min(x1, x2), maxX = max(x1, x2);
-                int minY = min(y1, y2), maxY = max(y1, y2);
-                
-                // Check if other two corners exist
-                if (pointSet.find({minX, maxY}) == pointSet.end() ||
-                    pointSet.find({maxX, minY}) == pointSet.end()) {
-                    continue;
-                }
-                
-                // Check if any other point is inside or on boundary
-                bool valid = true;
-                for (int k = 0; k < n; k++) {
-                    int x = xCoord[k], y = yCoord[k];
-                    
-                    // Skip the four corners
-                    if ((x == minX && y == minY) || (x == minX && y == maxY) ||
-                        (x == maxX && y == minY) || (x == maxX && y == maxY)) {
-                        continue;
-                    }
-                    
-                    // Check if inside or on boundary
-                    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-                        valid = false;
-                        break;
+                if (lastX1 >= 0 && lastX1 == lastX2) {
+                    int maxBetween = query(1, 0, m - 1, y1 + 1, y2 - 1);
+                    if (maxBetween < lastX1) {
+                        long long area = (long long)(x - lastX1) * (sortedY[y2] - sortedY[y1]);
+                        maxArea = max(maxArea, area);
                     }
                 }
-                
-                if (valid) {
-                    long long area = (long long)(maxX - minX) * (maxY - minY);
-                    maxArea = max(maxArea, area);
-                }
+            }
+            
+            // Update segment tree
+            for (int y : ys) {
+                update(1, 0, m - 1, y, x);
             }
         }
         

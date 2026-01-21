@@ -3,42 +3,64 @@
 #
 # [3413] Maximum Coins From K Consecutive Bags
 #
+
 # @lc code=start
 class Solution {
 public:
     long long maximumCoins(vector<vector<int>>& coins, int k) {
-        // Sort segments by starting position
         sort(coins.begin(), coins.end());
         
+        int n = coins.size();
         long long maxCoins = 0;
         
-        // Collect all meaningful starting positions
-        set<long long> starts;
-        starts.insert(1); // Consider starting from the beginning
-        
-        for (auto& seg : coins) {
-            long long l = seg[0], r = seg[1];
-            starts.insert(l); // Window starts at segment start
-            long long endStart = r - k + 1;
-            if (endStart >= 1) {
-                starts.insert(endStart); // Window ends at segment end
-            }
+        // Precompute prefix sums
+        vector<long long> prefixSum(n + 1, 0);
+        for (int i = 0; i < n; i++) {
+            prefixSum[i + 1] = prefixSum[i] + (long long)(coins[i][1] - coins[i][0] + 1) * coins[i][2];
         }
         
-        // For each starting position, calculate total coins
-        for (long long start : starts) {
-            long long end = start + k - 1;
-            long long total = 0;
+        // Case 1: Window starts at left boundary of segment i
+        for (int i = 0; i < n; i++) {
+            long long windowEnd = (long long)coins[i][0] + k - 1;
             
-            for (auto& seg : coins) {
-                long long l = seg[0], r = seg[1], c = seg[2];
-                // Calculate overlap between [start, end] and [l, r]
-                long long overlapStart = max(l, start);
-                long long overlapEnd = min(r, end);
-                if (overlapStart <= overlapEnd) {
-                    total += (overlapEnd - overlapStart + 1) * c;
+            // Find rightmost segment with start <= windowEnd
+            int lo = i, hi = n - 1, lastSeg = i;
+            while (lo <= hi) {
+                int mid = (lo + hi) / 2;
+                if (coins[mid][0] <= windowEnd) {
+                    lastSeg = mid;
+                    lo = mid + 1;
+                } else {
+                    hi = mid - 1;
                 }
             }
+            
+            long long total = prefixSum[lastSeg] - prefixSum[i];
+            long long partialEnd = min(windowEnd, (long long)coins[lastSeg][1]);
+            total += (partialEnd - coins[lastSeg][0] + 1) * coins[lastSeg][2];
+            
+            maxCoins = max(maxCoins, total);
+        }
+        
+        // Case 2: Window ends at right boundary of segment i
+        for (int i = 0; i < n; i++) {
+            long long windowStart = (long long)coins[i][1] - k + 1;
+            
+            // Find leftmost segment with end >= windowStart
+            int lo = 0, hi = i, firstSeg = i;
+            while (lo <= hi) {
+                int mid = (lo + hi) / 2;
+                if (coins[mid][1] >= windowStart) {
+                    firstSeg = mid;
+                    hi = mid - 1;
+                } else {
+                    lo = mid + 1;
+                }
+            }
+            
+            long long total = prefixSum[i + 1] - prefixSum[firstSeg + 1];
+            long long partialStart = max(windowStart, (long long)coins[firstSeg][0]);
+            total += (coins[firstSeg][1] - partialStart + 1) * coins[firstSeg][2];
             
             maxCoins = max(maxCoins, total);
         }

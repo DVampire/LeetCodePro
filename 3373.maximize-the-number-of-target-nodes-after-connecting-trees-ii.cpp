@@ -12,74 +12,58 @@ public:
         int m = edges2.size() + 1;
         
         // Build adjacency lists
-        vector<vector<int>> graph1(n), graph2(m);
+        vector<vector<int>> adj1(n), adj2(m);
         for (auto& e : edges1) {
-            graph1[e[0]].push_back(e[1]);
-            graph1[e[1]].push_back(e[0]);
+            adj1[e[0]].push_back(e[1]);
+            adj1[e[1]].push_back(e[0]);
         }
         for (auto& e : edges2) {
-            graph2[e[0]].push_back(e[1]);
-            graph2[e[1]].push_back(e[0]);
+            adj2[e[0]].push_back(e[1]);
+            adj2[e[1]].push_back(e[0]);
         }
         
-        // Color tree1 using BFS
-        vector<int> color1(n, -1);
-        color1[0] = 0;
-        queue<int> q;
-        q.push(0);
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
-            for (int v : graph1[u]) {
-                if (color1[v] == -1) {
-                    color1[v] = 1 - color1[u];
-                    q.push(v);
+        // Function to compute parities using BFS
+        auto computeParity = [](vector<vector<int>>& adj, int nodes) {
+            vector<int> parity(nodes, -1);
+            queue<int> q;
+            q.push(0);
+            parity[0] = 0;
+            while (!q.empty()) {
+                int u = q.front();
+                q.pop();
+                for (int v : adj[u]) {
+                    if (parity[v] == -1) {
+                        parity[v] = 1 - parity[u];
+                        q.push(v);
+                    }
                 }
             }
-        }
+            return parity;
+        };
         
-        // Count colors in tree1
-        int count0_tree1 = 0, count1_tree1 = 0;
-        for (int c : color1) {
-            if (c == 0) count0_tree1++;
-            else count1_tree1++;
-        }
+        vector<int> parity1 = computeParity(adj1, n);
+        vector<int> parity2 = computeParity(adj2, m);
         
-        // Color tree2 using BFS
-        vector<int> color2(m, -1);
-        color2[0] = 0;
-        q.push(0);
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
-            for (int v : graph2[u]) {
-                if (color2[v] == -1) {
-                    color2[v] = 1 - color2[u];
-                    q.push(v);
-                }
-            }
-        }
-        
-        // Count colors in tree2
-        int count0_tree2 = 0, count1_tree2 = 0;
-        for (int c : color2) {
-            if (c == 0) count0_tree2++;
-            else count1_tree2++;
-        }
-        
-        int max_from_tree2 = max(count0_tree2, count1_tree2);
-        
-        // Build result
-        vector<int> result(n);
+        // Count parities for tree 1
+        int count1[2] = {0, 0};
         for (int i = 0; i < n; i++) {
-            if (color1[i] == 0) {
-                result[i] = count0_tree1 + max_from_tree2;
-            } else {
-                result[i] = count1_tree1 + max_from_tree2;
-            }
+            count1[parity1[i]]++;
         }
         
-        return result;
+        // Count parities for tree 2 and find max
+        int count2[2] = {0, 0};
+        for (int i = 0; i < m; i++) {
+            count2[parity2[i]]++;
+        }
+        int maxTree2 = max(count2[0], count2[1]);
+        
+        // Compute answer
+        vector<int> answer(n);
+        for (int i = 0; i < n; i++) {
+            answer[i] = count1[parity1[i]] + maxTree2;
+        }
+        
+        return answer;
     }
 };
 # @lc code=end

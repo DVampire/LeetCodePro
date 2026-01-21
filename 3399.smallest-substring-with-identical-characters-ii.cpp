@@ -1,67 +1,65 @@
-#
-# @lc app=leetcode id=3399 lang=cpp
-#
-# [3399] Smallest Substring With Identical Characters II
-#
-# @lc code=start
+//
+// @lc app=leetcode id=3399 lang=cpp
+//
+// [3399] Smallest Substring With Identical Characters II
+//
+
+// @lc code=start
 class Solution {
 public:
     int minLength(string s, int numOps) {
         int n = s.length();
         
-        // Special case: check if we can achieve length 1 (alternating pattern)
-        int mismatch1 = 0, mismatch2 = 0;
-        for (int i = 0; i < n; i++) {
-            if (s[i] - '0' != i % 2) mismatch1++;
-            if (s[i] - '0' != 1 - i % 2) mismatch2++;
-        }
-        if (min(mismatch1, mismatch2) <= numOps) {
-            return 1;
-        }
-        
-        // Binary search on the answer
-        int left = 2, right = n;
-        int ans = n;
-        
-        while (left <= right) {
-            int mid = left + (right - left) / 2;
-            if (canAchieve(s, mid, numOps)) {
-                ans = mid;
-                right = mid - 1;
+        // Compute runs
+        vector<int> runs;
+        int count = 1;
+        for (int i = 1; i < n; i++) {
+            if (s[i] == s[i-1]) {
+                count++;
             } else {
-                left = mid + 1;
+                runs.push_back(count);
+                count = 1;
             }
         }
+        runs.push_back(count);
         
+        // Check if max run ≤ L is achievable with given ops
+        auto check = [&](int L) -> int {
+            if (L == 1) {
+                // Count mismatches for two alternating patterns
+                int mismatch0 = 0, mismatch1 = 0;
+                for (int i = 0; i < n; i++) {
+                    int expected0 = i % 2; // "010101..."
+                    int expected1 = 1 - i % 2; // "101010..."
+                    int actual = s[i] - '0';
+                    if (actual != expected0) mismatch0++;
+                    if (actual != expected1) mismatch1++;
+                }
+                return min(mismatch0, mismatch1);
+            } else {
+                // Sum of (run_length / (L + 1)) for each run
+                int ops = 0;
+                for (int len : runs) {
+                    ops += len / (L + 1);
+                }
+                return ops;
+            }
+        };
+        
+        // Binary search on L
+        int maxRun = *max_element(runs.begin(), runs.end());
+        int lo = 1, hi = maxRun;
+        int ans = hi;
+        while (lo <= hi) {
+            int mid = (lo + hi) / 2;
+            if (check(mid) <= numOps) {
+                ans = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
+        }
         return ans;
     }
-    
-    bool canAchieve(string& s, int k, int numOps) {
-        int n = s.length();
-        int flips = 0;
-        int i = 0;
-        
-        while (i < n) {
-            int j = i;
-            // Find the end of current consecutive substring
-            while (j < n && s[j] == s[i]) {
-                j++;
-            }
-            int len = j - i;
-            
-            // Calculate flips needed to break this substring
-            if (len > k) {
-                flips += len / (k + 1);
-            }
-            
-            if (flips > numOps) {
-                return false;
-            }
-            
-            i = j;
-        }
-        
-        return true;
-    }
 };
-# @lc code=end
+// @lc code=end
