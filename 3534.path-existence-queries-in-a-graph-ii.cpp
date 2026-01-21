@@ -7,48 +7,67 @@
 class Solution {
 public:
     vector<int> pathExistenceQueries(int n, vector<int>& nums, int maxDiff, vector<vector<int>>& queries) {
-        vector<pair<int, int>> sorted_nodes(n);
-        for (int i = 0; i < n; ++i) {
-            sorted_nodes[i] = {nums[i], i};
+        // Build adjacency list
+        vector<vector<int>> adj(n);
+        
+        // Sort nodes by their values to efficiently find edges
+        vector<pair<int, int>> sorted_nodes;
+        for (int i = 0; i < n; i++) {
+            sorted_nodes.push_back({nums[i], i});
         }
         sort(sorted_nodes.begin(), sorted_nodes.end());
-        vector<int> position(n);
-        for (int k = 0; k < n; ++k) {
-            position[sorted_nodes[k].second] = k;
-        }
-        vector<int> component(n);
-        int current_comp = 0;
-        if (n > 0) {
-            component[0] = 0;
-            for (int k = 1; k < n; ++k) {
-                if (sorted_nodes[k].first - sorted_nodes[k - 1].first > maxDiff) {
-                    ++current_comp;
-                }
-                component[k] = current_comp;
+        
+        // For each node, find all nodes within maxDiff
+        for (int i = 0; i < n; i++) {
+            int idx1 = sorted_nodes[i].second;
+            int val1 = sorted_nodes[i].first;
+            
+            for (int j = i + 1; j < n; j++) {
+                int idx2 = sorted_nodes[j].second;
+                int val2 = sorted_nodes[j].first;
+                
+                if (val2 - val1 > maxDiff) break;
+                
+                adj[idx1].push_back(idx2);
+                adj[idx2].push_back(idx1);
             }
         }
-        vector<int> ans;
-        for (auto& q : queries) {
-            int u = q[0], v = q[1];
+        
+        // Process queries
+        vector<int> result;
+        for (const auto& query : queries) {
+            int u = query[0];
+            int v = query[1];
+            
             if (u == v) {
-                ans.push_back(0);
+                result.push_back(0);
                 continue;
             }
-            int pu = position[u], pv = position[v];
-            int cu = component[pu], cv = component[pv];
-            if (cu != cv) {
-                ans.push_back(-1);
-                continue;
+            
+            // BFS to find shortest path
+            queue<int> q;
+            vector<int> dist(n, -1);
+            q.push(u);
+            dist[u] = 0;
+            
+            while (!q.empty()) {
+                int curr = q.front();
+                q.pop();
+                
+                if (curr == v) break;
+                
+                for (int neighbor : adj[curr]) {
+                    if (dist[neighbor] == -1) {
+                        dist[neighbor] = dist[curr] + 1;
+                        q.push(neighbor);
+                    }
+                }
             }
-            int delta = abs(nums[u] - nums[v]);
-            if (delta == 0) {
-                ans.push_back(1);
-            } else {
-                long long ce = ((long long)delta + maxDiff - 1) / maxDiff;
-                ans.push_back((int)ce);
-            }
+            
+            result.push_back(dist[v]);
         }
-        return ans;
+        
+        return result;
     }
 };
 # @lc code=end

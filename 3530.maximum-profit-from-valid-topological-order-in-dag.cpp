@@ -3,35 +3,39 @@
 #
 # [3530] Maximum Profit from Valid Topological Order in DAG
 #
-
 # @lc code=start
 class Solution {
 public:
     int maxProfit(int n, vector<vector<int>>& edges, vector<int>& score) {
-        vector<int> pred(n, 0);
+        // Build bitmask for prerequisites
+        vector<int> prereq_mask(n, 0);
         for (auto& e : edges) {
-            int u = e[0], v = e[1];
-            pred[v] |= (1 << u);
+            prereq_mask[e[1]] |= (1 << e[0]);
         }
-        int N = 1 << n;
-        vector<long long> dp(N, -(1LL << 60));
+        
+        // dp[mask] = maximum profit when nodes in mask are processed
+        vector<long long> dp(1 << n, -1);
         dp[0] = 0;
-        for (int S = 0; S < N; ++S) {
-            if (dp[S] == -(1LL << 60)) continue;
-            int pos = __builtin_popcount(S) + 1;
-            for (int v = 0; v < n; ++v) {
-                if ((S & (1 << v)) == 0) {
-                    if ((pred[v] & S) == pred[v]) {
-                        int nS = S | (1 << v);
-                        long long nprof = dp[S] + 1LL * score[v] * pos;
-                        if (nprof > dp[nS]) {
-                            dp[nS] = nprof;
-                        }
-                    }
+        
+        for (int mask = 0; mask < (1 << n); mask++) {
+            if (dp[mask] == -1) continue;
+            
+            int position = __builtin_popcount(mask) + 1;
+            
+            // Try to add each unprocessed node
+            for (int node = 0; node < n; node++) {
+                if (mask & (1 << node)) continue;
+                
+                // Check if all prerequisites are satisfied
+                if ((prereq_mask[node] & mask) == prereq_mask[node]) {
+                    int new_mask = mask | (1 << node);
+                    long long profit = dp[mask] + (long long)score[node] * position;
+                    dp[new_mask] = max(dp[new_mask], profit);
                 }
             }
         }
-        return dp[N - 1];
+        
+        return (int)dp[(1 << n) - 1];
     }
 };
 # @lc code=end

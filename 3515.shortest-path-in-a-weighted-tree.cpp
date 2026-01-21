@@ -3,70 +3,71 @@
 #
 # [3515] Shortest Path in a Weighted Tree
 #
-
 # @lc code=start
 class Solution {
 public:
     vector<int> treeQueries(int n, vector<vector<int>>& edges, vector<vector<int>>& queries) {
-        vector<vector<pair<int,int>>> adj(n+1);
-        for(auto& e : edges) {
-            int a = e[0], b = e[1], c = e[2];
-            adj[a].emplace_back(b, c);
-            adj[b].emplace_back(a, c);
+        // Build adjacency list with edge indices
+        vector<vector<pair<int, int>>> adj(n + 1);
+        map<pair<int, int>, int> edgeIndex;
+        
+        for (int i = 0; i < edges.size(); i++) {
+            int u = edges[i][0];
+            int v = edges[i][1];
+            
+            adj[u].push_back({v, i});
+            adj[v].push_back({u, i});
+            
+            edgeIndex[{min(u, v), max(u, v)}] = i;
         }
-        vector<int> tin(n+1), tout(n+1), dep(n+1), value(n+1, 0);
-        int timee = 1;
-        function<void(int,int,int,int)> dfs = [&](int u, int p, int d, int w) {
-            dep[u] = d;
-            value[u] = w;
-            tin[u] = timee++;
-            for(auto& pr : adj[u]) {
-                int v = pr.first;
-                int ww = pr.second;
-                if(v != p) {
-                    dfs(v, u, d+1, ww);
+        
+        vector<int> edgeWeights(edges.size());
+        for (int i = 0; i < edges.size(); i++) {
+            edgeWeights[i] = edges[i][2];
+        }
+        
+        vector<int> result;
+        
+        for (const auto& query : queries) {
+            if (query[0] == 1) {
+                int u = query[1];
+                int v = query[2];
+                int w = query[3];
+                
+                int idx = edgeIndex[{min(u, v), max(u, v)}];
+                edgeWeights[idx] = w;
+            } else {
+                int target = query[1];
+                vector<bool> visited(n + 1, false);
+                int dist = dfs(1, target, adj, edgeWeights, visited);
+                result.push_back(dist);
+            }
+        }
+        
+        return result;
+    }
+    
+private:
+    int dfs(int node, int target, const vector<vector<pair<int, int>>>& adj, 
+            const vector<int>& edgeWeights, vector<bool>& visited) {
+        if (node == target) {
+            return 0;
+        }
+        
+        visited[node] = true;
+        
+        for (const auto& p : adj[node]) {
+            int neighbor = p.first;
+            int edgeIdx = p.second;
+            if (!visited[neighbor]) {
+                int dist = dfs(neighbor, target, adj, edgeWeights, visited);
+                if (dist >= 0) {
+                    return dist + edgeWeights[edgeIdx];
                 }
             }
-            tout[u] = timee++;
-        };
-        dfs(1, 0, 0, 0);
-        int max_time = timee;
-        vector<long long> ftree(max_time + 2, 0);
-        auto update = [&](int idx, long long delta) {
-            while(idx <= max_time) {
-                ftree[idx] += delta;
-                idx += idx & -idx;
-            }
-        };
-        auto pref = [&](int idx) -> long long {
-            long long sum = 0;
-            while(idx > 0) {
-                sum += ftree[idx];
-                idx -= idx & -idx;
-            }
-            return sum;
-        };
-        for(int u = 1; u <= n; ++u) {
-            update(tin[u], value[u]);
-            update(tout[u], -value[u]);
         }
-        vector<int> answer;
-        for(auto& q : queries) {
-            if(q[0] == 2) {
-                int x = q[1];
-                long long dist = pref(tin[x]);
-                answer.push_back((int)dist);
-            } else {
-                int u = q[1], v = q[2], nw = q[3];
-                int child = (dep[u] < dep[v] ? v : u);
-                int oldw = value[child];
-                long long delta = (long long)nw - oldw;
-                value[child] = nw;
-                update(tin[child], delta);
-                update(tout[child], -delta);
-            }
-        }
-        return answer;
+        
+        return -1;
     }
 };
 # @lc code=end
