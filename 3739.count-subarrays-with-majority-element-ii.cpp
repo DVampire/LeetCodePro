@@ -6,39 +6,68 @@
 # @lc code=start
 class Solution {
 public:
-    long long countMajoritySubarrays(vector<int>& nums, int target) {
-        int n = nums.size();
-        vector<int> P(n + 1, 0);
-        for (int i = 1; i <= n; ++i) {
-            P[i] = P[i - 1] + (nums[i - 1] == target ? 1 : -1);
-        }
-        int OFFSET = n;
-        int MAXV = 2 * n + 2;
-        vector<long long> tree(MAXV + 1, 0);
-        auto update = [&](int idx, long long val) {
-            while (idx <= MAXV) {
-                tree[idx] += val;
-                idx += idx & -idx;
+    class BIT {
+    public:
+        vector<int> tree;
+        int n;
+        
+        BIT(int n) : n(n), tree(n + 1, 0) {}
+        
+        void update(int idx, int delta) {
+            for (++idx; idx <= n; idx += idx & -idx) {
+                tree[idx] += delta;
             }
-        };
-        auto query = [&](int idx) -> long long {
-            long long sum = 0;
-            while (idx > 0) {
+        }
+        
+        int query(int idx) {
+            int sum = 0;
+            for (++idx; idx > 0; idx -= idx & -idx) {
                 sum += tree[idx];
-                idx -= idx & -idx;
             }
             return sum;
-        };
-        long long ans = 0;
-        int idx0 = P[0] + OFFSET + 1;
-        update(idx0, 1);
-        for (int r = 1; r <= n; ++r) {
-            int tidx = P[r] + OFFSET + 1;
-            long long cnt = query(tidx - 1);
-            ans += cnt;
-            update(tidx, 1);
         }
-        return ans;
+    };
+    
+    long long countMajoritySubarrays(vector<int>& nums, int target) {
+        int n = nums.size();
+        
+        // Compute prefix sums with transformation
+        vector<int> prefix(n + 1);
+        prefix[0] = 0;
+        for (int i = 0; i < n; i++) {
+            prefix[i + 1] = prefix[i] + (nums[i] == target ? 1 : -1);
+        }
+        
+        // Coordinate compression
+        vector<int> sorted_prefix = prefix;
+        sort(sorted_prefix.begin(), sorted_prefix.end());
+        sorted_prefix.erase(unique(sorted_prefix.begin(), sorted_prefix.end()), sorted_prefix.end());
+        
+        auto get_compressed = [&](int val) {
+            return lower_bound(sorted_prefix.begin(), sorted_prefix.end(), val) - sorted_prefix.begin();
+        };
+        
+        int m = sorted_prefix.size();
+        BIT bit(m);
+        
+        long long count = 0;
+        
+        // Add prefix[0] to BIT
+        bit.update(get_compressed(prefix[0]), 1);
+        
+        for (int r = 0; r < n; r++) {
+            int compressed = get_compressed(prefix[r + 1]);
+            
+            // Count how many prefix sums are < prefix[r+1]
+            if (compressed > 0) {
+                count += bit.query(compressed - 1);
+            }
+            
+            // Add prefix[r+1] to BIT
+            bit.update(compressed, 1);
+        }
+        
+        return count;
     }
 };
 # @lc code=end

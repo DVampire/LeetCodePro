@@ -3,73 +3,63 @@
 #
 # [3743] Maximize Cyclic Partition Score
 #
-
 # @lc code=start
-#include <bits/stdc++.h>
-using namespace std;
-
 class Solution {
 public:
     long long maximumScore(vector<int>& nums, int k) {
         int n = nums.size();
-        vector<int> ext(2 * n);
-        for (int i = 0; i < 2 * n; ++i) {
-            ext[i] = nums[i % n];
-        }
-        int N = 2 * n;
-        int LOG = 0;
-        while ((1 << LOG) <= N) ++LOG;
-        vector<vector<int>> spmax(LOG, vector<int>(N));
-        vector<vector<int>> spmin(LOG, vector<int>(N));
-        for (int i = 0; i < N; ++i) {
-            spmax[0][i] = spmin[0][i] = ext[i];
-        }
-        for (int lv = 1; lv < LOG; ++lv) {
-            for (int i = 0; i + (1 << lv) <= N; ++i) {
-                spmax[lv][i] = max(spmax[lv - 1][i], spmax[lv - 1][i + (1 << (lv - 1))]);
-                spmin[lv][i] = min(spmin[lv - 1][i], spmin[lv - 1][i + (1 << (lv - 1))]);
+        long long maxScore = 0;
+        
+        // Try each starting position in the cyclic array
+        for (int start = 0; start < n; start++) {
+            // Create a linear array starting from 'start'
+            vector<int> arr(n);
+            for (int i = 0; i < n; i++) {
+                arr[i] = nums[(start + i) % n];
             }
-        }
-        auto get_max = [&](int L, int R) -> int {
-            int leng = R - L + 1;
-            int lg = 31 - __builtin_clz(leng);
-            return max(spmax[lg][L], spmax[lg][R - (1 << lg) + 1]);
-        };
-        auto get_min = [&](int L, int R) -> int {
-            int leng = R - L + 1;
-            int lg = 31 - __builtin_clz(leng);
-            return min(spmin[lg][L], spmin[lg][R - (1 << lg) + 1]);
-        };
-        long long ans = 0;
-        vector<long long> dpa(n + 1);
-        vector<long long> dpb(n + 1);
-        for (int s = 0; s < n; ++s) {
-            fill(dpa.begin(), dpa.end(), LLONG_MIN / 2);
-            dpa[0] = 0;
-            vector<long long>* now = &dpa;
-            vector<long long>* nxtt = &dpb;
-            for (int p = 1; p <= k; ++p) {
-                int optt = p - 1;
-                for (int len = p; len <= n; ++len) {
-                    long long best = LLONG_MIN / 2;
-                    int start_pr = optt;
-                    for (int pr = start_pr; pr < len; ++pr) {
-                        long long cc = (long long)get_max(s + pr, s + len - 1) - get_min(s + pr, s + len - 1);
-                        long long temp = (*now)[pr] + cc;
-                        if (temp > best) {
-                            best = temp;
-                            optt = pr;
+            
+            // Precompute min and max for all ranges [i, j]
+            vector<vector<int>> minVal(n, vector<int>(n));
+            vector<vector<int>> maxVal(n, vector<int>(n));
+            for (int i = 0; i < n; i++) {
+                minVal[i][i] = maxVal[i][i] = arr[i];
+                for (int j = i + 1; j < n; j++) {
+                    minVal[i][j] = min(minVal[i][j-1], arr[j]);
+                    maxVal[i][j] = max(maxVal[i][j-1], arr[j]);
+                }
+            }
+            
+            // DP to partition arr into at most k parts
+            // dp[i][j] = max score to partition arr[0..i-1] into exactly j parts
+            vector<vector<long long>> dp(n + 1, vector<long long>(k + 1, -1));
+            dp[0][0] = 0;
+            
+            for (int i = 1; i <= n; i++) {
+                for (int j = 1; j <= min(i, k); j++) {
+                    // Try all possible start positions for the j-th segment
+                    for (int p = j - 1; p < i; p++) {
+                        if (dp[p][j-1] == -1) continue;
+                        
+                        // Segment from arr[p] to arr[i-1]
+                        long long range = (long long)maxVal[p][i-1] - minVal[p][i-1];
+                        if (dp[i][j] == -1) {
+                            dp[i][j] = dp[p][j-1] + range;
+                        } else {
+                            dp[i][j] = max(dp[i][j], dp[p][j-1] + range);
                         }
                     }
-                    (*nxtt)[len] = best;
                 }
-                auto* tmp = now;
-                now = nxtt;
-                nxtt = tmp;
             }
-            ans = max(ans, (*now)[n]);
+            
+            // Take the maximum score using at most k segments
+            for (int j = 1; j <= k; j++) {
+                if (dp[n][j] != -1) {
+                    maxScore = max(maxScore, dp[n][j]);
+                }
+            }
         }
-        return ans;
+        
+        return maxScore;
     }
 };
 # @lc code=end
