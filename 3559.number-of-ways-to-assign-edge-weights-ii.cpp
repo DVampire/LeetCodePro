@@ -3,84 +3,95 @@
 #
 # [3559] Number of Ways to Assign Edge Weights II
 #
-
 # @lc code=start
 class Solution {
 public:
     vector<int> assignEdgeWeights(vector<vector<int>>& edges, vector<vector<int>>& queries) {
         int n = edges.size() + 1;
+        const int MOD = 1e9 + 7;
+        
+        // Build adjacency list
         vector<vector<int>> adj(n + 1);
         for (auto& e : edges) {
-            int u = e[0], v = e[1];
-            adj[u].push_back(v);
-            adj[v].push_back(u);
+            adj[e[0]].push_back(e[1]);
+            adj[e[1]].push_back(e[0]);
         }
-        const int MOD = 1000000007;
-        const int LOG = 18;
-        vector<vector<int>> parent(LOG, vector<int>(n + 1, 0));
+        
+        // Preprocess: compute depth and parent for LCA
+        int LOG = 20;
         vector<int> depth(n + 1, 0);
-        // BFS to compute depth and parent[0]
-        queue<int> q;
-        vector<bool> vis(n + 1, false);
-        q.push(1);
-        vis[1] = true;
-        depth[1] = 0;
-        parent[0][1] = 0;
-        while (!q.empty()) {
-            int node = q.front(); q.pop();
-            for (int nei : adj[node]) {
-                if (!vis[nei]) {
-                    vis[nei] = true;
-                    parent[0][nei] = node;
-                    depth[nei] = depth[node] + 1;
-                    q.push(nei);
+        vector<vector<int>> parent(n + 1, vector<int>(LOG, 0));
+        
+        // DFS to compute depth and direct parent
+        function<void(int, int)> dfs = [&](int u, int p) {
+            parent[u][0] = p;
+            for (int v : adj[u]) {
+                if (v != p) {
+                    depth[v] = depth[u] + 1;
+                    dfs(v, u);
                 }
             }
-        }
-        // Build parent table
+        };
+        
+        dfs(1, 0);
+        
+        // Binary lifting preprocessing
         for (int j = 1; j < LOG; j++) {
             for (int i = 1; i <= n; i++) {
-                int anc = parent[j - 1][i];
-                parent[j][i] = (anc ? parent[j - 1][anc] : 0);
-            }
-        }
-        // Precompute 2^i % MOD
-        vector<long long> pow2(n, 1LL);
-        for (int i = 1; i < n; i++) {
-            pow2[i] = pow2[i - 1] * 2LL % MOD;
-        }
-        // LCA lambda
-        auto getLCA = [&](int x, int y) -> int {
-            int u = x, v = y;
-            if (depth[u] > depth[v]) std::swap(u, v);
-            int diff = depth[v] - depth[u];
-            for (int j = 0; j < LOG; j++) {
-                if ((diff >> j) & 1) {
-                    v = parent[j][v];
+                if (parent[i][j-1] != 0) {
+                    parent[i][j] = parent[parent[i][j-1]][j-1];
                 }
             }
+        }
+        
+        // LCA function
+        auto lca = [&](int u, int v) -> int {
+            if (depth[u] < depth[v]) swap(u, v);
+            
+            // Bring u to the same level as v
+            int diff = depth[u] - depth[v];
+            for (int i = 0; i < LOG; i++) {
+                if ((diff >> i) & 1) {
+                    u = parent[u][i];
+                }
+            }
+            
             if (u == v) return u;
-            for (int j = LOG - 1; j >= 0; j--) {
-                if (parent[j][u] != parent[j][v]) {
-                    u = parent[j][u];
-                    v = parent[j][v];
+            
+            // Binary search for LCA
+            for (int i = LOG - 1; i >= 0; i--) {
+                if (parent[u][i] != parent[v][i]) {
+                    u = parent[u][i];
+                    v = parent[v][i];
                 }
             }
-            return parent[0][u];
+            
+            return parent[u][0];
         };
-        vector<int> answer;
-        for (auto& query : queries) {
-            int u = query[0], v = query[1];
+        
+        // Precompute powers of 2
+        vector<long long> pow2(n);
+        pow2[0] = 1;
+        for (int i = 1; i < n; i++) {
+            pow2[i] = (pow2[i-1] * 2) % MOD;
+        }
+        
+        vector<int> result;
+        for (auto& q : queries) {
+            int u = q[0], v = q[1];
+            
             if (u == v) {
-                answer.push_back(0);
+                result.push_back(0);
                 continue;
             }
-            int lca = getLCA(u, v);
-            int k = depth[u] + depth[v] - 2 * depth[lca];
-            long long ways = pow2[k - 1];
-            answer.push_back(ways % MOD);
+            
+            int l = lca(u, v);
+            int pathLen = depth[u] + depth[v] - 2 * depth[l];
+            
+            result.push_back(pow2[pathLen - 1]);
         }
-        return answer;
+        
+        return result;
     }
 };
 # @lc code=end

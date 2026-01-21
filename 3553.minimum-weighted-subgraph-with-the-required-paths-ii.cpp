@@ -3,71 +3,55 @@
 #
 # [3553] Minimum Weighted Subgraph With the Required Paths II
 #
-
 # @lc code=start
 class Solution {
 public:
     vector<int> minimumWeight(vector<vector<int>>& edges, vector<vector<int>>& queries) {
         int n = edges.size() + 1;
-        vector<vector<pair<int, int>>> adj(n);
+        
+        // Build adjacency list
+        vector<vector<pair<int, int>>> graph(n);
         for (auto& e : edges) {
             int u = e[0], v = e[1], w = e[2];
-            adj[u].emplace_back(v, w);
-            adj[v].emplace_back(u, w);
+            graph[u].push_back({v, w});
+            graph[v].push_back({u, w});
         }
-        const int LOG = 18;
-        vector<vector<int>> up(n, vector<int>(LOG, -1));
-        vector<long long> dep(n, 0);
-        vector<int> level(n, 0);
-        auto dfs = [&](auto&& self, int u, int p, long long d, int lev) -> void {
-            up[u][0] = p;
-            dep[u] = d;
-            level[u] = lev;
-            for (auto [v, w] : adj[u]) {
-                if (v != p) {
-                    self(self, v, u, d + w, lev + 1);
+        
+        // Function to compute distances from a source node to all other nodes using DFS
+        auto computeDistances = [&](int src) {
+            vector<long long> dist(n, -1);
+            function<void(int, int, long long)> dfs = [&](int u, int parent, long long d) {
+                dist[u] = d;
+                for (auto [v, w] : graph[u]) {
+                    if (v != parent) {
+                        dfs(v, u, d + w);
+                    }
                 }
-            }
+            };
+            dfs(src, -1, 0);
+            return dist;
         };
-        dfs(dfs, 0, -1, 0LL, 0);
-        for (int j = 1; j < LOG; ++j) {
-            for (int i = 0; i < n; ++i) {
-                int anc = up[i][j - 1];
-                if (anc != -1) {
-                    up[i][j] = up[anc][j - 1];
-                }
+        
+        vector<int> result;
+        
+        for (auto& query : queries) {
+            int src1 = query[0], src2 = query[1], dest = query[2];
+            
+            // Compute distances from src1, src2, and dest to all nodes
+            vector<long long> dist1 = computeDistances(src1);
+            vector<long long> dist2 = computeDistances(src2);
+            vector<long long> distDest = computeDistances(dest);
+            
+            // Find the Steiner point that minimizes the sum
+            long long minWeight = LLONG_MAX;
+            for (int i = 0; i < n; i++) {
+                minWeight = min(minWeight, dist1[i] + dist2[i] + distDest[i]);
             }
+            
+            result.push_back((int)minWeight);
         }
-        auto get_lca = [&](int u, int v) -> int {
-            if (level[u] > level[v]) std::swap(u, v);
-            int diff = level[v] - level[u];
-            for (int j = 0; j < LOG; ++j) {
-                if ((diff >> j) & 1) {
-                    v = up[v][j];
-                }
-            }
-            if (u == v) return u;
-            for (int j = LOG - 1; j >= 0; --j) {
-                if (up[u][j] != up[v][j]) {
-                    u = up[u][j];
-                    v = up[v][j];
-                }
-            }
-            return up[u][0];
-        };
-        vector<int> ans;
-        for (auto& q : queries) {
-            int a = q[0], b = q[1], c = q[2];
-            int lab = get_lca(a, b);
-            long long dab = dep[a] + dep[b] - 2LL * dep[lab];
-            int lac = get_lca(a, c);
-            long long dac = dep[a] + dep[c] - 2LL * dep[lac];
-            int lbc = get_lca(b, c);
-            long long dbc = dep[b] + dep[c] - 2LL * dep[lbc];
-            long long total = dab + dac + dbc;
-            ans.push_back(total / 2);
-        }
-        return ans;
+        
+        return result;
     }
 };
 # @lc code=end
