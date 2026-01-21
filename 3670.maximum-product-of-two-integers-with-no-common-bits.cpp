@@ -3,36 +3,32 @@
 #
 # [3670] Maximum Product of Two Integers With No Common Bits
 #
-
 # @lc code=start
 class Solution {
 public:
     long long maxProduct(vector<int>& nums) {
-        const int BITS = 20;
-        const int MAXM = 1 << BITS;
-        vector<long long> maxval(MAXM, 0);
-        for (int num : nums) {
-            int mask = num;
-            maxval[mask] = max(maxval[mask], (long long)num);
-        }
-        auto dp = maxval;
-        for (int b = 0; b < BITS; ++b) {
-            for (int s = 0; s < MAXM; ++s) {
-                if (s & (1 << b)) {
-                    dp[s] = max(dp[s], dp[s ^ (1 << b)]);
+        // Get unique values and sort in descending order
+        set<int> uniqueNums(nums.begin(), nums.end());
+        vector<int> unique(uniqueNums.begin(), uniqueNums.end());
+        sort(unique.rbegin(), unique.rend());
+        
+        long long maxProd = 0;
+        int m = unique.size();
+        
+        for (int i = 0; i < m; i++) {
+            for (int j = i + 1; j < m; j++) {
+                long long prod = (long long)unique[i] * unique[j];
+                if (prod <= maxProd) {
+                    break; // All subsequent products will be even smaller
+                }
+                if ((unique[i] & unique[j]) == 0) {
+                    maxProd = prod;
+                    break; // Found the best match for unique[i]
                 }
             }
         }
-        int ALL = MAXM - 1;
-        long long ans = 0;
-        for (int m = 0; m < MAXM; ++m) {
-            if (maxval[m] > 0) {
-                int comp = ALL ^ m;
-                long long prod = maxval[m] * dp[comp];
-                ans = max(ans, prod);
-            }
-        }
-        return ans;
+        
+        return maxProd;
     }
 };
 # @lc code=end
