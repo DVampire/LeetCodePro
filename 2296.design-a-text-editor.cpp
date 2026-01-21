@@ -1,56 +1,46 @@
-#
-# @lc app=leetcode id=2296 lang=cpp
-#
-# [2296] Design a Text Editor
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+// @lc code=start
 class TextEditor {
-    string left;   // text to the left of cursor
-    string right;  // text to the right of cursor, stored reversed (top near cursor)
+    vector<char> left;
+    vector<char> right;
 
-    string last10Left() {
+    string lastTenLeft() {
         int n = (int)left.size();
-        int take = min(10, n);
-        return left.substr(n - take, take);
+        int start = max(0, n - 10);
+        return string(left.begin() + start, left.end());
     }
 
 public:
     TextEditor() {}
 
     void addText(string text) {
-        left += text;
+        for (char c : text) left.push_back(c);
     }
 
     int deleteText(int k) {
         int del = min(k, (int)left.size());
-        left.resize(left.size() - del);
-        return del;
+        while (del--) left.pop_back();
+        return min(k, (int)(left.size() + (k - min(k, (int)left.size())))); // not used, but keep simple? 
     }
 
     string cursorLeft(int k) {
-        while (k-- > 0 && !left.empty()) {
+        int mv = min(k, (int)left.size());
+        while (mv--) {
             right.push_back(left.back());
             left.pop_back();
         }
-        return last10Left();
+        return lastTenLeft();
     }
 
     string cursorRight(int k) {
-        while (k-- > 0 && !right.empty()) {
+        int mv = min(k, (int)right.size());
+        while (mv--) {
             left.push_back(right.back());
             right.pop_back();
         }
-        return last10Left();
+        return lastTenLeft();
     }
 };
-
-/**
- * Your TextEditor object will be instantiated and called as such:
- * TextEditor* obj = new TextEditor();
- * obj->addText(text);
- * int param_2 = obj->deleteText(k);
- * string param_3 = obj->cursorLeft(k);
- * string param_4 = obj->cursorRight(k);
- */
-# @lc code=end
+// @lc code=end

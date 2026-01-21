@@ -9,36 +9,34 @@ using namespace std;
 
 // @lc code=start
 class Skiplist {
-    static constexpr int MAX_LEVEL = 16;
-
+private:
     struct Node {
         int val;
         vector<Node*> next;
         Node(int v, int level) : val(v), next(level, nullptr) {}
     };
 
-    Node* head;
-    int curLevel; // current maximum level in use (1..MAX_LEVEL)
+    static constexpr int MAX_LEVEL = 32;
+    static constexpr double P = 0.5;
 
-    // Simple deterministic RNG (good enough for skiplist leveling).
-    uint32_t seed;
-    uint32_t rng() {
-        seed = seed * 1103515245u + 12345u;
-        return seed;
-    }
+    Node* head;
+    int level; // current highest level (1..MAX_LEVEL)
+
+    std::mt19937 rng;
+    std::uniform_real_distribution<double> dist;
 
     int randomLevel() {
         int lvl = 1;
-        while (lvl < MAX_LEVEL && (rng() & 1u)) ++lvl; // p=0.5 to go up
+        while (lvl < MAX_LEVEL && dist(rng) < P) ++lvl;
         return lvl;
     }
 
 public:
-    Skiplist() : head(new Node(-1, MAX_LEVEL)), curLevel(1), seed(712367u) {}
+    Skiplist() : head(new Node(-1, MAX_LEVEL)), level(1), rng(std::random_device{}()), dist(0.0, 1.0) {}
 
     bool search(int target) {
         Node* cur = head;
-        for (int i = curLevel - 1; i >= 0; --i) {
+        for (int i = level - 1; i >= 0; --i) {
             while (cur->next[i] && cur->next[i]->val < target) {
                 cur = cur->next[i];
             }
@@ -51,21 +49,21 @@ public:
         array<Node*, MAX_LEVEL> update{};
         Node* cur = head;
 
-        for (int i = curLevel - 1; i >= 0; --i) {
+        for (int i = level - 1; i >= 0; --i) {
             while (cur->next[i] && cur->next[i]->val < num) {
                 cur = cur->next[i];
             }
             update[i] = cur;
         }
 
-        int lvl = randomLevel();
-        if (lvl > curLevel) {
-            for (int i = curLevel; i < lvl; ++i) update[i] = head;
-            curLevel = lvl;
+        int nodeLevel = randomLevel();
+        if (nodeLevel > level) {
+            for (int i = level; i < nodeLevel; ++i) update[i] = head;
+            level = nodeLevel;
         }
 
-        Node* node = new Node(num, lvl);
-        for (int i = 0; i < lvl; ++i) {
+        Node* node = new Node(num, nodeLevel);
+        for (int i = 0; i < nodeLevel; ++i) {
             node->next[i] = update[i]->next[i];
             update[i]->next[i] = node;
         }
@@ -75,25 +73,27 @@ public:
         array<Node*, MAX_LEVEL> update{};
         Node* cur = head;
 
-        for (int i = curLevel - 1; i >= 0; --i) {
+        for (int i = level - 1; i >= 0; --i) {
             while (cur->next[i] && cur->next[i]->val < num) {
                 cur = cur->next[i];
             }
             update[i] = cur;
         }
 
-        Node* target = update[0]->next[0];
+        Node* target = cur->next[0];
         if (!target || target->val != num) return false;
 
-        for (int i = 0; i < curLevel; ++i) {
+        // Unlink from every level where it appears
+        for (int i = 0; i < level; ++i) {
             if (update[i]->next[i] == target) {
                 update[i]->next[i] = target->next[i];
             }
         }
         delete target;
 
-        while (curLevel > 1 && head->next[curLevel - 1] == nullptr) {
-            --curLevel;
+        // Decrease current level if top levels are empty
+        while (level > 1 && head->next[level - 1] == nullptr) {
+            --level;
         }
         return true;
     }

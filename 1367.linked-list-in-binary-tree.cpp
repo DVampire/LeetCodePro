@@ -1,7 +1,10 @@
-#include <bits/stdc++.h>
-using namespace std;
-
-/*
+#
+# @lc app=leetcode id=1367 lang=cpp
+#
+# [1367] Linked List in Binary Tree
+#
+# @lc code=start
+/**
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;
@@ -11,7 +14,7 @@ using namespace std;
  *     ListNode(int x, ListNode *next) : val(x), next(next) {}
  * };
  */
-/*
+/**
  * Definition for a binary tree node.
  * struct TreeNode {
  *     int val;
@@ -22,15 +25,15 @@ using namespace std;
  *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
  * };
  */
-
 class Solution {
 public:
     bool isSubPath(ListNode* head, TreeNode* root) {
+        // Build pattern from linked list
         vector<int> pat;
-        for (ListNode* cur = head; cur; cur = cur->next) pat.push_back(cur->val);
+        for (ListNode* p = head; p; p = p->next) pat.push_back(p->val);
         int m = (int)pat.size();
 
-        // Build LPS (KMP prefix function)
+        // Build LPS array (KMP prefix function)
         vector<int> lps(m, 0);
         for (int i = 1, len = 0; i < m; ) {
             if (pat[i] == pat[len]) {
@@ -56,3 +59,4 @@ public:
         return dfs(root, 0);
     }
 };
+# @lc code=end

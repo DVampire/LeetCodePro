@@ -1,10 +1,7 @@
-#
-# @lc app=leetcode id=2058 lang=cpp
-#
-# [2058] Find the Minimum and Maximum Number of Nodes Between Critical Points
-#
-# @lc code=start
-/**
+#include <bits/stdc++.h>
+using namespace std;
+
+/*
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;
@@ -17,41 +14,35 @@
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        if (!head || !head->next) return {-1, -1};
+        if (!head || !head->next || !head->next->next) return {-1, -1};
 
         ListNode* prev = head;
-        ListNode* cur = head->next;
-        int idx = 2; // 1-based index of cur
+        ListNode* curr = head->next;
+        int idx = 2; // 1-based index of curr
 
-        int firstCritical = -1;
-        int lastCritical = -1;
-        int prevCritical = -1;
+        int firstCrit = -1;
+        int prevCrit = -1;
+        int lastCrit = -1;
         int minDist = INT_MAX;
-        int criticalCount = 0;
+        int critCount = 0;
 
-        while (cur && cur->next) {
-            ListNode* nxt = cur->next;
-            bool isMax = (cur->val > prev->val && cur->val > nxt->val);
-            bool isMin = (cur->val < prev->val && cur->val < nxt->val);
-
+        while (curr && curr->next) {
+            ListNode* nxt = curr->next;
+            bool isMax = (curr->val > prev->val && curr->val > nxt->val);
+            bool isMin = (curr->val < prev->val && curr->val < nxt->val);
             if (isMax || isMin) {
-                criticalCount++;
-                if (firstCritical == -1) firstCritical = idx;
-                lastCritical = idx;
-
-                if (prevCritical != -1) {
-                    minDist = min(minDist, idx - prevCritical);
-                }
-                prevCritical = idx;
+                critCount++;
+                if (firstCrit == -1) firstCrit = idx;
+                if (prevCrit != -1) minDist = min(minDist, idx - prevCrit);
+                prevCrit = idx;
+                lastCrit = idx;
             }
-
-            prev = cur;
-            cur = nxt;
+            prev = curr;
+            curr = nxt;
             idx++;
         }
 
-        if (criticalCount < 2) return {-1, -1};
-        return {minDist, lastCritical - firstCritical};
+        if (critCount < 2) return {-1, -1};
+        return {minDist, lastCrit - firstCrit};
     }
 };
-# @lc code=end

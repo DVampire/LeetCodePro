@@ -1,22 +1,21 @@
+#
+# @lc app=leetcode id=1670 lang=cpp
+#
+# [1670] Design Front Middle Back Queue
+#
 #include <deque>
 using namespace std;
 
-/*
- * @lc app=leetcode id=1670 lang=cpp
- *
- * [1670] Design Front Middle Back Queue
- */
-
-// @lc code=start
+# @lc code=start
 class FrontMiddleBackQueue {
-    deque<int> L, R;
+    deque<int> L, R; // queue = L + R
 
     void rebalance() {
-        while ((int)L.size() > (int)R.size() + 1) {
+        while (L.size() > R.size() + 1) {
             R.push_front(L.back());
             L.pop_back();
         }
-        while ((int)L.size() < (int)R.size()) {
+        while (L.size() < R.size()) {
             L.push_back(R.front());
             R.pop_front();
         }
@@ -31,7 +30,7 @@ public:
     }
 
     void pushMiddle(int val) {
-        if ((int)L.size() > (int)R.size()) {
+        if (L.size() > R.size()) {
             R.push_front(L.back());
             L.pop_back();
         }
@@ -46,32 +45,43 @@ public:
 
     int popFront() {
         if (L.empty() && R.empty()) return -1;
-        int ret = L.front();
+        int ans = L.front();
         L.pop_front();
         rebalance();
-        return ret;
+        return ans;
     }
 
     int popMiddle() {
         if (L.empty() && R.empty()) return -1;
-        int ret = L.back();
+        int ans = L.back();
         L.pop_back();
         rebalance();
-        return ret;
+        return ans;
     }
 
     int popBack() {
         if (L.empty() && R.empty()) return -1;
-        int ret;
+        int ans;
         if (!R.empty()) {
-            ret = R.back();
+            ans = R.back();
             R.pop_back();
         } else {
-            ret = L.back();
+            ans = L.back();
             L.pop_back();
         }
         rebalance();
-        return ret;
+        return ans;
     }
 };
-// @lc code=end
+
+/**
+ * Your FrontMiddleBackQueue object will be instantiated and called as such:
+ * FrontMiddleBackQueue* obj = new FrontMiddleBackQueue();
+ * obj->pushFront(val);
+ * obj->pushMiddle(val);
+ * obj->pushBack(val);
+ * int param_4 = obj->popFront();
+ * int param_5 = obj->popMiddle();
+ * int param_6 = obj->popBack();
+ */
+# @lc code=end
