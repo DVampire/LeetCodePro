@@ -16,36 +16,44 @@ public:
         
         long long maxArea = -1;
         
+        // Try all pairs of points as potential diagonal corners
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
                 int x1 = xCoord[i], y1 = yCoord[i];
                 int x2 = xCoord[j], y2 = yCoord[j];
                 
+                // Must have different x and y to be diagonal
                 if (x1 == x2 || y1 == y2) continue;
                 
-                if (x1 > x2) swap(x1, x2);
-                if (y1 > y2) swap(y1, y2);
+                int minX = min(x1, x2), maxX = max(x1, x2);
+                int minY = min(y1, y2), maxY = max(y1, y2);
                 
-                if (pointSet.find({x1, y2}) == pointSet.end() || 
-                    pointSet.find({x2, y1}) == pointSet.end()) {
+                // Check if other two corners exist
+                if (pointSet.find({minX, maxY}) == pointSet.end() ||
+                    pointSet.find({maxX, minY}) == pointSet.end()) {
                     continue;
                 }
                 
+                // Check if any other point is inside or on boundary
                 bool valid = true;
                 for (int k = 0; k < n; k++) {
                     int x = xCoord[k], y = yCoord[k];
-                    if ((x == x1 && y == y1) || (x == x1 && y == y2) ||
-                        (x == x2 && y == y1) || (x == x2 && y == y2)) {
+                    
+                    // Skip the four corners
+                    if ((x == minX && y == minY) || (x == minX && y == maxY) ||
+                        (x == maxX && y == minY) || (x == maxX && y == maxY)) {
                         continue;
                     }
-                    if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+                    
+                    // Check if inside or on boundary
+                    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
                         valid = false;
                         break;
                     }
                 }
                 
                 if (valid) {
-                    long long area = (long long)(x2 - x1) * (y2 - y1);
+                    long long area = (long long)(maxX - minX) * (maxY - minY);
                     maxArea = max(maxArea, area);
                 }
             }

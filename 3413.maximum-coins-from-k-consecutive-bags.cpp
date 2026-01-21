@@ -7,33 +7,40 @@
 class Solution {
 public:
     long long maximumCoins(vector<vector<int>>& coins, int k) {
+        // Sort segments by starting position
         sort(coins.begin(), coins.end());
-        
-        set<long long> starts;
-        for (const auto& seg : coins) {
-            long long l = seg[0], r = seg[1];
-            starts.insert(l);
-            starts.insert(max(1LL, l - k + 1));
-            starts.insert(max(1LL, r - k + 1));
-        }
         
         long long maxCoins = 0;
         
+        // Collect all meaningful starting positions
+        set<long long> starts;
+        starts.insert(1); // Consider starting from the beginning
+        
+        for (auto& seg : coins) {
+            long long l = seg[0], r = seg[1];
+            starts.insert(l); // Window starts at segment start
+            long long endStart = r - k + 1;
+            if (endStart >= 1) {
+                starts.insert(endStart); // Window ends at segment end
+            }
+        }
+        
+        // For each starting position, calculate total coins
         for (long long start : starts) {
             long long end = start + k - 1;
-            long long totalCoins = 0;
+            long long total = 0;
             
-            for (const auto& seg : coins) {
+            for (auto& seg : coins) {
                 long long l = seg[0], r = seg[1], c = seg[2];
-                long long overlapStart = max(start, l);
-                long long overlapEnd = min(end, r);
-                
+                // Calculate overlap between [start, end] and [l, r]
+                long long overlapStart = max(l, start);
+                long long overlapEnd = min(r, end);
                 if (overlapStart <= overlapEnd) {
-                    totalCoins += (overlapEnd - overlapStart + 1) * c;
+                    total += (overlapEnd - overlapStart + 1) * c;
                 }
             }
             
-            maxCoins = max(maxCoins, totalCoins);
+            maxCoins = max(maxCoins, total);
         }
         
         return maxCoins;

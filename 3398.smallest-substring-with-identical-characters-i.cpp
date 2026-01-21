@@ -6,61 +6,67 @@
 # @lc code=start
 class Solution {
 public:
-    bool canAchieve(string s, int maxLen, int numOps) {
-        int n = s.length();
-        
-        if (maxLen == 1) {
-            // Special case: alternating pattern
-            int flips1 = 0, flips2 = 0;
-            for (int i = 0; i < n; i++) {
-                if (s[i] != ('0' + i % 2)) flips1++;
-                if (s[i] != ('1' - i % 2)) flips2++;
-            }
-            return min(flips1, flips2) <= numOps;
-        }
-        
-        // General case: count flips needed for each run
-        int flipsNeeded = 0;
-        int i = 0;
-        while (i < n) {
-            int j = i;
-            while (j < n && s[j] == s[i]) j++;
-            int runLength = j - i;
-            flipsNeeded += runLength / (maxLen + 1);
-            if (flipsNeeded > numOps) return false;
-            i = j;
-        }
-        return true;
-    }
-    
     int minLength(string s, int numOps) {
         int n = s.length();
         
-        // Find the maximum run length in the original string
-        int maxRun = 1;
+        // Find all runs in the original string
+        vector<int> runs;
         int i = 0;
         while (i < n) {
             int j = i;
-            while (j < n && s[j] == s[i]) j++;
-            maxRun = max(maxRun, j - i);
+            while (j < n && s[j] == s[i]) {
+                j++;
+            }
+            runs.push_back(j - i);
             i = j;
         }
         
+        // If no operations, return the longest run
+        if (numOps == 0) {
+            return *max_element(runs.begin(), runs.end());
+        }
+        
         // Binary search on the answer
-        int left = 1, right = maxRun;
-        int result = right;
+        int left = 1, right = *max_element(runs.begin(), runs.end());
+        int answer = right;
         
         while (left <= right) {
             int mid = left + (right - left) / 2;
-            if (canAchieve(s, mid, numOps)) {
-                result = mid;
+            if (canAchieve(s, runs, mid, numOps)) {
+                answer = mid;
                 right = mid - 1;
             } else {
                 left = mid + 1;
             }
         }
         
-        return result;
+        return answer;
+    }
+    
+    bool canAchieve(const string& s, const vector<int>& runs, int k, int numOps) {
+        // Special case for k = 1: check alternating patterns
+        if (k == 1) {
+            int flips0 = 0, flips1 = 0;
+            for (int i = 0; i < s.length(); i++) {
+                if ((i % 2 == 0 && s[i] != '0') || (i % 2 == 1 && s[i] != '1')) {
+                    flips0++;
+                }
+                if ((i % 2 == 0 && s[i] != '1') || (i % 2 == 1 && s[i] != '0')) {
+                    flips1++;
+                }
+            }
+            return min(flips0, flips1) <= numOps;
+        }
+        
+        // For k >= 2, count flips needed for each run
+        int totalFlips = 0;
+        for (int len : runs) {
+            if (len > k) {
+                totalFlips += (len - 1) / k;
+            }
+        }
+        
+        return totalFlips <= numOps;
     }
 };
 # @lc code=end

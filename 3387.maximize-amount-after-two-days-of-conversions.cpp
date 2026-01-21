@@ -3,37 +3,13 @@
 #
 # [3387] Maximize Amount After Two Days of Conversions
 #
+
 # @lc code=start
 class Solution {
 public:
-    unordered_map<string, double> findMaxAmounts(const unordered_map<string, vector<pair<string, double>>>& graph, const string& start) {
-        unordered_map<string, double> maxAmounts;
-        priority_queue<pair<double, string>> pq;
-        
-        pq.push({1.0, start});
-        maxAmounts[start] = 1.0;
-        
-        while (!pq.empty()) {
-            auto [amount, curr] = pq.top();
-            pq.pop();
-            
-            if (amount < maxAmounts[curr]) continue;
-            
-            if (graph.find(curr) == graph.end()) continue;
-            
-            for (const auto& [next, rate] : graph.at(curr)) {
-                double newAmount = amount * rate;
-                if (maxAmounts.find(next) == maxAmounts.end() || newAmount > maxAmounts[next]) {
-                    maxAmounts[next] = newAmount;
-                    pq.push({newAmount, next});
-                }
-            }
-        }
-        
-        return maxAmounts;
-    }
-    
-    double maxAmount(string initialCurrency, vector<vector<string>>& pairs1, vector<double>& rates1, vector<vector<string>>& pairs2, vector<double>& rates2) {
+    double maxAmount(string initialCurrency, vector<vector<string>>& pairs1, vector<double>& rates1, 
+                     vector<vector<string>>& pairs2, vector<double>& rates2) {
+        // Build graph for day 1
         unordered_map<string, vector<pair<string, double>>> graph1;
         for (size_t i = 0; i < pairs1.size(); i++) {
             const string& from = pairs1[i][0];
@@ -43,6 +19,26 @@ public:
             graph1[to].push_back({from, 1.0 / rate});
         }
         
+        // Find max amount for each currency on day 1
+        unordered_map<string, double> maxDay1;
+        maxDay1[initialCurrency] = 1.0;
+        
+        bool updated = true;
+        while (updated) {
+            updated = false;
+            for (const auto& [from, neighbors] : graph1) {
+                if (maxDay1.find(from) == maxDay1.end()) continue;
+                for (const auto& [to, rate] : neighbors) {
+                    double newAmount = maxDay1[from] * rate;
+                    if (maxDay1.find(to) == maxDay1.end() || newAmount > maxDay1[to]) {
+                        maxDay1[to] = newAmount;
+                        updated = true;
+                    }
+                }
+            }
+        }
+        
+        // Build graph for day 2
         unordered_map<string, vector<pair<string, double>>> graph2;
         for (size_t i = 0; i < pairs2.size(); i++) {
             const string& from = pairs2[i][0];
@@ -52,18 +48,26 @@ public:
             graph2[to].push_back({from, 1.0 / rate});
         }
         
-        unordered_map<string, double> day1Max = findMaxAmounts(graph1, initialCurrency);
+        // For day 2, start with all currencies and amounts from day 1
+        unordered_map<string, double> maxDay2 = maxDay1;
         
-        double result = day1Max[initialCurrency];
-        
-        for (const auto& [currency, day1Amount] : day1Max) {
-            unordered_map<string, double> day2Max = findMaxAmounts(graph2, currency);
-            if (day2Max.find(initialCurrency) != day2Max.end()) {
-                result = max(result, day1Amount * day2Max[initialCurrency]);
+        updated = true;
+        while (updated) {
+            updated = false;
+            for (const auto& [from, neighbors] : graph2) {
+                if (maxDay2.find(from) == maxDay2.end()) continue;
+                for (const auto& [to, rate] : neighbors) {
+                    double newAmount = maxDay2[from] * rate;
+                    if (maxDay2.find(to) == maxDay2.end() || newAmount > maxDay2[to]) {
+                        maxDay2[to] = newAmount;
+                        updated = true;
+                    }
+                }
             }
         }
         
-        return result;
+        // Return the max amount of initialCurrency after day 2
+        return maxDay2[initialCurrency];
     }
 };
 # @lc code=end
