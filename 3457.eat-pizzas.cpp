@@ -3,28 +3,32 @@
 #
 # [3457] Eat Pizzas!
 #
-
 # @lc code=start
 class Solution {
 public:
     long long maxWeight(vector<int>& pizzas) {
         int n = pizzas.size();
-        sort(pizzas.begin(), pizzas.end());
-        int days = n / 4;
-        int odd_days = (days + 1) / 2;
-        int even_days = days / 2;
-        long long sum = 0;
-        // Sum the largest odd_days pizzas
-        for (int i = 0; i < odd_days; ++i) {
-            sum += pizzas[n - 1 - i];
+        sort(pizzas.begin(), pizzas.end(), greater<int>());
+        
+        int total_days = n / 4;
+        int odd_days = (total_days + 1) / 2;
+        int even_days = total_days / 2;
+        
+        long long result = 0;
+        
+        // Sum top odd_days pizzas (gained on odd days)
+        for (int i = 0; i < odd_days; i++) {
+            result += pizzas[i];
         }
-        // For even days, sum the mins of pairs from next 2*even_days
-        int end_pair = n - odd_days - 1;
-        for (int j = 0; j < even_days; ++j) {
-            int offset = 1 + 2 * j;
-            sum += pizzas[end_pair - offset];
+        
+        // Sum every second pizza from the next 2*even_days pizzas
+        // (second-max of each even-day group)
+        for (int k = 1; k <= even_days; k++) {
+            int idx = odd_days + 2 * k - 1;
+            result += pizzas[idx];
         }
-        return sum;
+        
+        return result;
     }
 };
 # @lc code=end
