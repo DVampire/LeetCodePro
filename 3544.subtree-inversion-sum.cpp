@@ -1,98 +1,109 @@
-#
-# @lc app=leetcode id=3544 lang=cpp
-#
-# [3544] Subtree Inversion Sum
-#
-
-# @lc code=start
-#include <vector>
-#include <algorithm>
-#include <iostream>
-
+#include <bits/stdc++.h>
 using namespace std;
 
+// @lc app=leetcode id=3544 lang=cpp
+//
+// [3544] Subtree Inversion Sum
+//
+
+// @lc code=start
 class Solution {
-    vector<vector<int>> adj;
-    // dp[u][dist][sign]
-    // u: node index
-    // dist: distance to the nearest inverted ancestor (capped at K)
-    // sign: 0 for positive incoming context (even inversions above), 1 for negative (odd inversions above)
-    long long dp[50005][55][2];
-    int K;
-    vector<int> val;
-
-    void dfs(int u, int p) {
-        // Initialize dp[u] with the base contribution of u itself
-        // If context is 0 (+), u contributes val[u]
-        // If context is 1 (-), u contributes -val[u]
-        for(int i = 0; i <= K; ++i) {
-            dp[u][i][0] = val[u];
-            dp[u][i][1] = -val[u];
-        }
-        
-        // Accumulators for the case where we choose to invert u (only valid for i == K)
-        // If we invert u, the distance to nearest inverted ancestor for children becomes 1.
-        long long sum_inv_children_context_0 = 0; // Sum of children with dist 1, context 0 (+)
-        long long sum_inv_children_context_1 = 0; // Sum of children with dist 1, context 1 (-)
-
-        for (int v : adj[u]) {
-            if (v == p) continue;
-            dfs(v, u);
-            
-            // Propagate results for the "Don't Invert u" scenarios
-            for (int i = 0; i <= K; ++i) {
-                int next_dist = (i == K) ? K : i + 1;
-                // If i < K, distance increases. If i == K, it stays at "sufficiently far" state K.
-                
-                // Standard accumulation
-                dp[u][i][0] += dp[v][next_dist][0];
-                dp[u][i][1] += dp[v][next_dist][1];
-            }
-            
-            // Accumulate for the "Invert u" scenario
-            // If u is inverted, v is at distance 1 from the inverted node u.
-            // We need to access dp[v][1]...
-            int dist_after_inv = 1;
-            // In the edge case where K could be less than 1 (though constraint says K>=1), clamp it.
-            // If K=1, dist 1 is the max state.
-            if (dist_after_inv > K) dist_after_inv = K;
-            
-            sum_inv_children_context_0 += dp[v][dist_after_inv][0];
-            sum_inv_children_context_1 += dp[v][dist_after_inv][1];
-        }
-
-        // Apply the choice to Invert u, only valid if i == K
-        // 1. Context 0 (+): 
-        //    If we invert, u's sign becomes - (relative to global). 
-        //    u contributes -val[u].
-        //    Children receive context 1 (-).
-        long long invert_val_curr_0 = -val[u] + sum_inv_children_context_1;
-        dp[u][K][0] = max(dp[u][K][0], invert_val_curr_0);
-
-        // 2. Context 1 (-): 
-        //    If we invert, u's sign becomes + (relative to global). 
-        //    u contributes val[u].
-        //    Children receive context 0 (+).
-        long long invert_val_curr_1 = val[u] + sum_inv_children_context_0;
-        dp[u][K][1] = max(dp[u][K][1], invert_val_curr_1);
-    }
-
 public:
     long long subtreeInversionSum(vector<vector<int>>& edges, vector<int>& nums, int k) {
-        int n = nums.size();
-        adj.assign(n, vector<int>());
-        for (auto& e : edges) {
-            adj[e[0]].push_back(e[1]);
-            adj[e[1]].push_back(e[0]);
+        int n = (int)nums.size();
+        int m = 2 * (n - 1);
+
+        // Build adjacency using arrays (memory efficient)
+        vector<int> head(n, -1), to(m), nxt(m);
+        int ei = 0;
+        auto addEdge = [&](int u, int v) {
+            to[ei] = v;
+            nxt[ei] = head[u];
+            head[u] = ei++;
+        };
+        for (auto &e : edges) {
+            addEdge(e[0], e[1]);
+            addEdge(e[1], e[0]);
         }
-        val = nums;
-        K = k;
-        
-        dfs(0, -1);
-        
-        // The root is theoretically at infinite distance from any inverted ancestor (dist K).
-        // The initial context is positive (0).
-        return dp[0][K][0];
+
+        // Root the tree at 0, get parent and order
+        vector<int> parent(n, -1);
+        vector<int> order;
+        order.reserve(n);
+        vector<int> st;
+        st.reserve(n);
+        st.push_back(0);
+        parent[0] = -1;
+        while (!st.empty()) {
+            int u = st.back();
+            st.pop_back();
+            order.push_back(u);
+            for (int e = head[u]; e != -1; e = nxt[e]) {
+                int v = to[e];
+                if (v == parent[u]) continue;
+                parent[v] = u;
+                st.push_back(v);
+            }
+        }
+
+        int stride = k + 1; // we will use distances d in [1..k], index 0 unused
+        vector<long long> dp((long long)n * 2 * stride, 0);
+        auto idx = [&](int u, int p, int d) -> long long {
+            return ((long long)u * 2 + p) * stride + d;
+        };
+
+        // Postorder DP
+        for (int it = n - 1; it >= 0; --it) {
+            int u = order[it];
+
+            // base sums for "not invert" option
+            static long long base0[51], base1[51];
+            for (int d = 1; d <= k; d++) base0[d] = base1[d] = 0;
+
+            // sums for "invert" option (only used when d==k)
+            long long invBase0 = 0; // when parent parity p=0, children get parity 1
+            long long invBase1 = 0; // when parent parity p=1, children get parity 0
+
+            // accumulate children contributions
+            for (int e = head[u]; e != -1; e = nxt[e]) {
+                int v = to[e];
+                if (v == parent[u]) continue;
+
+                // For not invert: child distance is min(d+1,k)
+                for (int d = 1; d <= k - 1; d++) {
+                    base0[d] += dp[idx(v, 0, d + 1)];
+                    base1[d] += dp[idx(v, 1, d + 1)];
+                }
+                base0[k] += dp[idx(v, 0, k)];
+                base1[k] += dp[idx(v, 1, k)];
+
+                // For invert at u: child parity toggles, distance becomes 1
+                invBase0 += dp[idx(v, 1, 1)];
+                invBase1 += dp[idx(v, 0, 1)];
+            }
+
+            // fill dp[u][p][d]
+            for (int d = 1; d <= k; d++) {
+                // p = 0: current sign is +
+                dp[idx(u, 0, d)] = (long long)nums[u] + base0[d];
+                // p = 1: current sign is -
+                dp[idx(u, 1, d)] = -(long long)nums[u] + base1[d];
+            }
+
+            // invert allowed only when d == k
+            {
+                // if p=0 and invert: node contributes -nums[u], children use invBase0
+                long long cand0 = -(long long)nums[u] + invBase0;
+                dp[idx(u, 0, k)] = max(dp[idx(u, 0, k)], cand0);
+
+                // if p=1 and invert: node contributes +nums[u], children use invBase1
+                long long cand1 = (long long)nums[u] + invBase1;
+                dp[idx(u, 1, k)] = max(dp[idx(u, 1, k)], cand1);
+            }
+        }
+
+        // Root starts with parity 0 and no inverted ancestor within k-1 => d=k
+        return dp[idx(0, 0, k)];
     }
 };
-# @lc code=end
+// @lc code=end

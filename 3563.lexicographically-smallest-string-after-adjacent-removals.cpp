@@ -1,86 +1,72 @@
-#
-# @lc app=leetcode id=3563 lang=cpp
-#
-# [3563] Lexicographically Smallest String After Adjacent Removals
-#
-
-# @lc code=start
-#include <iostream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <cmath>
-
+#include <bits/stdc++.h>
 using namespace std;
 
+// @lc code=start
 class Solution {
 public:
     string lexicographicallySmallestString(string s) {
-        int n = s.length();
-        if (n == 0) return "";
+        int n = (int)s.size();
+        auto consecutive = [&](char a, char b) -> bool {
+            int x = a - 'a', y = b - 'a';
+            return (x + 1) % 26 == y || (y + 1) % 26 == x;
+        };
 
-        // canEmpty[i][j] will be true if s[i...j] can be completely removed.
-        // We use length + 1 to handle the empty range case easily (e.g. i > j).
-        // But indices are 0 to n-1. Let's use specific logic.
-        // Initialize with -1 (unknown), 0 (false), 1 (true)
-        vector<vector<int>> emptyMemo(n + 1, vector<int>(n + 1, -1));
-        
-        // dp[i][j] stores the optimal string for s[i...j]
-        vector<vector<string>> memo(n + 1, vector<string>(n + 1, ""));
-        vector<vector<bool>> visited(n + 1, vector<bool>(n + 1, false));
+        vector<vector<char>> rem(n, vector<char>(n, 0));
+        auto canRemove = [&](int l, int r) -> bool {
+            if (l > r) return true;
+            return rem[l][r];
+        };
 
-        return solve(0, n - 1, s, memo, visited, emptyMemo);
-    }
-
-private:
-    bool isConsecutive(char a, char b) {
-        int diff = abs(a - b);
-        return diff == 1 || diff == 25;
-    }
-
-    // Check if s[i...j] can be reduced to empty string
-    bool canEmpty(int i, int j, const string& s, vector<vector<int>>& emptyMemo) {
-        if (i > j) return true;
-        if ((j - i + 1) % 2 != 0) return false; // Odd length cannot be empty
-        if (emptyMemo[i][j] != -1) return emptyMemo[i][j];
-
-        bool res = false;
-        // Try to pair s[i] with s[k]
-        for (int k = i + 1; k <= j; k += 2) { // k must be at odd distance to have even elements between
-            if (isConsecutive(s[i], s[k])) {
-                if (canEmpty(i + 1, k - 1, s, emptyMemo) && canEmpty(k + 1, j, s, emptyMemo)) {
-                    res = true;
-                    break;
-                }
-            }
-        }
-        return emptyMemo[i][j] = res;
-    }
-
-    string solve(int i, int j, const string& s, vector<vector<string>>& memo, vector<vector<bool>>& visited, vector<vector<int>>& emptyMemo) {
-        if (i > j) return "";
-        if (visited[i][j]) return memo[i][j];
-
-        // Option 1: Keep s[i]
-        string res = s[i] + solve(i + 1, j, s, memo, visited, emptyMemo);
-
-        // Option 2: Remove s[i] by pairing with some s[k]
-        // For s[i] and s[k] to be adjacent, s[i+1...k-1] must be fully removable.
-        for (int k = i + 1; k <= j; ++k) {
-            if (isConsecutive(s[i], s[k])) {
-                if (canEmpty(i + 1, k - 1, s, emptyMemo)) {
-                    // If valid, we are left with s[k+1...j]
-                    string candidate = solve(k + 1, j, s, memo, visited, emptyMemo);
-                    if (candidate < res) {
-                        res = candidate;
+        for (int len = 2; len <= n; ++len) {
+            if (len % 2 == 1) continue; // odd length can't be fully removed
+            for (int l = 0; l + len - 1 < n; ++l) {
+                int r = l + len - 1;
+                for (int k = l + 1; k <= r; k += 2) { // k-l must be odd
+                    if (consecutive(s[l], s[k]) && canRemove(l + 1, k - 1) && canRemove(k + 1, r)) {
+                        rem[l][r] = 1;
+                        break;
                     }
                 }
             }
         }
 
-        visited[i][j] = true;
-        memo[i][j] = res;
-        return res;
+        // memo[state], where state = lastKeptIndex + 1 (so 0 means lastKeptIndex = -1)
+        vector<string> memo(n + 1);
+        vector<char> vis(n + 1, 0);
+
+        function<string(int)> dfs = [&](int state) -> string {
+            if (vis[state]) return memo[state];
+            vis[state] = 1;
+            int last = state - 1;
+
+            bool hasBest = false;
+            string best;
+
+            for (int nxt = last + 1; nxt <= n; ++nxt) {
+                // Need to be able to remove the gap (last+1 .. nxt-1)
+                if (!canRemove(last + 1, nxt - 1)) continue;
+
+                string cand;
+                if (nxt == n) {
+                    cand = ""; // end, suffix removable by condition above
+                } else {
+                    cand.reserve(1 + (n - nxt));
+                    cand.push_back(s[nxt]);
+                    string tail = dfs(nxt + 1);
+                    cand += tail;
+                }
+
+                if (!hasBest || cand < best) {
+                    best = std::move(cand);
+                    hasBest = true;
+                }
+            }
+
+            memo[state] = hasBest ? best : string();
+            return memo[state];
+        };
+
+        return dfs(0);
     }
 };
-# @lc code=end
+// @lc code=end

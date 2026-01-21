@@ -1,101 +1,95 @@
-#
-# @lc app=leetcode id=3562 lang=cpp
-#
-# [3562] Maximum Profit from Trading Stocks with Discounts
-#
+#include <bits/stdc++.h>
+using namespace std;
 
-# @lc code=start
+// @lc code=start
 class Solution {
 public:
     int maxProfit(int n, vector<int>& present, vector<int>& future, vector<vector<int>>& hierarchy, int budget) {
-        // Adjacency list for the tree
-        vector<vector<int>> adj(n + 1);
-        for (const auto& edge : hierarchy) {
-            adj[edge[0]].push_back(edge[1]);
+        vector<vector<int>> children(n);
+        for (auto &e : hierarchy) {
+            int u = e[0] - 1, v = e[1] - 1;
+            children[u].push_back(v);
         }
 
-        // DFS function
-        // Returns a pair of vectors: {dp_parent_no_buy, dp_parent_buy}
-        // Each vector is of size budget + 1, where vec[c] = max profit with cost c
-        // If a cost is unreachable, we can use a very small number, but since we start with 0 cost 0 profit, 
-        // and only add, we can just initialize with -1e9 or similar to denote invalid, 
-        // or just handle valid states explicitly. 
-        // Here, initializing with a specific value for 'impossible' is safer.
-        
-        const int INF = 1e9;
-        
-        // Helper to merge knapsacks
-        auto merge = [&](const vector<int>& current_dp, const vector<int>& child_dp) {
-            vector<int> next_dp(budget + 1, -INF);
-            for (int b = 0; b <= budget; ++b) {
-                if (current_dp[b] == -INF) continue;
-                for (int cb = 0; cb <= budget - b; ++cb) {
-                    if (child_dp[cb] == -INF) continue;
-                    next_dp[b + cb] = max(next_dp[b + cb], current_dp[b] + child_dp[cb]);
-                }
+        const long long NEG = -(1LL<<60);
+
+        // dp0[u], dp1[u]
+        vector<vector<long long>> dp0(n, vector<long long>(budget + 1, NEG));
+        vector<vector<long long>> dp1(n, vector<long long>(budget + 1, NEG));
+
+        // postorder traversal
+        vector<int> order;
+        order.reserve(n);
+        vector<int> st = {0};
+        vector<int> it(n, 0);
+        vector<int> parent(n, -1);
+        while (!st.empty()) {
+            int u = st.back();
+            if (it[u] < (int)children[u].size()) {
+                int v = children[u][it[u]++];
+                parent[v] = u;
+                st.push_back(v);
+            } else {
+                order.push_back(u);
+                st.pop_back();
             }
-            return next_dp;
-        };
-
-        function<pair<vector<int>, vector<int>>(int)> dfs = [&](int u) {
-            // 1. Calculate aggregated results from children
-            // agg_no_buy: max profit from subtree children assuming u DOES NOT buy
-            // agg_buy: max profit from subtree children assuming u DOES buy
-            
-            vector<int> agg_no_buy(budget + 1, -INF);
-            vector<int> agg_buy(budget + 1, -INF);
-            
-            // Base case: 0 cost, 0 profit
-            agg_no_buy[0] = 0;
-            agg_buy[0] = 0;
-
-            for (int v : adj[u]) {
-                pair<vector<int>, vector<int>> child_res = dfs(v);
-                // If u doesn't buy, v sees parent_bought=false -> child_res.first
-                agg_no_buy = merge(agg_no_buy, child_res.first);
-                // If u buys, v sees parent_bought=true -> child_res.second
-                agg_buy = merge(agg_buy, child_res.second);
-            }
-
-            // 2. Construct result for u
-            // res.first: parent of u didn't buy
-            // res.second: parent of u bought
-            
-            vector<int> res_parent_no_buy = agg_no_buy; // Initialize with option where u doesn't buy
-            vector<int> res_parent_buy = agg_no_buy;    // Initialize with option where u doesn't buy
-            
-            // Option where u buys:
-            // Case A: parent of u didn't buy. u pays full price.
-            int cost_full = present[u - 1];
-            int profit_full = future[u - 1] - cost_full;
-            
-            for (int b = 0; b <= budget - cost_full; ++b) {
-                if (agg_buy[b] != -INF) {
-                    res_parent_no_buy[b + cost_full] = max(res_parent_no_buy[b + cost_full], agg_buy[b] + profit_full);
-                }
-            }
-
-            // Case B: parent of u bought. u pays half price.
-            int cost_half = present[u - 1] / 2;
-            int profit_half = future[u - 1] - cost_half;
-            
-            for (int b = 0; b <= budget - cost_half; ++b) {
-                if (agg_buy[b] != -INF) {
-                    res_parent_buy[b + cost_half] = max(res_parent_buy[b + cost_half], agg_buy[b] + profit_half);
-                }
-            }
-            
-            return make_pair(res_parent_no_buy, res_parent_buy);
-        };
-
-        pair<vector<int>, vector<int>> result = dfs(1);
-        
-        // Since 1 has no parent, we look at result.first (parent didn't buy)
-        int max_p = 0;
-        for (int p : result.first) {
-            max_p = max(max_p, p);
         }
-        return max_p;
+
+        auto mergeKnapsack = [&](const vector<long long>& A, const vector<long long>& B) {
+            vector<long long> C(budget + 1, NEG);
+            for (int i = 0; i <= budget; i++) if (A[i] != NEG) {
+                for (int j = 0; j + i <= budget; j++) if (B[j] != NEG) {
+                    C[i + j] = max(C[i + j], A[i] + B[j]);
+                }
+            }
+            return C;
+        };
+
+        for (int u : order) {
+            // Combine children assuming u not bought (children parentBought = false)
+            vector<long long> comb0(budget + 1, NEG);
+            comb0[0] = 0;
+            for (int v : children[u]) {
+                comb0 = mergeKnapsack(comb0, dp0[v]);
+            }
+
+            // Combine children assuming u bought (children parentBought = true)
+            vector<long long> comb1(budget + 1, NEG);
+            comb1[0] = 0;
+            for (int v : children[u]) {
+                comb1 = mergeKnapsack(comb1, dp1[v]);
+            }
+
+            // dp0[u]: parent not bought => u cost is full
+            // Option not buy: comb0
+            dp0[u] = comb0;
+            // Option buy: pay full cost
+            {
+                int cost = present[u];
+                long long prof = (long long)future[u] - cost;
+                if (cost <= budget) {
+                    for (int b = 0; b + cost <= budget; b++) if (comb1[b] != NEG) {
+                        dp0[u][b + cost] = max(dp0[u][b + cost], comb1[b] + prof);
+                    }
+                }
+            }
+
+            // dp1[u]: parent bought => u cost is discounted
+            dp1[u] = comb0;
+            {
+                int cost = present[u] / 2;
+                long long prof = (long long)future[u] - cost;
+                if (cost <= budget) {
+                    for (int b = 0; b + cost <= budget; b++) if (comb1[b] != NEG) {
+                        dp1[u][b + cost] = max(dp1[u][b + cost], comb1[b] + prof);
+                    }
+                }
+            }
+        }
+
+        long long ans = 0;
+        for (int b = 0; b <= budget; b++) ans = max(ans, dp0[0][b]);
+        return (int)ans;
     }
 };
-# @lc code=end
+// @lc code=end

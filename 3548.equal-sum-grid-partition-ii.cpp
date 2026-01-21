@@ -1,130 +1,117 @@
-#
+#include <bits/stdc++.h>
+using namespace std;
+
+/*
 # @lc app=leetcode id=3548 lang=cpp
 #
 # [3548] Equal Sum Grid Partition II
 #
+*/
 
-# @lc code=start
+// @lc code=start
 class Solution {
 public:
     bool canPartitionGrid(vector<vector<int>>& grid) {
-        int m = grid.size();
-        int n = grid[0].size();
+        int m = (int)grid.size();
+        int n = (int)grid[0].size();
+
+        const int MAXV = 100000;
+        vector<long long> rowSum(m, 0), colSum(n, 0);
         long long totalSum = 0;
 
-        // Frequency arrays for values. Max value is 10^5.
-        // Using vectors is safer and fast enough.
-        vector<int> bottomCount(100005, 0);
-        vector<int> topCount(100005, 0);
+        unordered_map<int,int> totalCnt;
+        totalCnt.reserve((size_t)m * (size_t)n * 2);
+        totalCnt.max_load_factor(0.7f);
 
-        for(const auto& row : grid) {
-            for(int val : row) {
-                totalSum += val;
-                bottomCount[val]++;
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                int v = grid[i][j];
+                rowSum[i] += v;
+                colSum[j] += v;
+                totalSum += v;
+                totalCnt[v]++;
             }
         }
 
-        long long topSum = 0;
-        long long bottomSum = totalSum;
+        auto getCount = [&](const unordered_map<int,int>& mp, int key) -> int {
+            auto it = mp.find(key);
+            return it == mp.end() ? 0 : it->second;
+        };
 
-        // Try Horizontal Cuts
-        // Cut is after row i. i ranges from 0 to m-2.
-        for (int i = 0; i < m; ++i) {
-            // Move row i from bottom to top
-            for (int val : grid[i]) {
-                bottomCount[val]--;
-                topCount[val]++;
-                topSum += val;
-                bottomSum -= val;
+        unordered_map<int,int> prefCnt; // topCnt for horizontal, leftCnt for vertical
+        prefCnt.reserve(totalCnt.size() * 2 + 1);
+        prefCnt.max_load_factor(0.7f);
+
+        // Checks if we can remove a cell of value diff from rectangle [r1..r2]x[c1..c2].
+        // If usePref==true, the rectangle is the prefix tracked by prefCnt; otherwise it's the complement.
+        auto canRemoveFromRect = [&](long long diff, int r1, int c1, int r2, int c2, bool usePref) -> bool {
+            if (diff <= 0) return false;
+            int h = r2 - r1 + 1;
+            int w = c2 - c1 + 1;
+            long long area = 1LL * h * w;
+
+            // If discounting would remove the only cell, disallow.
+            if (area <= 1) return false;
+
+            // Line case: only endpoints are removable.
+            if (h == 1 || w == 1) {
+                int v1 = grid[r1][c1];
+                int v2 = grid[r2][c2];
+                return diff == v1 || diff == v2;
             }
 
-            // If this is the last row, we can't cut after it
-            if (i == m - 1) continue;
+            // General rectangle (h>=2 and w>=2): any cell is removable.
+            if (diff > MAXV) return false; // cell values are <= 1e5
+            int d = (int)diff;
+            int tot = getCount(totalCnt, d);
+            if (tot == 0) return false;
+            int pre = getCount(prefCnt, d);
+            int cntInRect = usePref ? pre : (tot - pre);
+            return cntInRect > 0;
+        };
 
+        // 1) Horizontal cuts
+        long long topSum = 0;
+        for (int r = 0; r <= m - 2; r++) {
+            topSum += rowSum[r];
+            for (int j = 0; j < n; j++) prefCnt[grid[r][j]]++;
+
+            long long bottomSum = totalSum - topSum;
             if (topSum == bottomSum) return true;
 
-            long long diff = abs(topSum - bottomSum);
-            if (diff > 100000) continue; // Cannot remove such a large value
-
             if (topSum > bottomSum) {
-                // Need to remove 'diff' from top
-                // Top section is rows 0 to i. Height is i+1. Width is n.
-                // It is connected unless width == 1 AND height > 1 AND we remove an internal node.
-                if (n > 1 || (i + 1) == 1) {
-                    if (topCount[diff] > 0) return true;
-                } else {
-                    // n == 1 and height > 1. Can only remove endpoints of the top section.
-                    // Endpoints are (0,0) and (i,0).
-                    if (grid[0][0] == diff || grid[i][0] == diff) return true;
-                }
+                long long diff = topSum - bottomSum;
+                // top rect: rows [0..r], cols [0..n-1]
+                if (canRemoveFromRect(diff, 0, 0, r, n - 1, true)) return true;
             } else {
-                // Need to remove 'diff' from bottom
-                // Bottom section is rows i+1 to m-1. Height is m - 1 - i. Width is n.
-                if (n > 1 || (m - 1 - i) == 1) {
-                    if (bottomCount[diff] > 0) return true;
-                } else {
-                    // n == 1 and height > 1.
-                    // Endpoints are (i+1, 0) and (m-1, 0).
-                    if (grid[i+1][0] == diff || grid[m-1][0] == diff) return true;
-                }
+                long long diff = bottomSum - topSum;
+                // bottom rect: rows [r+1..m-1], cols [0..n-1]
+                if (canRemoveFromRect(diff, r + 1, 0, m - 1, n - 1, false)) return true;
             }
         }
 
-        // Try Vertical Cuts
-        // Reset counts
-        vector<int> rightCount(100005, 0);
-        vector<int> leftCount(100005, 0);
-        
-        // Re-populate rightCount with all values
-        // Note: We could have copied from bottomCount initially if we hadn't modified it,
-        // but re-scanning is O(MN) which is fine.
-        for(const auto& row : grid) {
-            for(int val : row) {
-                rightCount[val]++;
-            }
-        }
-
+        // 2) Vertical cuts
+        prefCnt.clear();
         long long leftSum = 0;
-        long long rightSum = totalSum;
+        for (int c = 0; c <= n - 2; c++) {
+            leftSum += colSum[c];
+            for (int i = 0; i < m; i++) prefCnt[grid[i][c]]++;
 
-        // Cut is after column j. j ranges from 0 to n-2.
-        for (int j = 0; j < n; ++j) {
-            // Move col j from right to left
-            for (int r = 0; r < m; ++r) {
-                int val = grid[r][j];
-                rightCount[val]--;
-                leftCount[val]++;
-                leftSum += val;
-                rightSum -= val;
-            }
-
-            if (j == n - 1) continue;
-
+            long long rightSum = totalSum - leftSum;
             if (leftSum == rightSum) return true;
 
-            long long diff = abs(leftSum - rightSum);
-            if (diff > 100000) continue;
-
             if (leftSum > rightSum) {
-                // Remove from left. Left is cols 0..j. Width j+1, Height m.
-                if (m > 1 || (j + 1) == 1) {
-                    if (leftCount[diff] > 0) return true;
-                } else {
-                    // m == 1, width > 1. Line graph. Endpoints (0,0) and (0,j).
-                    if (grid[0][0] == diff || grid[0][j] == diff) return true;
-                }
+                long long diff = leftSum - rightSum;
+                // left rect: rows [0..m-1], cols [0..c]
+                if (canRemoveFromRect(diff, 0, 0, m - 1, c, true)) return true;
             } else {
-                // Remove from right. Right is cols j+1..n-1. Width n-1-j, Height m.
-                if (m > 1 || (n - 1 - j) == 1) {
-                    if (rightCount[diff] > 0) return true;
-                } else {
-                    // m == 1, width > 1. Endpoints (0, j+1) and (0, n-1).
-                    if (grid[0][j+1] == diff || grid[0][n-1] == diff) return true;
-                }
+                long long diff = rightSum - leftSum;
+                // right rect: rows [0..m-1], cols [c+1..n-1]
+                if (canRemoveFromRect(diff, 0, c + 1, m - 1, n - 1, false)) return true;
             }
         }
 
         return false;
     }
 };
-# @lc code=end
+// @lc code=end
