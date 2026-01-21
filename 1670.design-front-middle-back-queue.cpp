@@ -8,74 +8,45 @@
 #include <deque>
 
 class FrontMiddleBackQueue {
-private:
-    std::deque<int> left;
-    std::deque<int> right;
-
-    // Maintains the invariant: left.size() == right.size() or left.size() == right.size() + 1
-    void balance() {
-        if (left.size() > right.size() + 1) {
-            right.push_front(left.back());
-            left.pop_back();
-        } else if (right.size() > left.size()) {
-            left.push_back(right.front());
-            right.pop_front();
-        }
-    }
-
+    std::deque<int> dq;
 public:
     FrontMiddleBackQueue() {
         
     }
     
     void pushFront(int val) {
-        left.push_front(val);
-        balance();
+        dq.push_front(val);
     }
     
     void pushMiddle(int val) {
-        if (left.size() > right.size()) {
-            right.push_front(left.back());
-            left.pop_back();
-        }
-        left.push_back(val);
-        // No balance needed theoretically, but safe to call or rely on logic
-        // If L=k+1, R=k -> move -> L=k, R=k+1 -> push -> L=k+1, R=k+1. Balanced.
-        // If L=k, R=k -> push -> L=k+1, R=k. Balanced.
+        size_t pos = dq.size() / 2;
+        dq.insert(dq.begin() + pos, val);
     }
     
     void pushBack(int val) {
-        right.push_back(val);
-        balance();
+        dq.push_back(val);
     }
     
     int popFront() {
-        if (left.empty()) return -1;
-        int val = left.front();
-        left.pop_front();
-        balance();
+        if (dq.empty()) return -1;
+        int val = dq.front();
+        dq.pop_front();
         return val;
     }
     
     int popMiddle() {
-        if (left.empty()) return -1;
-        int val = left.back();
-        left.pop_back();
-        balance();
+        if (dq.empty()) return -1;
+        size_t n = dq.size();
+        size_t pos = (n - 1) / 2;
+        int val = dq[pos];
+        dq.erase(dq.begin() + pos);
         return val;
     }
     
     int popBack() {
-        if (left.empty()) return -1;
-        // If right is empty, then left must have exactly 1 element (due to invariant)
-        if (right.empty()) {
-            int val = left.back();
-            left.pop_back();
-            return val;
-        }
-        int val = right.back();
-        right.pop_back();
-        balance();
+        if (dq.empty()) return -1;
+        int val = dq.back();
+        dq.pop_back();
         return val;
     }
 };

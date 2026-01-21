@@ -3,6 +3,7 @@
 #
 # [2074] Reverse Nodes in Even Length Groups
 #
+
 # @lc code=start
 /**
  * Definition for singly-linked list.
@@ -17,54 +18,41 @@
 class Solution {
 public:
     ListNode* reverseEvenLengthGroups(ListNode* head) {
-        if (!head) return head;
-
-        ListNode dummy(0);
-        dummy.next = head;
-
-        ListNode* prevGroup = &dummy;
-        ListNode* curr = head;
-        int groupSize = 1;
-
-        while (curr) {
-            // Find actual count of nodes in this group
-            int cnt = 0;
-            ListNode* temp = curr;
-            while (temp && cnt < groupSize) {
-                temp = temp->next;
-                cnt++;
+        ListNode* dummy = new ListNode(0);
+        dummy->next = head;
+        ListNode* prev = dummy;
+        int k = 1;
+        while (true) {
+            ListNode* group_start = prev->next;
+            if (!group_start) break;
+            ListNode* cur = group_start;
+            int len = 0;
+            ListNode* group_tail = nullptr;
+            while (cur != nullptr && len < k) {
+                group_tail = cur;
+                cur = cur->next;
+                ++len;
             }
-            // temp is the node right after this group
-
-            if (cnt % 2 == 0) {
-                // Reverse cnt nodes starting at curr
-                ListNode* node = curr;
-                ListNode* prev = nullptr;
-                for (int i = 0; i < cnt; i++) {
-                    ListNode* nxt = node->next;
-                    node->next = prev;
-                    prev = node;
-                    node = nxt;
+            ListNode* next_group_start = cur;
+            if (len % 2 == 0) {
+                ListNode* old_start = group_start;
+                ListNode* new_head = nullptr;
+                cur = group_start;
+                while (cur != next_group_start) {
+                    ListNode* nxt = cur->next;
+                    cur->next = new_head;
+                    new_head = cur;
+                    cur = nxt;
                 }
-                // prev = new head of reversed group, curr = old head (now tail)
-                prevGroup->next = prev;
-                curr->next = temp;
-
-                // Move pointers for next iteration
-                prevGroup = curr;
-                curr = temp;
+                prev->next = new_head;
+                old_start->next = next_group_start;
+                prev = old_start;
             } else {
-                // No reversal; just advance pointers cnt steps
-                for (int i = 0; i < cnt; i++) {
-                    prevGroup = curr;
-                    curr = curr->next;
-                }
+                prev = group_tail;
             }
-
-            groupSize++;
+            ++k;
         }
-
-        return dummy.next;
+        return dummy->next;
     }
 };
 # @lc code=end

@@ -1,7 +1,11 @@
-#include <bits/stdc++.h>
-using namespace std;
+#
+# @lc app=leetcode id=2058 lang=cpp
+#
+# [2058] Find the Minimum and Maximum Number of Nodes Between Critical Points
+#
 
-/*
+# @lc code=start
+/**
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;
@@ -14,35 +18,30 @@ using namespace std;
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        if (!head || !head->next || !head->next->next) return {-1, -1};
-
-        ListNode* prev = head;
-        ListNode* curr = head->next;
-        int idx = 2; // 1-based index of curr
-
-        int firstCrit = -1;
-        int prevCrit = -1;
-        int lastCrit = -1;
-        int minDist = INT_MAX;
-        int critCount = 0;
-
-        while (curr && curr->next) {
-            ListNode* nxt = curr->next;
-            bool isMax = (curr->val > prev->val && curr->val > nxt->val);
-            bool isMin = (curr->val < prev->val && curr->val < nxt->val);
-            if (isMax || isMin) {
-                critCount++;
-                if (firstCrit == -1) firstCrit = idx;
-                if (prevCrit != -1) minDist = min(minDist, idx - prevCrit);
-                prevCrit = idx;
-                lastCrit = idx;
+        vector<int> crit;
+        ListNode* prev = nullptr;
+        ListNode* cur = head;
+        int pos = 1;
+        while (cur && cur->next) {
+            if (prev && cur->next &&
+                ((cur->val > prev->val && cur->val > cur->next->val) ||
+                 (cur->val < prev->val && cur->val < cur->next->val))) {
+                crit.push_back(pos);
             }
-            prev = curr;
-            curr = nxt;
-            idx++;
+            prev = cur;
+            cur = cur->next;
+            ++pos;
         }
-
-        if (critCount < 2) return {-1, -1};
-        return {minDist, lastCrit - firstCrit};
+        if (crit.size() < 2) {
+            return {-1, -1};
+        }
+        int minDist = INT_MAX;
+        for (size_t i = 1; i < crit.size(); ++i) {
+            int dist = crit[i] - crit[i - 1];
+            minDist = min(minDist, dist);
+        }
+        int maxDist = crit.back() - crit.front();
+        return {minDist, maxDist};
     }
 };
+# @lc code=end
