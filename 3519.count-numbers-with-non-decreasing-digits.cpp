@@ -1,102 +1,96 @@
+#
+# @lc app=leetcode id=3519 lang=cpp
+#
+# [3519] Count Numbers with Non-Decreasing Digits
+#
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc code=start
 class Solution {
 public:
-    static constexpr int MOD = 1000000007;
-
-    // Divide non-negative decimal string s by small int b.
-    // Returns {quotient_string, remainder}
-    pair<string,int> divmodDecString(const string& s, int b) {
-        long long carry = 0;
-        string q;
-        q.reserve(s.size());
-        for (char c : s) {
-            carry = carry * 10 + (c - '0');
-            int digit = (int)(carry / b);
-            carry %= b;
-            if (!q.empty() || digit != 0) q.push_back(char('0' + digit));
-        }
-        if (q.empty()) q = "0";
-        return {q, (int)carry};
-    }
-
-    vector<int> toBaseB(string x, int b) {
-        if (x == "0") return {0};
-        vector<int> rev;
-        while (x != "0") {
-            auto [q, rem] = divmodDecString(x, b);
-            rev.push_back(rem);
-            x = q;
-        }
-        reverse(rev.begin(), rev.end());
-        return rev;
-    }
-
-    string decMinusOne(string s) {
-        if (s == "0") return "-1";
-        int i = (int)s.size() - 1;
-        while (i >= 0 && s[i] == '0') {
-            s[i] = '9';
-            --i;
-        }
-        if (i < 0) return "-1";
-        s[i]--;
-        int p = 0;
-        while (p + 1 < (int)s.size() && s[p] == '0') ++p;
-        s = s.substr(p);
-        if (s.empty()) return "0";
-        return s;
-    }
-
-    int countUpTo(const string& xDec, int b) {
-        if (xDec == "-1") return 0;
-        vector<int> dig = toBaseB(xDec, b);
-        int n = (int)dig.size();
-
-        // memo[pos][prev][started][tight]
-        vector<vector<vector<vector<int>>>> memo(
-            n + 1,
-            vector<vector<vector<int>>>(b, vector<vector<int>>(2, vector<int>(2, -1)))
-        );
-
-        function<int(int,int,int,int)> dfs = [&](int pos, int prev, int started, int tight) -> int {
-            if (pos == n) return 1; // one number formed
-            int &res = memo[pos][prev][started][tight];
-            if (res != -1) return res;
-
-            long long ans = 0;
-            int lim = tight ? dig[pos] : (b - 1);
-            for (int d = 0; d <= lim; ++d) {
-                int ntight = (tight && d == lim);
-                if (!started) {
-                    if (d == 0) {
-                        ans += dfs(pos + 1, 0, 0, ntight);
-                    } else {
-                        ans += dfs(pos + 1, d, 1, ntight);
-                    }
+    int countNumbers(string l, string r, int b) {
+        const long long MOD = 1000000007LL;
+        auto decrement = [](string num) -> string {
+            int n = num.size();
+            string res = num;
+            int i = n - 1;
+            while (i >= 0) {
+                if (res[i] > '0') {
+                    res[i]--;
+                    break;
                 } else {
-                    if (d >= prev) {
-                        ans += dfs(pos + 1, d, 1, ntight);
+                    res[i] = '9';
+                    i--;
+                }
+            }
+            if (i < 0) return "0";
+            size_t startpos = res.find_first_not_of('0');
+            if (startpos == string::npos) return "0";
+            return res.substr(startpos);
+        };
+        auto to_baseb = [b](string num) -> vector<int> {
+            vector<int> digs;
+            if (num == "0") return {0};
+            while (num != "0") {
+                int rem = 0;
+                string nextn;
+                for (char ch : num) {
+                    int digi = ch - '0';
+                    int temp = rem * 10 + digi;
+                    int q = temp / b;
+                    rem = temp % b;
+                    if (!nextn.empty() || q != 0) {
+                        nextn += ('0' + q);
                     }
                 }
-                if (ans >= (1LL<<62)) ans %= MOD;
+                if (nextn.empty()) nextn = "0";
+                digs.push_back(rem);
+                num = nextn;
             }
-            res = (int)(ans % MOD);
-            return res;
+            reverse(digs.begin(), digs.end());
+            return digs;
         };
-
-        return dfs(0, 0, 0, 1);
-    }
-
-    int countNumbers(string l, string r, int b) {
-        int right = countUpTo(r, b);
-        string lm1 = decMinusOne(l);
-        int left = countUpTo(lm1, b);
-        int ans = right - left;
-        if (ans < 0) ans += MOD;
-        return ans;
+        auto count_up_to = [&](const string& S) -> long long {
+            if (S == "0") return 0LL;
+            vector<int> digits = to_baseb(S);
+            int len_ = digits.size();
+            int m_ = b - 1;
+            const int MAXN = 400;
+            vector<vector<long long>> comb(MAXN + 1, vector<long long>(10, 0LL));
+            for (int i = 0; i <= MAXN; ++i) {
+                comb[i][0] = 1;
+                for (int j = 1; j <= min(i, 9); ++j) {
+                    comb[i][j] = (comb[i - 1][j] + comb[i - 1][j - 1]) % MOD;
+                }
+            }
+            long long small = 0;
+            int L = len_ - 1;
+            if (L >= 0) {
+                small = (comb[L + m_][m_] + MOD - 1) % MOD;
+            }
+            vector<vector<vector<long long>>> mem(len_ + 1, vector<vector<long long>>(10, vector<long long>(2, -1LL)));
+            auto dfs = [&](auto&& self, int pos, int prevv, int tig) -> long long {
+                if (pos == len_) return 1LL;
+                long long& ans = mem[pos][prevv][tig];
+                if (ans != -1LL) return ans;
+                ans = 0LL;
+                int up = tig ? digits[pos] : b - 1;
+                int lo = (pos == 0 ? 1 : prevv);
+                for (int d = lo; d <= up; ++d) {
+                    int ntig = tig && (d == up);
+                    ans = (ans + self(self, pos + 1, d, ntig)) % MOD;
+                }
+                return ans;
+            };
+            long long same_len = dfs(dfs, 0, 0, 1);
+            return (small + same_len) % MOD;
+        };
+        string l1 = decrement(l);
+        long long ans = (count_up_to(r) - count_up_to(l1) + MOD) % MOD;
+        if (l == "0") ans = (ans + 1) % MOD;
+        return (int)ans;
     }
 };
-// @lc code=end
+# @lc code=end

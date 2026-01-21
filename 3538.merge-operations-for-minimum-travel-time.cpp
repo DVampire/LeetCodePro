@@ -1,59 +1,50 @@
+#
+# @lc app=leetcode id=3538 lang=cpp
+#
+# [3538] Merge Operations for Minimum Travel Time
+#
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc code=start
 class Solution {
 public:
     int minTravelTime(int l, int n, int k, vector<int>& position, vector<int>& time) {
-        const long long INF = (long long)4e18;
-
-        // prefix sums of time
-        vector<long long> pref(n + 1, 0);
-        for (int i = 0; i < n; i++) pref[i + 1] = pref[i] + time[i];
-
-        auto sumTimeInclusive = [&](int L, int R) -> long long {
-            // sum time[L..R], assumes 0<=L<=R<n
-            return pref[R + 1] - pref[L];
-        };
-
-        // dp[del][i][j]
-        vector<vector<vector<long long>>> dp(k + 1,
-            vector<vector<long long>>(n, vector<long long>(n, INF)));
-
-        // Initialize: survivors are (0, j)
-        for (int j = 1; j < n; j++) {
-            int del = j - 1; // removed signs 1..j-1
-            if (del <= k) {
-                dp[del][0][j] = 1LL * (position[j] - position[0]) * time[0];
-            }
+        vector<long long> prefix(n + 1, 0);
+        for (int i = 1; i <= n; ++i) {
+            prefix[i] = prefix[i - 1] + time[i - 1];
         }
-
-        for (int del = 0; del <= k; del++) {
-            for (int i = 0; i < n; i++) {
-                for (int j = i + 1; j < n; j++) {
-                    long long cur = dp[del][i][j];
-                    if (cur >= INF) continue;
-
-                    // try next survivor z
-                    for (int z = j + 1; z < n; z++) {
-                        int gap = z - j - 1; // number of deleted signs between j and z
-                        int nd = del + gap;
-                        if (nd > k) continue;
-
-                        // accumulated time at j is sum(time[i+1..j])
-                        long long accJ = sumTimeInclusive(i + 1, j);
-                        long long addCost = 1LL * (position[z] - position[j]) * accJ;
-                        dp[nd][j][z] = min(dp[nd][j][z], cur + addCost);
+        const long long INF = LLONG_MAX / 2;
+        vector<vector<vector<long long>>> dp(n, vector<vector<long long>>(k + 1, vector<long long>(101, INF)));
+        int t0 = time[0];
+        dp[0][0][t0] = 0;
+        for (int q = 0; q < n; ++q) {
+            for (int u = 0; u <= k; ++u) {
+                for (int s = 0; s <= 100; ++s) {
+                    if (dp[q][u][s] == INF) continue;
+                    for (int p = q + 1; p < n; ++p) {
+                        int num_signs = p - q;
+                        int mrg = num_signs - 1;
+                        int nu = u + mrg;
+                        if (nu > k) continue;
+                        long long ns = prefix[p + 1] - prefix[q + 1];
+                        if (ns > 100 || ns <= 0) continue;
+                        long long dist = (long long)position[p] - position[q];
+                        long long addc = dist * s;
+                        long long nc = dp[q][u][s] + addc;
+                        if (nc < dp[p][nu][(int)ns]) {
+                            dp[p][nu][(int)ns] = nc;
+                        }
                     }
                 }
             }
         }
-
         long long ans = INF;
-        for (int i = 0; i < n - 1; i++) {
-            ans = min(ans, dp[k][i][n - 1]);
+        for (int s = 0; s <= 100; ++s) {
+            ans = min(ans, dp[n - 1][k][s]);
         }
         return (int)ans;
     }
 };
-// @lc code=end
+# @lc code=end
