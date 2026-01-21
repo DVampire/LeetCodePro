@@ -31,14 +31,20 @@ public:
         }
         
         ListNode* current = head;
-        while (current->next) {
-            int gcd_val = gcd(current->val, current->next->val);
-            ListNode* newNode = new ListNode(gcd_val);
+        
+        while (current && current->next) {
+            // Get the GCD of current and next node values
+            int gcdValue = gcd(current->val, current->next->val);
             
-            newNode->next = current->next;
-            current->next = newNode;
+            // Create a new node with the GCD value
+            ListNode* gcdNode = new ListNode(gcdValue);
             
-            current = newNode->next;
+            // Insert the new node between current and next
+            gcdNode->next = current->next;
+            current->next = gcdNode;
+            
+            // Move to the next original node (skip the newly inserted node)
+            current = gcdNode->next;
         }
         
         return head;

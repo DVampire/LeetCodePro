@@ -1,13 +1,22 @@
-//
-// @lc app=leetcode id=1670 lang=cpp
-//
-// [1670] Design Front Middle Back Queue
-//
-
-// @lc code=start
+#
+# @lc app=leetcode id=1670 lang=cpp
+#
+# [1670] Design Front Middle Back Queue
+#
+# @lc code=start
 class FrontMiddleBackQueue {
 private:
-    deque<int> q;
+    deque<int> left, right;
+    
+    void balance() {
+        if (left.size() > right.size()) {
+            right.push_front(left.back());
+            left.pop_back();
+        } else if (right.size() > left.size() + 1) {
+            left.push_back(right.front());
+            right.pop_front();
+        }
+    }
     
 public:
     FrontMiddleBackQueue() {
@@ -15,37 +24,62 @@ public:
     }
     
     void pushFront(int val) {
-        q.push_front(val);
+        left.push_front(val);
+        balance();
     }
     
     void pushMiddle(int val) {
-        int mid = q.size() / 2;
-        q.insert(q.begin() + mid, val);
+        if (left.size() == right.size()) {
+            right.push_front(val);
+        } else {
+            left.push_back(val);
+        }
     }
     
     void pushBack(int val) {
-        q.push_back(val);
+        right.push_back(val);
+        balance();
     }
     
     int popFront() {
-        if (q.empty()) return -1;
-        int val = q.front();
-        q.pop_front();
+        if (left.empty() && right.empty()) return -1;
+        int val;
+        if (left.empty()) {
+            val = right.front();
+            right.pop_front();
+        } else {
+            val = left.front();
+            left.pop_front();
+        }
+        balance();
         return val;
     }
     
     int popMiddle() {
-        if (q.empty()) return -1;
-        int mid = (q.size() - 1) / 2;
-        int val = q[mid];
-        q.erase(q.begin() + mid);
+        if (left.empty() && right.empty()) return -1;
+        int val;
+        if (left.size() == right.size()) {
+            val = left.back();
+            left.pop_back();
+        } else {
+            val = right.front();
+            right.pop_front();
+        }
+        balance();
         return val;
     }
     
     int popBack() {
-        if (q.empty()) return -1;
-        int val = q.back();
-        q.pop_back();
+        if (left.empty() && right.empty()) return -1;
+        int val;
+        if (right.empty()) {
+            val = left.back();
+            left.pop_back();
+        } else {
+            val = right.back();
+            right.pop_back();
+        }
+        balance();
         return val;
     }
 };
@@ -60,4 +94,4 @@ public:
  * int param_5 = obj->popMiddle();
  * int param_6 = obj->popBack();
  */
-// @lc code=end
+# @lc code=end

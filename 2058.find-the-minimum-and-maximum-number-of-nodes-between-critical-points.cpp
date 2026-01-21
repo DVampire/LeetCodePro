@@ -17,41 +17,44 @@
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        // We need at least 3 nodes to have a critical point
         if (!head || !head->next || !head->next->next) {
             return {-1, -1};
         }
         
-        vector<int> criticalPoints;
+        int firstCritical = -1;
+        int prevCritical = -1;
+        int minDistance = INT_MAX;
+        
         ListNode* prev = head;
         ListNode* curr = head->next;
-        int position = 1; // position of curr (0-indexed from head)
+        int position = 1;
         
         while (curr->next) {
-            // Check if curr is a local maxima or minima
-            if ((curr->val > prev->val && curr->val > curr->next->val) ||
-                (curr->val < prev->val && curr->val < curr->next->val)) {
-                criticalPoints.push_back(position);
+            ListNode* next = curr->next;
+            
+            // Check if current node is a critical point
+            if ((curr->val > prev->val && curr->val > next->val) ||
+                (curr->val < prev->val && curr->val < next->val)) {
+                
+                if (firstCritical == -1) {
+                    firstCritical = position;
+                } else {
+                    minDistance = min(minDistance, position - prevCritical);
+                }
+                prevCritical = position;
             }
             
             prev = curr;
-            curr = curr->next;
+            curr = next;
             position++;
         }
         
-        // If we have fewer than 2 critical points
-        if (criticalPoints.size() < 2) {
+        // If fewer than 2 critical points
+        if (firstCritical == -1 || prevCritical == firstCritical) {
             return {-1, -1};
         }
         
-        // Calculate minimum distance (between consecutive critical points)
-        int minDistance = INT_MAX;
-        for (int i = 1; i < criticalPoints.size(); i++) {
-            minDistance = min(minDistance, criticalPoints[i] - criticalPoints[i-1]);
-        }
-        
-        // Calculate maximum distance (between first and last critical point)
-        int maxDistance = criticalPoints.back() - criticalPoints.front();
+        int maxDistance = prevCritical - firstCritical;
         
         return {minDistance, maxDistance};
     }

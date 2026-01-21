@@ -1,19 +1,18 @@
-#
-# @lc app=leetcode id=2296 lang=cpp
-#
-# [2296] Design a Text Editor
-#
+//
+// @lc app=leetcode id=2296 lang=cpp
+//
+// [2296] Design a Text Editor
+//
 
-# @lc code=start
+// @lc code=start
 class TextEditor {
 private:
     string left;  // Characters to the left of cursor
-    string right; // Characters to the right of cursor
+    string right; // Characters to the right of cursor (stored in reverse)
     
 public:
     TextEditor() {
-        left = "";
-        right = "";
+        
     }
     
     void addText(string text) {
@@ -28,26 +27,22 @@ public:
     
     string cursorLeft(int k) {
         int moves = min(k, (int)left.size());
-        for (int i = 0; i < moves; i++) {
-            right += left.back();
+        while (moves--) {
+            right.push_back(left.back());
             left.pop_back();
         }
-        return getLeftChars();
+        int len = min(10, (int)left.size());
+        return len == 0 ? "" : left.substr(left.size() - len);
     }
     
     string cursorRight(int k) {
         int moves = min(k, (int)right.size());
-        for (int i = 0; i < moves; i++) {
-            left += right.back();
+        while (moves--) {
+            left.push_back(right.back());
             right.pop_back();
         }
-        return getLeftChars();
-    }
-    
-private:
-    string getLeftChars() {
         int len = min(10, (int)left.size());
-        return left.substr(left.size() - len, len);
+        return len == 0 ? "" : left.substr(left.size() - len);
     }
 };
 
@@ -59,4 +54,4 @@ private:
  * string param_3 = obj->cursorLeft(k);
  * string param_4 = obj->cursorRight(k);
  */
-# @lc code=end
+// @lc code=end
