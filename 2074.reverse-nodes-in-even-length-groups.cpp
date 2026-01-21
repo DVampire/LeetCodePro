@@ -1,12 +1,9 @@
-#include <bits/stdc++.h>
-using namespace std;
-
-// @lc app=leetcode id=2074 lang=cpp
-//
-// [2074] Reverse Nodes in Even Length Groups
-//
-
-// @lc code=start
+#
+# @lc app=leetcode id=2074 lang=cpp
+#
+# [2074] Reverse Nodes in Even Length Groups
+#
+# @lc code=start
 /**
  * Definition for singly-linked list.
  * struct ListNode {
@@ -19,55 +16,55 @@ using namespace std;
  */
 class Solution {
 public:
-    // Reverse exactly n nodes starting at head.
-    // Returns {newHead, newTail, successorAfterReversedPart}
-    tuple<ListNode*, ListNode*, ListNode*> reverseN(ListNode* head, int n) {
-        ListNode* prev = nullptr;
-        ListNode* curr = head;
-        while (n-- > 0 && curr) {
-            ListNode* nxt = curr->next;
-            curr->next = prev;
-            prev = curr;
-            curr = nxt;
-        }
-        // prev is new head, head is now tail, curr is successor
-        return {prev, head, curr};
-    }
-
     ListNode* reverseEvenLengthGroups(ListNode* head) {
+        if (!head) return head;
+
         ListNode dummy(0);
         dummy.next = head;
 
-        ListNode* prev = &dummy;
-        int k = 1;
+        ListNode* prevGroup = &dummy;
+        ListNode* curr = head;
+        int groupSize = 1;
 
-        while (prev->next) {
-            ListNode* start = prev->next;
-            ListNode* curr = start;
-            ListNode* end = nullptr;
-            int len = 0;
-
-            // Determine actual length of this group and the end pointer
-            while (len < k && curr) {
-                end = curr;
-                curr = curr->next;
-                len++;
+        while (curr) {
+            // Find actual count of nodes in this group
+            int cnt = 0;
+            ListNode* temp = curr;
+            while (temp && cnt < groupSize) {
+                temp = temp->next;
+                cnt++;
             }
-            ListNode* nextGroup = curr; // node after the group
+            // temp is the node right after this group
 
-            if (len % 2 == 0) {
-                auto [newHead, newTail, succ] = reverseN(start, len);
-                prev->next = newHead;
-                newTail->next = succ; // succ should equal nextGroup
-                prev = newTail;
+            if (cnt % 2 == 0) {
+                // Reverse cnt nodes starting at curr
+                ListNode* node = curr;
+                ListNode* prev = nullptr;
+                for (int i = 0; i < cnt; i++) {
+                    ListNode* nxt = node->next;
+                    node->next = prev;
+                    prev = node;
+                    node = nxt;
+                }
+                // prev = new head of reversed group, curr = old head (now tail)
+                prevGroup->next = prev;
+                curr->next = temp;
+
+                // Move pointers for next iteration
+                prevGroup = curr;
+                curr = temp;
             } else {
-                prev = end;
+                // No reversal; just advance pointers cnt steps
+                for (int i = 0; i < cnt; i++) {
+                    prevGroup = curr;
+                    curr = curr->next;
+                }
             }
 
-            k++;
+            groupSize++;
         }
 
         return dummy.next;
     }
 };
-// @lc code=end
+# @lc code=end

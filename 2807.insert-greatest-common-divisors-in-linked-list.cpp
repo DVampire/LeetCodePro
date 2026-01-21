@@ -3,9 +3,10 @@
 #
 # [2807] Insert Greatest Common Divisors in Linked List
 #
-#include <numeric>
 
 # @lc code=start
+#include <numeric> // for std::gcd
+
 /**
  * Definition for singly-linked list.
  * struct ListNode {
@@ -19,14 +20,15 @@
 class Solution {
 public:
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
+        if (!head || !head->next) return head;
+
         ListNode* cur = head;
         while (cur && cur->next) {
+            int g = std::gcd(cur->val, cur->next->val);
             ListNode* nxt = cur->next;
-            int g = std::gcd(cur->val, nxt->val);
-            ListNode* mid = new ListNode(g);
+            ListNode* mid = new ListNode(g, nxt);
             cur->next = mid;
-            mid->next = nxt;
-            cur = nxt;
+            cur = nxt; // move to the original next node
         }
         return head;
     }

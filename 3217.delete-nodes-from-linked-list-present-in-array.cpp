@@ -1,10 +1,7 @@
-#
-# @lc app=leetcode id=3217 lang=cpp
-#
-# [3217] Delete Nodes From Linked List Present in Array
-#
-# @lc code=start
-/**
+#include <bits/stdc++.h>
+using namespace std;
+
+/*
  * Definition for singly-linked list.
  * struct ListNode {
  *     int val;
@@ -17,24 +14,25 @@
 class Solution {
 public:
     ListNode* modifiedList(vector<int>& nums, ListNode* head) {
-        static const int MAXV = 100000;
-        vector<char> present(MAXV + 1, 0);
-        for (int x : nums) present[x] = 1;
+        // Values are within [1, 1e5]
+        vector<char> del(100001, 0);
+        for (int x : nums) del[x] = 1;
 
         ListNode dummy(0, head);
         ListNode* prev = &dummy;
+        ListNode* cur = head;
 
-        while (prev->next) {
-            if (present[prev->next->val]) {
-                ListNode* del = prev->next;
-                prev->next = del->next;
-                // Optional: delete del;  // not required on LeetCode
+        while (cur) {
+            if (del[cur->val]) {
+                prev->next = cur->next;
+                ListNode* toDelete = cur;
+                cur = cur->next;
+                delete toDelete; // optional
             } else {
-                prev = prev->next;
+                prev = cur;
+                cur = cur->next;
             }
         }
-
         return dummy.next;
     }
 };
-# @lc code=end
