@@ -3,67 +3,67 @@
 #
 # [3419] Minimize the Maximum Edge Weight of Graph
 #
+
 # @lc code=start
 class Solution {
 public:
-    bool canAchieve(int n, vector<vector<int>>& edges, int threshold, int maxWeight) {
-        // Build reverse adjacency list
-        vector<vector<int>> revAdj(n);
-        for (auto& e : edges) {
-            if (e[2] <= maxWeight) {
-                revAdj[e[1]].push_back(e[0]);
-            }
-        }
-        
-        // BFS from 0 in reverse graph
-        vector<bool> reachable(n, false);
-        queue<int> q;
-        q.push(0);
-        reachable[0] = true;
-        
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
-            
-            for (int v : revAdj[u]) {
-                if (!reachable[v]) {
-                    reachable[v] = true;
-                    q.push(v);
-                }
-            }
-        }
-        
-        for (int i = 0; i < n; i++) {
-            if (!reachable[i]) return false;
-        }
-        return true;
-    }
-    
     int minMaxWeight(int n, vector<vector<int>>& edges, int threshold) {
-        if (edges.empty()) return -1;
-        
-        // Get all unique weights and sort them
-        set<int> weightSet;
+        vector<int> weights;
         for (auto& e : edges) {
-            weightSet.insert(e[2]);
+            weights.push_back(e[2]);
         }
-        vector<int> weights(weightSet.begin(), weightSet.end());
+        sort(weights.begin(), weights.end());
+        weights.erase(unique(weights.begin(), weights.end()), weights.end());
         
-        // Binary search on the answer
-        int left = 0, right = weights.size() - 1;
-        int result = -1;
+        int m = weights.size();
+        int left = 0, right = m - 1;
+        int ans = -1;
         
         while (left <= right) {
-            int mid = left + (right - left) / 2;
-            if (canAchieve(n, edges, threshold, weights[mid])) {
-                result = weights[mid];
+            int mid = (left + right) / 2;
+            if (canReach(n, edges, weights[mid])) {
+                ans = weights[mid];
                 right = mid - 1;
             } else {
                 left = mid + 1;
             }
         }
         
-        return result;
+        return ans;
+    }
+    
+private:
+    bool canReach(int n, vector<vector<int>>& edges, int maxWeight) {
+        // Build reversed graph with edges of weight <= maxWeight
+        vector<vector<int>> revAdj(n);
+        for (auto& e : edges) {
+            if (e[2] <= maxWeight) {
+                // Original: e[0] -> e[1], Reversed: e[1] -> e[0]
+                revAdj[e[1]].push_back(e[0]);
+            }
+        }
+        
+        // BFS from node 0 in reversed graph
+        vector<bool> visited(n, false);
+        queue<int> q;
+        q.push(0);
+        visited[0] = true;
+        int count = 1;
+        
+        while (!q.empty()) {
+            int node = q.front();
+            q.pop();
+            
+            for (int neighbor : revAdj[node]) {
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    count++;
+                    q.push(neighbor);
+                }
+            }
+        }
+        
+        return count == n;
     }
 };
 # @lc code=end

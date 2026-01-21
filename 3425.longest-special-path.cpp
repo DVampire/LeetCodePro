@@ -1,64 +1,73 @@
-#
-# @lc app=leetcode id=3425 lang=cpp
-#
-# [3425] Longest Special Path
-#
-# @lc code=start
+//
+// @lc app=leetcode id=3425 lang=cpp
+//
+// [3425] Longest Special Path
+//
+
+// @lc code=start
 class Solution {
 public:
     vector<int> longestSpecialPath(vector<vector<int>>& edges, vector<int>& nums) {
         int n = nums.size();
-        vector<vector<pair<int, int>>> graph(n);
         
-        for (auto& edge : edges) {
-            int u = edge[0], v = edge[1], len = edge[2];
-            graph[u].push_back({v, len});
-            graph[v].push_back({u, len});
+        // Build adjacency list
+        vector<vector<pair<int, int>>> adj(n);
+        for (auto& e : edges) {
+            int u = e[0], v = e[1], w = e[2];
+            adj[u].push_back({v, w});
+            adj[v].push_back({u, w});
         }
         
-        int maxLen = 0;
-        int minNodes = 1;
+        // last_occ[val] = depth where val was last seen in current path
+        unordered_map<int, int> last_occ;
+        // Distance prefix sums from root
+        vector<long long> dist = {0};
         
-        vector<int> path;
-        vector<int> edgeLens;
+        long long max_length = 0;
+        int min_nodes = 1;
         
-        function<void(int, int)> dfs = [&](int node, int parent) {
-            path.push_back(node);
+        function<void(int, int, int, int)> dfs = [&](int u, int parent, int depth, int left_bound) {
+            int val = nums[u];
             
-            unordered_set<int> seenValues;
-            int pathLen = 0;
+            // Save previous occurrence and update left_bound if needed
+            int prev_occ = -1;
+            auto it = last_occ.find(val);
+            if (it != last_occ.end()) {
+                prev_occ = it->second;
+                left_bound = max(left_bound, prev_occ + 1);
+            }
+            last_occ[val] = depth;
             
-            for (int i = path.size() - 1; i >= 0; i--) {
-                int val = nums[path[i]];
-                if (seenValues.count(val)) break;
-                seenValues.insert(val);
-                
-                int nodes = path.size() - i;
-                
-                if (pathLen > maxLen || (pathLen == maxLen && nodes < minNodes)) {
-                    maxLen = pathLen;
-                    minNodes = nodes;
-                }
-                
-                if (i > 0) {
-                    pathLen += edgeLens[i - 1];
+            // Calculate path metrics from left_bound to current depth
+            long long path_length = dist[depth] - dist[left_bound];
+            int path_nodes = depth - left_bound + 1;
+            
+            // Update answer
+            if (path_length > max_length || (path_length == max_length && path_nodes < min_nodes)) {
+                max_length = path_length;
+                min_nodes = path_nodes;
+            }
+            
+            // DFS to children
+            for (auto& [v, w] : adj[u]) {
+                if (v != parent) {
+                    dist.push_back(dist.back() + w);
+                    dfs(v, u, depth + 1, left_bound);
+                    dist.pop_back();
                 }
             }
             
-            for (auto [neighbor, edgeLen] : graph[node]) {
-                if (neighbor != parent) {
-                    edgeLens.push_back(edgeLen);
-                    dfs(neighbor, node);
-                    edgeLens.pop_back();
-                }
+            // Restore state for backtracking
+            if (prev_occ == -1) {
+                last_occ.erase(val);
+            } else {
+                last_occ[val] = prev_occ;
             }
-            
-            path.pop_back();
         };
         
-        dfs(0, -1);
+        dfs(0, -1, 0, 0);
         
-        return {maxLen, minNodes};
+        return {(int)max_length, min_nodes};
     }
 };
-# @lc code=end
+// @lc code=end

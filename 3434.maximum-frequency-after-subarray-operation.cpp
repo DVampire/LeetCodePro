@@ -7,37 +7,29 @@
 class Solution {
 public:
     int maxFrequency(vector<int>& nums, int k) {
-        // Count initial frequency of k
-        int base_count = 0;
-        for (int num : nums) {
-            if (num == k) base_count++;
-        }
+        int n = nums.size();
+        int total_k = count(nums.begin(), nums.end(), k);
+        int result = total_k;
         
-        int max_freq = base_count;
-        
-        // Try converting each unique value to k
-        set<int> unique_values(nums.begin(), nums.end());
-        for (int target_value : unique_values) {
-            if (target_value == k) continue;
+        // For each possible value v that we want to convert to k
+        for (int v = 1; v <= 50; v++) {
+            if (v == k) continue;
             
-            // Use Kadane's algorithm to find the best subarray
-            // contribution = +1 if we convert target_value to k
-            // contribution = -1 if we lose an existing k
-            int max_gain = 0;
-            int current_sum = 0;
-            for (int num : nums) {
+            // Kadane's algorithm to find max subarray sum
+            // where +1 for v's and -1 for k's
+            int max_sum = 0, cur_sum = 0;
+            for (int i = 0; i < n; i++) {
                 int contribution = 0;
-                if (num == target_value) contribution = 1;
-                else if (num == k) contribution = -1;
+                if (nums[i] == v) contribution = 1;
+                else if (nums[i] == k) contribution = -1;
                 
-                current_sum = max(0, current_sum + contribution);
-                max_gain = max(max_gain, current_sum);
+                cur_sum = max(0, cur_sum + contribution);
+                max_sum = max(max_sum, cur_sum);
             }
-            
-            max_freq = max(max_freq, base_count + max_gain);
+            result = max(result, total_k + max_sum);
         }
         
-        return max_freq;
+        return result;
     }
 };
 # @lc code=end
