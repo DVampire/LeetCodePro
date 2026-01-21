@@ -16,19 +16,27 @@
  */
 class Solution {
 public:
+    int gcd(int a, int b) {
+        while (b != 0) {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+    
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
         if (head == nullptr || head->next == nullptr) {
             return head;
         }
         
         ListNode* current = head;
-        
         while (current != nullptr && current->next != nullptr) {
-            int gcdVal = __gcd(current->val, current->next->val);
-            ListNode* newNode = new ListNode(gcdVal);
+            int gcdValue = gcd(current->val, current->next->val);
+            ListNode* newNode = new ListNode(gcdValue);
             newNode->next = current->next;
             current->next = newNode;
-            current = newNode->next; // Move to the original next node
+            current = newNode->next;
         }
         
         return head;

@@ -6,17 +6,12 @@
 # @lc code=start
 class TextEditor {
 private:
-    string left;  // characters to the left of cursor
-    string right; // characters to the right of cursor (stored in reverse order)
-    
-    string getLeft10() {
-        int len = left.size();
-        if (len <= 10) return left;
-        return left.substr(len - 10);
-    }
+    string left, right;
     
 public:
     TextEditor() {
+        left = "";
+        right = "";
     }
     
     void addText(string text) {
@@ -35,7 +30,8 @@ public:
             right.push_back(left.back());
             left.pop_back();
         }
-        return getLeft10();
+        int len = min(10, (int)left.size());
+        return left.substr(left.size() - len, len);
     }
     
     string cursorRight(int k) {
@@ -44,7 +40,8 @@ public:
             left.push_back(right.back());
             right.pop_back();
         }
-        return getLeft10();
+        int len = min(10, (int)left.size());
+        return left.substr(left.size() - len, len);
     }
 };
 

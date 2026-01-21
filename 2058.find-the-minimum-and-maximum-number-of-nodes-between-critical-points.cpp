@@ -17,46 +17,46 @@
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        // Need at least 3 nodes for any critical point to exist
+        // We need at least 3 nodes for a critical point
         if (!head || !head->next || !head->next->next) {
             return {-1, -1};
         }
         
-        int firstCritical = -1;
-        int lastCritical = -1;
-        int minDistance = INT_MAX;
+        int firstCritical = -1, lastCritical = -1, prevCritical = -1;
+        int minDist = INT_MAX;
         
         ListNode* prev = head;
         ListNode* curr = head->next;
         int index = 1;
         
-        while (curr->next) {
-            int prevVal = prev->val;
-            int currVal = curr->val;
-            int nextVal = curr->next->val;
+        while (curr->next != nullptr) {
+            ListNode* next = curr->next;
             
             // Check if current node is a critical point (local maxima or minima)
-            if ((currVal > prevVal && currVal > nextVal) || 
-                (currVal < prevVal && currVal < nextVal)) {
+            if ((curr->val > prev->val && curr->val > next->val) || 
+                (curr->val < prev->val && curr->val < next->val)) {
                 if (firstCritical == -1) {
                     firstCritical = index;
                 } else {
-                    minDistance = min(minDistance, index - lastCritical);
+                    minDist = min(minDist, index - prevCritical);
                 }
+                prevCritical = index;
                 lastCritical = index;
             }
             
             prev = curr;
-            curr = curr->next;
+            curr = next;
             index++;
         }
         
-        // If fewer than 2 critical points
+        // If fewer than 2 critical points, return [-1, -1]
         if (firstCritical == lastCritical) {
             return {-1, -1};
         }
         
-        return {minDistance, lastCritical - firstCritical};
+        int maxDist = lastCritical - firstCritical;
+        
+        return {minDist, maxDist};
     }
 };
 # @lc code=end

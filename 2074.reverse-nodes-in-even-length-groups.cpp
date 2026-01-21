@@ -17,50 +17,46 @@
 class Solution {
 public:
     ListNode* reverseEvenLengthGroups(ListNode* head) {
-        if (!head || !head->next) return head;
+        ListNode dummy(0, head);
+        ListNode* prevGroupEnd = &dummy;
         
-        ListNode* prev = head; // Node before the current group
-        int groupSize = 2; // Start from group 2 (group 1 with size 1 is always odd)
+        int groupNum = 1;
         
-        while (prev->next) {
+        while (prevGroupEnd->next) {
             // Count actual nodes in this group
-            ListNode* curr = prev->next;
             int count = 0;
-            while (curr && count < groupSize) {
+            ListNode* curr = prevGroupEnd->next;
+            while (curr && count < groupNum) {
                 count++;
                 curr = curr->next;
             }
             
-            // If actual count is even, reverse
             if (count % 2 == 0) {
-                // Reverse 'count' nodes starting from prev->next
-                ListNode* tail = prev->next; // This will become the tail after reversal
-                ListNode* current = prev->next;
-                ListNode* prevNode = nullptr;
+                // Reverse this group
+                ListNode* groupStart = prevGroupEnd->next;
+                ListNode* prev = curr; // Node after the group (or nullptr)
+                ListNode* node = groupStart;
                 
                 for (int i = 0; i < count; i++) {
-                    ListNode* nextNode = current->next;
-                    current->next = prevNode;
-                    prevNode = current;
-                    current = nextNode;
+                    ListNode* next = node->next;
+                    node->next = prev;
+                    prev = node;
+                    node = next;
                 }
                 
-                // prevNode is now the new head of reversed portion
-                // current is the node after the reversed portion
-                prev->next = prevNode;
-                tail->next = current;
-                prev = tail;
+                prevGroupEnd->next = prev;
+                prevGroupEnd = groupStart;
             } else {
-                // Skip 'count' nodes
+                // No reversal, just move prevGroupEnd to the end of this group
                 for (int i = 0; i < count; i++) {
-                    prev = prev->next;
+                    prevGroupEnd = prevGroupEnd->next;
                 }
             }
             
-            groupSize++;
+            groupNum++;
         }
         
-        return head;
+        return dummy.next;
     }
 };
 # @lc code=end
