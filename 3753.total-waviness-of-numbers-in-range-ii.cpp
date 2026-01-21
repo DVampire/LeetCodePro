@@ -3,107 +3,72 @@
 #
 # [3753] Total Waviness of Numbers in Range II
 #
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc code=start
 class Solution {
-    static inline int isPeakOrValley(int a, int b, int c) {
-        return ((b > a && b > c) || (b < a && b < c)) ? 1 : 0;
-    }
-
-    long long solve(long long n) {
-        if (n < 0) return 0;
-        string s = to_string(n);
-        int L = (int)s.size();
-
-        // last1, last2 in [0..9], sentinel 10 means "not available"
-        static long long cnt[2][11][11];
-        static long long sum[2][11][11];
-        static long long ncnt[2][11][11];
-        static long long nsum[2][11][11];
-
-        for (int t = 0; t < 2; t++)
-            for (int a = 0; a <= 10; a++)
-                for (int b = 0; b <= 10; b++)
-                    cnt[t][a][b] = sum[t][a][b] = 0;
-
-        // Start: tight=1, not started => last1=10, last2=10
-        cnt[1][10][10] = 1;
-
-        for (int pos = 0; pos < L; pos++) {
-            for (int t = 0; t < 2; t++)
-                for (int a = 0; a <= 10; a++)
-                    for (int b = 0; b <= 10; b++)
-                        ncnt[t][a][b] = nsum[t][a][b] = 0;
-
-            int limDigit = s[pos] - '0';
-
-            for (int tight = 0; tight <= 1; tight++) {
-                int limit = tight ? limDigit : 9;
-                for (int last2 = 0; last2 <= 10; last2++) {
-                    for (int last1 = 0; last1 <= 10; last1++) {
-                        long long c = cnt[tight][last2][last1];
-                        if (c == 0) continue;
-                        long long sm = sum[tight][last2][last1];
-
-                        bool started = (last1 != 10);
-
-                        for (int x = 0; x <= limit; x++) {
-                            int ntight = (tight && x == limit);
-
-                            int nlast2 = 10, nlast1 = 10;
-                            int add = 0;
-
-                            if (!started) {
-                                if (x == 0) {
-                                    // still not started
-                                    nlast2 = 10;
-                                    nlast1 = 10;
-                                } else {
-                                    // start number
-                                    nlast2 = 10;
-                                    nlast1 = x;
-                                }
-                            } else {
-                                if (last2 == 10) {
-                                    // length becomes 2, still cannot form peak/valley
-                                    nlast2 = last1;
-                                    nlast1 = x;
-                                } else {
-                                    // last1 becomes an interior digit now
-                                    add = isPeakOrValley(last2, last1, x);
-                                    nlast2 = last1;
-                                    nlast1 = x;
-                                }
-                            }
-
-                            ncnt[ntight][nlast2][nlast1] += c;
-                            nsum[ntight][nlast2][nlast1] += sm + c * add;
-                        }
-                    }
-                }
-            }
-
-            for (int t = 0; t < 2; t++)
-                for (int a = 0; a <= 10; a++)
-                    for (int b = 0; b <= 10; b++) {
-                        cnt[t][a][b] = ncnt[t][a][b];
-                        sum[t][a][b] = nsum[t][a][b];
-                    }
-        }
-
-        long long total = 0;
-        for (int tight = 0; tight <= 1; tight++)
-            for (int last2 = 0; last2 <= 10; last2++)
-                for (int last1 = 0; last1 <= 10; last1++)
-                    total += sum[tight][last2][last1];
-        return total;
-    }
-
 public:
     long long totalWaviness(long long num1, long long num2) {
-        return solve(num2) - solve(num1 - 1);
+        struct Res {
+            long long cnt, sumw;
+            Res(long long c = -1LL, long long s = 0LL) : cnt(c), sumw(s) {}
+        };
+
+        auto solve = [&](auto&& self, long long n) -> long long {
+            if (n <= 0) return 0LL;
+            string S = to_string(n);
+            int L = S.length();
+            const int MAX_POS = 17;
+            const int MAX_PV = 11;
+            int total_states = MAX_POS * 2 * 2 * MAX_PV * MAX_PV;
+            vector<Res> memo(total_states);
+
+            auto get_idx = [&](int pos, int tig, int lea, int p1, int p2) -> int {
+                return (((pos * 2 + tig) * 2 + lea) * MAX_PV + (p1 + 1)) * MAX_PV + (p2 + 1);
+            };
+
+            function<Res(int, int, int, int, int)> dfs = [&](int pos, int tight, int lead, int prev1, int prev2) -> Res {
+                if (pos == L) {
+                    return Res(1LL, 0LL);
+                }
+                int idx = get_idx(pos, tight, lead, prev1, prev2);
+                if (memo[idx].cnt != -1LL) {
+                    return memo[idx];
+                }
+                Res ans(0LL, 0LL);
+                int up = tight ? (S[pos] - '0') : 9;
+                for (int d = 0; d <= up; ++d) {
+                    int ntight = tight && (d == up);
+                    int nlead = lead && (d == 0);
+                    int np1 = -1;
+                    int np2 = -1;
+                    long long contrib = 0LL;
+                    if (!nlead) {
+                        int op1 = prev1;
+                        int op2 = prev2;
+                        np1 = d;
+                        np2 = op1;
+                        if (op2 != -1) {
+                            int mid = op1;
+                            if ((mid > op2 && mid > d) || (mid < op2 && mid < d)) {
+                                contrib = 1LL;
+                            }
+                        }
+                    }
+                    Res sub = dfs(pos + 1, ntight, nlead, np1, np2);
+                    ans.cnt += sub.cnt;
+                    ans.sumw += sub.sumw + contrib * sub.cnt;
+                }
+                memo[idx] = ans;
+                return ans;
+            };
+
+            return dfs(0, 1, 1, -1, -1).sumw;
+        };
+
+        return solve(solve, num2) - solve(solve, num1 - 1);
     }
 };
-// @lc code=end
+# @lc code=end

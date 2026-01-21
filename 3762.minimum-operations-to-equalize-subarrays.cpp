@@ -1,192 +1,143 @@
+#
+# @lc app=leetcode id=3762 lang=cpp
+#
+# [3762] Minimum Operations to Equalize Subarrays
+#
+
+# @lc code=start
 #include <bits/stdc++.h>
 using namespace std;
 
-// @lc app=leetcode id=3762 lang=cpp
-//
-// [3762] Minimum Operations to Equalize Subarrays
-//
-
-// @lc code=start
 class Solution {
-    struct WaveletTree {
-        int lo, hi;
-        WaveletTree *l = nullptr, *r = nullptr;
-        vector<int> b;              // prefix count going to left
-        vector<long long> sLeft;    // prefix sum of values going to left
-        vector<long long> prefAll;  // prefix sum of all values at this node
+public:
+    vector<long long> minOperations(vector<int>& nums, int _k, vector<vector<int>>& queries) {
+        int n = nums.size();
+        long long k = _k;
+        vector<long long> mods(n), p(n);
+        for (int i = 0; i < n; ++i) {
+            long long num = nums[i];
+            mods[i] = num % k;
+            p[i] = num / k;
+        }
 
-        WaveletTree(const vector<int>& arr, int _lo, int _hi) : lo(_lo), hi(_hi) {
-            int n = (int)arr.size();
-            b.assign(n + 1, 0);
-            sLeft.assign(n + 1, 0);
-            prefAll.assign(n + 1, 0);
-            if (n == 0) return;
-            if (lo == hi) {
-                for (int i = 0; i < n; i++) {
-                    prefAll[i + 1] = prefAll[i] + arr[i];
-                }
+        // Prefix sum for total sum of p
+        vector<long long> presum(n + 1, 0);
+        for (int i = 1; i <= n; ++i) {
+            presum[i] = presum[i - 1] + p[i - 1];
+        }
+
+        // Sparse table for min/max mods
+        const int LOG = 17;
+        vector<vector<long long>> spmin(LOG, vector<long long>(n));
+        vector<vector<long long>> spmax(LOG, vector<long long>(n));
+        for (int i = 0; i < n; ++i) {
+            spmin[0][i] = spmax[0][i] = mods[i];
+        }
+        for (int j = 1; j < LOG; ++j) {
+            for (int i = 0; i + (1 << j) <= n; ++i) {
+                spmin[j][i] = min(spmin[j - 1][i], spmin[j - 1][i + (1 << (j - 1))]);
+                spmax[j][i] = max(spmax[j - 1][i], spmax[j - 1][i + (1 << (j - 1))]);
+            }
+        }
+        auto get_min = [&](int l, int r) -> long long {
+            int len = r - l + 1;
+            int j = 31 - __builtin_clz(len);
+            return min(spmin[j][l], spmin[j][r - (1 << j) + 1]);
+        };
+        auto get_max = [&](int l, int r) -> long long {
+            int len = r - l + 1;
+            int j = 31 - __builtin_clz(len);
+            return max(spmax[j][l], spmax[j][r - (1 << j) + 1]);
+        };
+
+        // Merge-sort tree
+        int tsize = 4 * n;
+        vector<vector<long long>> tree_sorted(tsize);
+        vector<vector<long long>> tree_prefix(tsize);
+
+        function<void(int, int, int)> build = [&](int node, int start, int end) {
+            if (start == end) {
+                tree_sorted[node] = {p[start]};
+                tree_prefix[node] = {0LL, p[start]};
                 return;
             }
-            int mid = lo + (hi - lo) / 2;
-            vector<int> leftArr; leftArr.reserve(n);
-            vector<int> rightArr; rightArr.reserve(n);
+            int mid = (start + end) / 2;
+            build(2 * node, start, mid);
+            build(2 * node + 1, mid + 1, end);
+            vector<long long>& left = tree_sorted[2 * node];
+            vector<long long>& right = tree_sorted[2 * node + 1];
+            vector<long long> merged;
+            merged.reserve(left.size() + right.size());
+            merge(left.begin(), left.end(), right.begin(), right.end(), back_inserter(merged));
+            tree_sorted[node] = std::move(merged);
+            int sz = tree_sorted[node].size();
+            tree_prefix[node].resize(sz + 1);
+            tree_prefix[node][0] = 0;
+            for (int i = 1; i <= sz; ++i) {
+                tree_prefix[node][i] = tree_prefix[node][i - 1] + tree_sorted[node][i - 1];
+            }
+        };
+        build(1, 0, n - 1);
 
-            for (int i = 0; i < n; i++) {
-                int x = arr[i];
-                prefAll[i + 1] = prefAll[i] + x;
-                if (x <= mid) {
-                    leftArr.push_back(x);
-                    b[i + 1] = b[i] + 1;
-                    sLeft[i + 1] = sLeft[i] + x;
-                } else {
-                    rightArr.push_back(x);
-                    b[i + 1] = b[i];
-                    sLeft[i + 1] = sLeft[i];
+        function<pair<long long, long long>(int, int, int, int, int, long long)> query_sumcnt =
+            [&](int node, int start, int end, int ql, int qr, long long val) -> pair<long long, long long> {
+                if (qr < start || ql > end) return {0, 0};
+                if (ql <= start && end <= qr) {
+                    auto& v = tree_sorted[node];
+                    auto it = upper_bound(v.begin(), v.end(), val);
+                    int pos = it - v.begin();
+                    long long cnt = pos;
+                    long long sm = tree_prefix[node][pos];
+                    return {cnt, sm};
                 }
-            }
+                int mid = (start + end) / 2;
+                auto left = query_sumcnt(2 * node, start, mid, ql, qr, val);
+                auto right = query_sumcnt(2 * node + 1, mid + 1, end, ql, qr, val);
+                return {left.first + right.first, left.second + right.second};
+            };
 
-            if (!leftArr.empty()) l = new WaveletTree(leftArr, lo, mid);
-            if (!rightArr.empty()) r = new WaveletTree(rightArr, mid + 1, hi);
-        }
+        auto get_count = [&](int l, int r, long long val) -> long long {
+            return query_sumcnt(1, 0, n - 1, l, r, val).first;
+        };
+        auto get_sum = [&](int l, int r, long long val) -> long long {
+            return query_sumcnt(1, 0, n - 1, l, r, val).second;
+        };
 
-        ~WaveletTree() {
-            delete l;
-            delete r;
-        }
-
-        // kth smallest in positions [L,R] (1-indexed), k is 1-indexed
-        int kth(int L, int R, int k) const {
-            if (L > R) return 0;
-            if (lo == hi) return lo;
-            int inLeft = b[R] - b[L - 1];
-            if (k <= inLeft) {
-                if (!l) return lo; // should not happen if counts consistent
-                int nL = b[L - 1] + 1;
-                int nR = b[R];
-                return l->kth(nL, nR, k);
-            } else {
-                if (!r) return hi;
-                int nL = L - b[L - 1];
-                int nR = R - b[R];
-                return r->kth(nL, nR, k - inLeft);
-            }
-        }
-
-        // returns {count, sum} of values <= x in positions [L,R] (1-indexed)
-        pair<long long,long long> lteCountSum(int L, int R, int x) const {
-            if (L > R || x < lo) return {0LL, 0LL};
-            if (hi <= x) {
-                long long cnt = R - L + 1LL;
-                long long sum = prefAll[R] - prefAll[L - 1];
-                return {cnt, sum};
-            }
-            if (lo == hi) {
-                // here lo==hi>x cannot happen due to previous checks
-                long long cnt = R - L + 1LL;
-                long long sum = prefAll[R] - prefAll[L - 1];
-                return {cnt, sum};
-            }
-            int mid = lo + (hi - lo) / 2;
-            int leftCount = b[R] - b[L - 1];
-            long long leftSum = sLeft[R] - sLeft[L - 1];
-            if (x <= mid) {
-                if (!l) return {0LL, 0LL};
-                int nL = b[L - 1] + 1;
-                int nR = b[R];
-                return l->lteCountSum(nL, nR, x);
-            } else {
-                pair<long long,long long> resL = {leftCount, leftSum};
-                if (!r) return resL;
-                int nL = L - b[L - 1];
-                int nR = R - b[R];
-                auto resR = r->lteCountSum(nL, nR, x);
-                return {resL.first + resR.first, resL.second + resR.second};
-            }
-        }
-    };
-
-    struct SparseMinMax {
-        int n = 0;
-        int LG = 0;
-        vector<int> lg;
-        vector<vector<int>> stMin, stMax;
-
-        SparseMinMax() {}
-        SparseMinMax(const vector<int>& a) { build(a); }
-
-        void build(const vector<int>& a) {
-            n = (int)a.size();
-            LG = 1;
-            while ((1 << LG) <= n) LG++;
-            stMin.assign(LG, vector<int>(n));
-            stMax.assign(LG, vector<int>(n));
-            stMin[0] = a;
-            stMax[0] = a;
-            for (int j = 1; j < LG; j++) {
-                int len = 1 << j;
-                int half = len >> 1;
-                for (int i = 0; i + len <= n; i++) {
-                    stMin[j][i] = min(stMin[j-1][i], stMin[j-1][i+half]);
-                    stMax[j][i] = max(stMax[j-1][i], stMax[j-1][i+half]);
-                }
-            }
-            lg.assign(n + 1, 0);
-            for (int i = 2; i <= n; i++) lg[i] = lg[i/2] + 1;
-        }
-
-        pair<int,int> query(int l, int r) const {
+        auto find_median = [&](int l, int r) -> long long {
             int len = r - l + 1;
-            int p = lg[len];
-            int span = 1 << p;
-            int mn = min(stMin[p][l], stMin[p][r - span + 1]);
-            int mx = max(stMax[p][l], stMax[p][r - span + 1]);
-            return {mn, mx};
-        }
-    };
+            long long target_k = (len + 1LL) / 2;
+            long long low = 0, high = 2000000000LL;
+            while (low < high) {
+                long long midv = low + (high - low) / 2;
+                if (get_count(l, r, midv) >= target_k) {
+                    high = midv;
+                } else {
+                    low = midv + 1;
+                }
+            }
+            return low;
+        };
 
-public:
-    vector<long long> minOperations(vector<int>& nums, int k, vector<vector<int>>& queries) {
-        int n = (int)nums.size();
-        vector<int> rem(n), b(n);
-        for (int i = 0; i < n; i++) {
-            rem[i] = nums[i] % k;
-            b[i] = nums[i] / k;
-        }
-
-        SparseMinMax rmq(rem);
-
-        int mnB = *min_element(b.begin(), b.end());
-        int mxB = *max_element(b.begin(), b.end());
-        WaveletTree wt(b, mnB, mxB);
-
-        vector<long long> pref(n + 1, 0);
-        for (int i = 0; i < n; i++) pref[i + 1] = pref[i] + (long long)b[i];
-
+        // Process queries
         vector<long long> ans;
-        ans.reserve(queries.size());
-
-        for (auto &q : queries) {
+        for (auto& q : queries) {
             int l = q[0], r = q[1];
-            auto [mnR, mxR] = rmq.query(l, r);
-            if (mnR != mxR) {
+            long long minm = get_min(l, r);
+            long long maxm = get_max(l, r);
+            if (minm != maxm) {
                 ans.push_back(-1);
                 continue;
             }
-            int len = r - l + 1;
-            if (len == 1) {
-                ans.push_back(0);
-                continue;
-            }
-            int L = l + 1, R = r + 1; // wavelet tree uses 1-indexed positions
-            int med = wt.kth(L, R, (len + 1) / 2);
-            auto [cntL, sumL] = wt.lteCountSum(L, R, med);
-            long long total = pref[r + 1] - pref[l];
-            long long sumR = total - sumL;
-            long long cntR = len - cntL;
-            long long ops = 1LL * med * cntL - sumL + (sumR - 1LL * med * cntR);
+            long long med = find_median(l, r);
+            long long total_sum = presum[r + 1] - presum[l];
+            long long cnt_leq = get_count(l, r, med);
+            long long sum_leq = get_sum(l, r, med);
+            long long cnt_gt = (r - l + 1LL) - cnt_leq;
+            long long sum_gt = total_sum - sum_leq;
+            long long ops = cnt_leq * med - sum_leq + sum_gt - cnt_gt * med;
             ans.push_back(ops);
         }
         return ans;
     }
 };
-// @lc code=end
+# @lc code=end

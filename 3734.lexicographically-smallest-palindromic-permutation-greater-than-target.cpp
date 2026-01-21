@@ -5,101 +5,139 @@
 #
 
 # @lc code=start
-#include <bits/stdc++.h>
-using namespace std;
+#include <string>
+#include <vector>
+#include <algorithm>
 
 class Solution {
 public:
-    string lexPalindromicPermutation(string s, string target) {
-        int n = (int)s.size();
-        vector<int> cnt(26, 0);
-        for (char ch : s) cnt[ch - 'a']++;
-
-        int odd = 0, midIdx = -1;
-        for (int c = 0; c < 26; c++) {
-            if (cnt[c] % 2) {
-                odd++;
-                midIdx = c;
-            }
+    std::string lexPalindromicPermutation(std::string s, std::string target) {
+        int n = s.size();
+        std::vector<int> freq(26, 0);
+        for (char ch : s) {
+            freq[ch - 'a']++;
         }
-        if (odd > 1) return "";
-        if (n % 2 == 0) {
-            if (odd != 0) return "";
-        } else {
-            // total length is odd => must have exactly one odd count
-            if (odd != 1) return "";
-        }
-
-        string mid;
-        if (midIdx != -1) mid.push_back(char('a' + midIdx));
-
         int m = n / 2;
-        vector<int> half(26, 0);
-        for (int c = 0; c < 26; c++) half[c] = cnt[c] / 2;
-
-        string A = target.substr(0, m);
-
-        // Check if A itself can be the left half.
-        {
-            vector<int> cntA(26, 0);
-            for (char ch : A) cntA[ch - 'a']++;
-            bool ok = true;
-            for (int c = 0; c < 26; c++) {
-                if (cntA[c] != half[c]) { ok = false; break; }
+        std::vector<int> num_L(26, 0);
+        char mid_char = 0;
+        int odd_cnt = 0;
+        for (int i = 0; i < 26; i++) {
+            num_L[i] = freq[i] / 2;
+            if (freq[i] % 2 == 1) {
+                odd_cnt++;
+                mid_char = 'a' + i;
             }
-            if (ok) {
-                string rev = A;
-                reverse(rev.begin(), rev.end());
-                string P0 = A + mid + rev;
-                if (P0 > target) return P0;
+        }
+        if ((n % 2 == 1 && odd_cnt != 1) || (n % 2 == 0 && odd_cnt != 0)) {
+            return "";
+        }
+
+        std::string T_left = target.substr(0, m);
+        std::vector<int> count_T(26, 0);
+        for (char ch : T_left) {
+            count_T[ch - 'a']++;
+        }
+        bool valid_T = true;
+        for (int i = 0; i < 26; i++) {
+            if (count_T[i] != num_L[i]) {
+                valid_T = false;
+                break;
             }
         }
 
-        // Precompute prefix counts of A.
-        vector<array<int, 26>> pref(m + 1);
-        pref[0].fill(0);
-        for (int i = 0; i < m; i++) {
-            pref[i + 1] = pref[i];
-            pref[i + 1][A[i] - 'a']++;
-        }
-
-        auto prefixFeasible = [&](int p) -> bool {
-            for (int c = 0; c < 26; c++) {
-                if (pref[p][c] > half[c]) return false;
+        auto build = [&](const std::string& L) -> std::string {
+            std::string P(n, '*');
+            for (int i = 0; i < m; i++) {
+                P[i] = L[i];
+                P[n - 1 - i] = L[i];
             }
-            return true;
+            if (n % 2 == 1) {
+                P[m] = mid_char;
+            }
+            return P;
         };
 
-        // Find the smallest multiset permutation H such that H > A.
-        for (int p = m - 1; p >= 0; --p) {
-            if (!prefixFeasible(p)) continue;
-
-            array<int, 26> rem;
-            for (int c = 0; c < 26; c++) rem[c] = half[c] - pref[p][c];
-
-            int a = A[p] - 'a';
-            for (int d = a + 1; d < 26; d++) {
-                if (rem[d] == 0) continue;
-
-                rem[d]--;
-                int L = m - p - 1;
-                string suf;
-                suf.reserve(L);
-                for (int c = 0; c < 26; c++) {
-                    if (rem[c] > 0) suf.append(rem[c], char('a' + c));
-                }
-
-                string H = A.substr(0, p);
-                H.push_back(char('a' + d));
-                H += suf;
-
-                string rev = H;
-                reverse(rev.begin(), rev.end());
-                return H + mid + rev;
+        if (valid_T) {
+            std::string P = build(T_left);
+            if (P > target) {
+                return P;
             }
         }
 
-        return "";
+        // Get next L > T_left
+        std::string nextL = get_next_perm_greater(T_left, num_L, m);
+        if (nextL.empty()) {
+            return "";
+        }
+        return build(nextL);
+    }
+
+private:
+    std::string get_next_perm_greater(const std::string& S, const std::vector<int>& counts, int len) {
+        std::vector<int> rem = counts;
+        std::string X;
+        bool still_equal = true;
+        for (int i = 0; i < len; i++) {
+            bool found = false;
+            for (char ch = 'a'; ch <= 'z'; ch++) {
+                int idx = ch - 'a';
+                if (rem[idx] == 0) continue;
+                rem[idx]--;
+
+                int prefix_cmp;
+                if (!still_equal) {
+                    prefix_cmp = 1;
+                } else {
+                    char s_ch = S[i];
+                    if (ch > s_ch) prefix_cmp = 1;
+                    else if (ch < s_ch) prefix_cmp = -1;
+                    else prefix_cmp = 0;
+                }
+
+                bool can_use = false;
+                if (prefix_cmp > 0) {
+                    can_use = true;
+                } else if (prefix_cmp == 0) {
+                    int suf_len = len - i - 1;
+                    std::string suf_S = S.substr(i + 1, suf_len);
+                    std::vector<int> rem_copy = rem;
+                    std::string Ymax(suf_len, ' ');
+                    bool can_fill = true;
+                    for (int j = 0; j < suf_len; j++) {
+                        bool got = false;
+                        for (char cc = 'z'; cc >= 'a'; cc--) {
+                            int idd = cc - 'a';
+                            if (rem_copy[idd] > 0) {
+                                Ymax[j] = cc;
+                                rem_copy[idd]--;
+                                got = true;
+                                break;
+                            }
+                        }
+                        if (!got) {
+                            can_fill = false;
+                            break;
+                        }
+                    }
+                    if (can_fill && Ymax > suf_S) {
+                        can_use = true;
+                    }
+                }
+
+                if (can_use) {
+                    X += ch;
+                    still_equal = still_equal && (ch == S[i]);
+                    found = true;
+                    break;
+                } else {
+                    rem[idx]++;
+                }
+            }
+            if (!found) {
+                return "";
+            }
+        }
+        return X;
     }
 };
 # @lc code=end
