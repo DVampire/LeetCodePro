@@ -1,82 +1,91 @@
-//
-// @lc app=leetcode id=3575 lang=cpp
-//
-// [3575] Maximum Good Subtree Score
-//
+#include <vector>
+#include <algorithm>
+#include <climits>
+using namespace std;
 
-// @lc code=start
 class Solution {
 public:
-    int goodSubtreeSum(vector<int>& vals, vector<int>& par) {
-        const int MOD = 1e9 + 7;
-        int n = vals.size();
-        
-        vector<vector<int>> children(n);
-        for (int i = 1; i < n; i++) {
-            children[par[i]].push_back(i);
+    static constexpr long long MOD = 1000000007LL;
+    long long answer;
+
+    vector<long long> dfs(int u,
+                         const vector<int>& vals,
+                         const vector<vector<int>>& adj) {
+        const int FULL_MASK = (1 << 10) - 1;
+        vector<long long> dp(1024, LLONG_MIN);
+        dp[0] = 0;
+
+        bool valid_node = true;
+        int num = vals[u];
+        bool seen[10] = {false};
+        int mask_u = 0;
+        while (num > 0) {
+            int d = num % 10;
+            if (seen[d]) {
+                valid_node = false;
+                break;
+            }
+            seen[d] = true;
+            mask_u |= (1 << d);
+            num /= 10;
         }
-        
-        auto getDigitMask = [](int val) -> int {
-            int mask = 0;
-            while (val > 0) {
-                int d = val % 10;
-                if (mask & (1 << d)) return -1;
-                mask |= (1 << d);
-                val /= 10;
+
+        if (valid_node)
+            dp[mask_u] = max(dp[mask_u], static_cast<long long>(vals[u]));
+
+        for (int v : adj[u]) {
+            auto child_dp = dfs(v, vals, adj);
+            vector<long long> new_dp(1024, LLONG_MIN);
+
+            vector<int> active_parent;
+            for (int m = 0; m < 1024; ++m)
+                if (dp[m] != LLONG_MIN)
+                    active_parent.push_back(m);
+
+            const int FULL = FULL_MASK;
+            for (int m_parent : active_parent) {
+                long long sparent = dp[m_parent];
+                int complement = (~m_parent) & FULL;
+                int submask = complement;
+                while (true) {
+                    long long schild = child_dp[submask];
+                    if (schild != LLONG_MIN) {
+                        long long total = sparent + schild;
+                        int new_mask = m_parent | submask;
+                        if (total > new_dp[new_mask])
+                            new_dp[new_mask] = total;
+                    }
+                    if (submask == 0)
+                        break;
+                    submask = (submask - 1) & complement;
+                }
             }
-            return mask;
-        };
-        
-        vector<int> masks(n);
-        for (int i = 0; i < n; i++) {
-            masks[i] = getDigitMask(vals[i]);
+            dp.swap(new_dp);
         }
+
+        long long best_sum_subtree = *max_element(dp.begin(), dp.end());
+        answer += best_sum_subtree % MOD;
+        answer %= MOD;
+
+        return dp;
+    }
+
+    int goodSubtreeSum(vector<int>& vals_vec,
+                       vector<int>& par_vec) {
+        answer = 0LL;
+        int n = vals_vec.size();
+        vector<vector<int>> adj(n);
         
-        long long totalSum = 0;
-        const long long NEG_INF = -1e18;
-        
-        function<vector<long long>(int)> dfs = [&](int u) -> vector<long long> {
-            vector<long long> dp(1024, NEG_INF);
-            dp[0] = 0;
-            
-            for (int c : children[u]) {
-                vector<long long> child_dp = dfs(c);
-                vector<long long> new_dp(1024, NEG_INF);
-                
-                for (int m = 0; m < 1024; m++) {
-                    for (int s = m; ; s = (s - 1) & m) {
-                        if (dp[s] > NEG_INF && child_dp[m ^ s] > NEG_INF) {
-                            new_dp[m] = max(new_dp[m], dp[s] + child_dp[m ^ s]);
-                        }
-                        if (s == 0) break;
-                    }
-                }
-                dp = move(new_dp);
-            }
-            
-            if (masks[u] != -1) {
-                vector<long long> new_dp = dp;
-                for (int m = 0; m < 1024; m++) {
-                    if (dp[m] > NEG_INF && (m & masks[u]) == 0) {
-                        new_dp[m | masks[u]] = max(new_dp[m | masks[u]], dp[m] + vals[u]);
-                    }
-                }
-                dp = move(new_dp);
-            }
-            
-            long long maxScore = 0;
-            for (int m = 0; m < 1024; m++) {
-                if (dp[m] > maxScore) {
-                    maxScore = dp[m];
-                }
-            }
-            totalSum = (totalSum + maxScore) % MOD;
-            
-            return dp;
-        };
-        
-        dfs(0);
-        return totalSum;
+        for(int i = 0;i < n;i++) {
+            int p = par_vec[i];
+            if(p != -1)
+                adj[p].push_back(i);
+        }
+
+        dfs(0,
+             vals_vec,
+             adj);
+
+        return answer % MOD;
     }
 };
-// @lc code=end
