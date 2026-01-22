@@ -3,7 +3,8 @@
 #
 # [2807] Insert Greatest Common Divisors in Linked List
 #
-# @lc code=start
+
+// @lc code=start
 /**
  * Definition for singly-linked list.
  * struct ListNode {
@@ -16,7 +17,7 @@
  */
 class Solution {
 public:
-    int gcd(int a, int b) {
+    int computeGCD(int a, int b) {
         while (b != 0) {
             int temp = b;
             b = a % b;
@@ -24,22 +25,18 @@ public:
         }
         return a;
     }
-    
+
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
-        if (head == nullptr || head->next == nullptr) {
-            return head;
+        if (!head || !head->next) return head;
+        ListNode* curr = head;
+        while (curr && curr->next) {
+            int gcdVal = computeGCD(curr->val, curr->next->val);
+            ListNode* newNode = new ListNode(gcdVal);
+            newNode->next = curr->next;
+            curr->next = newNode;
+            curr = newNode->next;
         }
-        
-        ListNode* current = head;
-        while (current != nullptr && current->next != nullptr) {
-            int gcdValue = gcd(current->val, current->next->val);
-            ListNode* newNode = new ListNode(gcdValue);
-            newNode->next = current->next;
-            current->next = newNode;
-            current = newNode->next;
-        }
-        
         return head;
     }
 };
-# @lc code=end
+// @lc code=end

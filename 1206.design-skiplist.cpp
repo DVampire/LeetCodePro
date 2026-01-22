@@ -3,101 +3,50 @@
 #
 # [1206] Design Skiplist
 #
-# @lc code=start
+#include <vector>
+#include <random>
+#include <iostream>
+using namespace std;
+// @lc code=start
 class Skiplist {
 private:
     struct Node {
         int val;
-        Node* right;
-        Node* down;
-        Node(int v = INT_MIN, Node* r = nullptr, Node* d = nullptr) 
-            : val(v), right(r), down(d) {}
+        vector<Node*> forward;
+        Node(int v, int level) : val(v), forward(level, nullptr) {}
     };
-    
+    const int MAX_LEVEL = 16; // enough for up to ~65k elements
     Node* head;
+    int curMaxLevel;
+    std::mt19937 rng;
+    std::uniform_real_distribution<double> dist;
     
+    int randomLevel() {
+        // returns a random level between 1 and MAX_LEVEL inclusive
+        // geometric distribution with p=0.5
+        int lvl = 1;
+        while ((dist(rng) < 0.5) && lvl < MAX_LEVEL)
+            lvl++;
+        return lvl;
+    }
 public:
-    Skiplist() {
-        head = new Node();
+    Skiplist() : curMaxLevel(1), rng(std::random_device{}()), dist(0.0, 1.0) {
+        head = new Node(-1, MAX_LEVEL); // dummy head with value -1
+    }
+    
+    ~Skiplist() {
+        // clean up all nodes
+        Node* curr = head->forward[0];
+        while (curr) {
+            Node* tmp = curr->forward[0];
+            delete curr;
+            curr = tmp;
+        }
+        delete head;
     }
     
     bool search(int target) {
-        Node* curr = head;
-        while (curr) {
-            while (curr->right && curr->right->val < target) {
-                curr = curr->right;
-            }
-            if (curr->right && curr->right->val == target) {
-                return true;
-            }
-            curr = curr->down;
-        }
-        return false;
-    }
-    
-    void add(int num) {
-        vector<Node*> path;
-        Node* curr = head;
-        
-        // Find insertion points at each level
-        while (curr) {
-            while (curr->right && curr->right->val < num) {
-                curr = curr->right;
-            }
-            path.push_back(curr);
-            curr = curr->down;
-        }
-        
-        // Insert from bottom, moving up based on coin flip
-        bool insertUp = true;
-        Node* downNode = nullptr;
-        
-        for (int i = path.size() - 1; i >= 0 && insertUp; i--) {
-            Node* newNode = new Node(num, path[i]->right, downNode);
-            path[i]->right = newNode;
-            downNode = newNode;
-            insertUp = (rand() % 2 == 0);
-        }
-        
-        // Add new levels if coin flip continues
-        while (insertUp) {
-            Node* newNode = new Node(num, nullptr, downNode);
-            Node* newHead = new Node(INT_MIN, newNode, head);
-            head = newHead;
-            downNode = newNode;
-            insertUp = (rand() % 2 == 0);
-        }
-    }
-    
-    bool erase(int num) {
-        Node* curr = head;
-        bool found = false;
-        
-        while (curr) {
-            while (curr->right && curr->right->val < num) {
-                curr = curr->right;
-            }
-            if (curr->right && curr->right->val == num) {
-                found = true;
-                curr->right = curr->right->right;
-            }
-            curr = curr->down;
-        }
-        
-        // Clean up empty top levels
-        while (head->right == nullptr && head->down != nullptr) {
-            head = head->down;
-        }
-        
-        return found;
-    }
-};
-
-/**
- * Your Skiplist object will be instantiated and called as such:
- * Skiplist* obj = new Skiplist();
- * bool param_1 = obj->search(target);
- * obj->add(num);
- * bool param_3 = obj->erase(num);
- */
-# @lc code=end
+        Node* cur = head;
+        for (int i = curMaxLevel - 1; i >= 0; --i) {
+            while (cur->forward[i] && cur->forward[i]->val < target)                cur = cur->forward[i];        }        cur = cur->forward[0];        return cur && cur->val == target;    }        void add(int num) {        vector<Node*> update(MAX_LEVEL, nullptr);        Node* cur = head;        // find predecessors at each layer        for (int i = curMaxLevel - 1; i >= 0; --i) {            while (cur->forward[i] && cur->forward[i]->val < num)                cur = cur->forward[i];            update[i] = cur;	}	// generate random level for new nod	int newLevel = randomLevel();	if(newLevel > curMaxLeve	{		for(int i=curMaxLeve;i<newLeve;i++)			update[i]=head		curMaxLeve=newLeve	}	Node* newNode=new Nod(numnewLeve	for(int i=0;i<newLeve;i++)	{		newNode->forwar[i]=update[i]->forwar[		update[		update[	}	}	bool erase(int num){	vector<Node*> updat(MAX_LEVE nullptr)	Node* cu=head	for(int i=curMaxLeve-1;i>=0;i--{	while(cu->forwar[	cu=cu->forwar[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	upt[	t}	t}	t}	t}	t}	t}	t}	t}	t}	t}	t}	t}}
+t}
