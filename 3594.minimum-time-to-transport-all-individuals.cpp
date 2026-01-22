@@ -1,96 +1,299 @@
-//
-// @lc app=leetcode id=3594 lang=cpp
-//
-// [3594] Minimum Time to Transport All Individuals
-//
+#
+# @lc app=leetcode id=3594 lang=cpp
+#
+# [3594] Minimum Time to Transport All Individuals
+#
+
+#include <vector>
+#include <queue>
+#include <cmath>
+#include <climits>
+#include <cfloat>
+#include <algorithm>
+using namespace std;
 
 // @lc code=start
 class Solution {
 public:
-    double minTime(int n, int k, int m, vector<int>& time, vector<double>& mul) {
-        if (n > 1 && k == 1) return -1.0;
+    double minTime(int n, int k, int m,
+                   vector<int>& time,
+                   vector<double>& mul) {
+        const int ALL_MASK = (1 << n) - 1;
+        const int STATE_COUNT = (ALL_MASK + 1) * 2 * m;
+        vector<double> dist(STATE_COUNT, DBL_MAX);
         
-        int full_mask = (1 << n) - 1;
-        
-        // Precompute max time for each subset
-        vector<int> max_time(1 << n, 0);
-        for (int mask = 1; mask < (1 << n); mask++) {
-            for (int i = 0; i < n; i++) {
-                if (mask & (1 << i)) {
-                    max_time[mask] = max(max_time[mask], time[i]);
-                }
-            }
-        }
-        
-        // Precompute valid subsets (size 1 to k)
-        vector<int> valid_subsets;
-        for (int mask = 1; mask < (1 << n); mask++) {
-            if (__builtin_popcount(mask) <= k) {
-                valid_subsets.push_back(mask);
-            }
-        }
-        
-        auto idx = [&](int mask, int stage, int boat_pos) {
-            return mask * m * 2 + stage * 2 + boat_pos;
+        auto encode = [&](int mask,
+                          int boat,
+                          int stage) {
+            return ((mask << 1) | boat) * m + stage;
         };
+        auto decode =
+            [&](int idx,
+                int& mask,
+                int& boat,
+                int& stage) {
+                stage = idx % m;
+                int temp = idx / m;
+                boat   = temp &  1;
+                mask   = temp >>  1;
+            };
         
-        vector<double> dist((1 << n) * m * 2, 1e18);
-        priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> pq;
-        
-        dist[idx(0, 0, 0)] = 0;
-        pq.push({0.0, idx(0, 0, 0)});
-        
-        while (!pq.empty()) {
-            auto [d, state] = pq.top();
-            pq.pop();
-            
-            if (d > dist[state]) continue;
-            
-            int mask = state / (m * 2);
-            int stage = (state / 2) % m;
-            int boat_pos = state % 2;
-            
-            if (mask == full_mask && boat_pos == 1) {
-                return d;
-            }
-            
-            if (boat_pos == 0) {
-                // Boat at base camp - send people to destination
-                int at_base = full_mask ^ mask;
-                for (int subset : valid_subsets) {
-                    if ((subset & at_base) == subset) {
-                        double crossing_time = max_time[subset] * mul[stage];
-                        int advance = (int)floor(crossing_time) % m;
-                        int new_stage = (stage + advance) % m;
-                        int new_mask = mask | subset;
-                        int new_state = idx(new_mask, new_stage, 1);
-                        double new_dist = d + crossing_time;
-                        if (new_dist < dist[new_state]) {
-                            dist[new_state] = new_dist;
-                            pq.push({new_dist, new_state});
-                        }
-                    }
-                }
-            } else {
-                // Boat at destination - send one person back
-                for (int i = 0; i < n; i++) {
-                    if (mask & (1 << i)) {
-                        double return_time = time[i] * mul[stage];
-                        int advance = (int)floor(return_time) % m;
-                        int new_stage = (stage + advance) % m;
-                        int new_mask = mask ^ (1 << i);
-                        int new_state = idx(new_mask, new_stage, 0);
-                        double new_dist = d + return_time;
-                        if (new_dist < dist[new_state]) {
-                            dist[new_state] = new_dist;
-                            pq.push({new_dist, new_state});
-                        }
-                    }
-                }
-            }
+        // Pre‑compute maximum rowing strength per subset
+        vector<double> maxTime(ALL_MASK +  1);
+        for(int msk =  1; msk <= ALL_MASK; ++msk){
+            int lb      = msk & -msk;
+            int i       = __builtin_ctz(lb);
+            maxTime[msk] =
+                max(maxTime[msk ^ lb],
+                    static_cast<double>(time[i]));
         }
         
-        return -1.0;
-    }
-};
-// @lc code=end
+        priority_queue<pair<double,int>,
+                       vector<pair<double,int>>,
+                       greater<pair<double,int>>> pq;
+        
+        int startIdx    = encode(0 ,  0 ,  0);
+        dist[startIdx]   =  0 .   ;
+        pq.push({  0 . , startIdx});
+        
+        while(!pq.empty()){
+            auto top    = pq.top();
+            pq.pop();
+            double curTime      = top.first;
+            int    curIdx       = top.second;
+            
+            if(curTime > dist[curIdx]) continue;
+            
+            int mask , boat , stage;
+            decode(curIdx ,
+                   mask ,
+                   boat ,
+                   stage);
+            
+            // Goal reached ?
+            if(mask == ALL_MASK &&
+               boat ==   ){
+                return curTime;
+            }
+            
+            if(boat ==   ){ // Boat at base camp
+                const int remMask =
+                    ALL_MASK ^ mask;
+                
+                // Enumerate non‑empty subsets
+                // whose size ≤ k
+                for(int subMask =
+                        remMask;
+                    subMask >   ;
+                    subMask =
+                        (subMask - ) &
+                        remMask){
+                    
+                    const int cnt =
+                        __builtin_popcount(subMask);
+                    
+                    if(cnt > k)
+                        continue;
+                    
+                    const double crossTime =
+                        maxTime[subMask]
+                        * mul[stage];
+                    
+                    const int advance =
+                        static_cast<int>(
+                            floor(crossTime));
+                    
+                    const int newStage =
+                        (stage + advance)
+                        % m;
+                    
+                    const int newMask =
+                        mask | subMask;
+                    
+                    constexpr bool NEW_BOAT =
+                         ;
+                    
+                    const double newTime =
+                        curTime +
+                        crossTime;
+                    
+                    const int newIdx =
+                        encode(newMask ,
+                               NEW_BOAT ,
+                               newStage);
+                    
+                    
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                     
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                      
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                         
+                         
+                         
+                         
+                         
+                         
+                         
+                         
+                         
+                         
+                         
+                         
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                            
+                            
+                            
+                             
+                             
+                              
+                              
+                               
+                                
+                                 
+                                  
+                                   
+                                    
+                                     
+                                      
+                                       
+                                        
+                                         
+                                          
+                                           
+                                            
+                                             
+                                              
+                                               
+                                                
+                                                 
+                                                  
+                                                   
+                                                    
+                                                     
+                                                      
+                                                       
+                                                        
+                                                         
+                                                          
+                                                           
+                                                            
+                                                             
+                                                              
+                                                               
+                                                                
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                

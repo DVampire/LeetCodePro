@@ -1,75 +1,54 @@
-//
-// @lc app=leetcode id=3563 lang=cpp
-//
-// [3563] Lexicographically Smallest String After Adjacent Removals
-//
+#include <string>
+#include <vector>
+#include <functional>
+using namespace std;
 
-// @lc code=start
 class Solution {
-public:
-    bool isAdjacent(char a, char b) {
-        int diff = abs(a - b);
+private:
+    bool cons(char a, char b) {
+        int diff = (a - b + 26) % 26;
         return diff == 1 || diff == 25;
     }
-    
+public:
     string lexicographicallySmallestString(string s) {
         int n = s.size();
-        if (n == 0) return "";
+        vector<vector<bool>> vis(n, vector<bool>(n));
+        vector<vector<string>> memo(n, vector<string>(n));
         
-        // can[i][j] = true if s[i..j] can be completely removed
-        vector<vector<bool>> can(n, vector<bool>(n, false));
-        
-        // Base case: length 2
-        for (int i = 0; i + 1 < n; i++) {
-            can[i][i+1] = isAdjacent(s[i], s[i+1]);
-        }
-        
-        // Fill for increasing lengths (only even lengths >= 4 matter)
-        for (int len = 4; len <= n; len += 2) {
-            for (int i = 0; i + len - 1 < n; i++) {
-                int j = i + len - 1;
-                // Option 1: s[i] pairs with s[j], and middle is removable
-                if (isAdjacent(s[i], s[j]) && can[i+1][j-1]) {
-                    can[i][j] = true;
-                    continue;
-                }
-                // Option 2: split into two removable parts
-                for (int k = i + 1; k < j; k += 2) {
-                    if (can[i][k] && can[k+1][j]) {
-                        can[i][j] = true;
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // dp[i] = lexicographically smallest string from s[i..n-1]
-        vector<string> dp(n + 1);
-        dp[n] = "";
-        
-        for (int i = n - 1; i >= 0; i--) {
-            bool emptyPossible = (n - i) % 2 == 0 && can[i][n-1];
+        function<string(int,int)> dfs = [&](int l,int r)->string {
+            if(l > r) return "";
+            if(l == r) return string(1,s[l]);
+            if(vis[l][r]) return memo[l][r];
             
-            if (emptyPossible) {
-                dp[i] = "";
-            } else {
-                // Initialize with s[i] + dp[i+1]
-                dp[i] = string(1, s[i]) + dp[i+1];
-                
-                // Try removing prefixes of even length
-                for (int j = i + 2; j < n; j += 2) {
-                    // Try to remove s[i..j-1] and start with s[j]
-                    if (can[i][j-1]) {
-                        string candidate = string(1, s[j]) + dp[j+1];
-                        if (candidate < dp[i]) {
-                            dp[i] = candidate;
-                        }
+            vector<string> candidates;
+            // entire substring unchanged
+            candidates.push_back(s.substr(l, r-l+1));
+            // keep first char
+            candidates.push_back(string(1,s[l]) + dfs(l+1,r));
+            // try matching first char
+            for(int j=l+1; j<=r; ++j){
+                if(cons(s[l],s[j])){
+                    // require interior [l+1 .. j-1] reducible to ""
+                    string inner = dfs(l+1,j-1);
+                    if(inner.empty()){
+                        // remainder
+                        candidates.push_back(dfs(j+1,r));
                     }
                 }
             }
-        }
+            
+            // find minimum
+            string ans = candidates[0];
+            for(const auto& str : candidates){
+                if(str < ans){
+                    ans = str;
+                }
+            }
+            vis[l][r] = true;
+            memo[l][r] = ans;
+            return ans;
+        };
         
-        return dp[0];
+        return dfs(0,n-1);
     }
 };
-// @lc code=end
