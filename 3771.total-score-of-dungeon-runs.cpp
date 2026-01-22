@@ -8,27 +8,23 @@ class Solution {
 public:
     long long totalScore(int hp, vector<int>& damage, vector<int>& requirement) {
         int n = damage.size();
-        vector<long long> prefix(n + 1, 0);
-        
-        // Build prefix sum array
+        vector<long long> prefix_sum(n + 1, 0);
         for (int i = 0; i < n; i++) {
-            prefix[i + 1] = prefix[i] + damage[i];
+            prefix_sum[i + 1] = prefix_sum[i] + damage[i];
         }
         
         long long total = 0;
-        
-        // For each room i, count how many starting positions j earn a point at room i
         for (int i = 0; i < n; i++) {
-            long long threshold = requirement[i] + prefix[i + 1] - hp;
+            // threshold = requirement[i] + prefix_sum[i+1] - hp
+            // We need prefix_sum[j] >= threshold for j in [0, i]
+            long long threshold = (long long)requirement[i] + prefix_sum[i + 1] - hp;
             
-            // Find the first j in [0, i] where prefix[j] >= threshold
-            auto it = lower_bound(prefix.begin(), prefix.begin() + i + 1, threshold);
-            int j = it - prefix.begin();
+            // Binary search to find first j where prefix_sum[j] >= threshold
+            auto it = lower_bound(prefix_sum.begin(), prefix_sum.begin() + i + 1, threshold);
+            long long k = it - prefix_sum.begin();
             
-            // If such j exists within valid range, count starting positions from j to i
-            if (j <= i) {
-                total += (i - j + 1);
-            }
+            // Count of valid starting positions is (i + 1) - k
+            total += (i + 1) - k;
         }
         
         return total;

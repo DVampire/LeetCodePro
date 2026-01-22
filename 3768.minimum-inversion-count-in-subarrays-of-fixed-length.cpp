@@ -1,77 +1,71 @@
-#
-# @lc app=leetcode id=3768 lang=cpp
-#
-# [3768] Minimum Inversion Count in Subarrays of Fixed Length
-#
-# @lc code=start
+//
+// @lc app=leetcode id=3768 lang=cpp
+//
+// [3768] Minimum Inversion Count in Subarrays of Fixed Length
+//
+
+// @lc code=start
 class Solution {
 public:
-    class BIT {
-        vector<int> tree;
-        int n;
-    public:
-        BIT(int n) : n(n), tree(n + 1, 0) {}
-        
-        void update(int idx, int delta) {
-            for (int i = idx; i <= n; i += i & -i) {
-                tree[i] += delta;
-            }
-        }
-        
-        int query(int idx) {
-            if (idx <= 0) return 0;
-            int sum = 0;
-            for (int i = idx; i > 0; i -= i & -i) {
-                sum += tree[i];
-            }
-            return sum;
-        }
-    };
-    
     long long minInversionCount(vector<int>& nums, int k) {
         int n = nums.size();
         
         // Coordinate compression
-        vector<int> sorted_nums = nums;
-        sort(sorted_nums.begin(), sorted_nums.end());
-        sorted_nums.erase(unique(sorted_nums.begin(), sorted_nums.end()), sorted_nums.end());
-        
-        map<int, int> compress;
-        for (int i = 0; i < sorted_nums.size(); i++) {
-            compress[sorted_nums[i]] = i + 1;
+        vector<int> sortedNums = nums;
+        sort(sortedNums.begin(), sortedNums.end());
+        sortedNums.erase(unique(sortedNums.begin(), sortedNums.end()), sortedNums.end());
+        unordered_map<int, int> compress;
+        for (int i = 0; i < (int)sortedNums.size(); i++) {
+            compress[sortedNums[i]] = i + 1;
         }
         
-        int m = sorted_nums.size();
-        BIT bit(m);
+        int m = sortedNums.size();
+        vector<int> bit(m + 1, 0);
         
-        // Count inversions for first window
-        long long currentInversions = 0;
+        auto update = [&](int i, int delta) {
+            for (; i <= m; i += i & (-i))
+                bit[i] += delta;
+        };
+        
+        auto query = [&](int i) -> int {
+            int sum = 0;
+            for (; i > 0; i -= i & (-i))
+                sum += bit[i];
+            return sum;
+        };
+        
+        // Count inversions in the first window
+        long long inv = 0;
         for (int i = 0; i < k; i++) {
-            int compressed = compress[nums[i]];
-            currentInversions += bit.query(m) - bit.query(compressed);
-            bit.update(compressed, 1);
+            int ci = compress[nums[i]];
+            // Count elements > nums[i] that have been added
+            inv += i - query(ci);
+            update(ci, 1);
         }
         
-        long long minInversions = currentInversions;
+        long long result = inv;
         
         // Slide the window
-        for (int i = k; i < n; i++) {
-            int removed = nums[i - k];
-            int removedCompressed = compress[removed];
-            int smallerCount = bit.query(removedCompressed - 1);
-            currentInversions -= smallerCount;
-            bit.update(removedCompressed, -1);
+        for (int l = 1; l + k - 1 < n; l++) {
+            int leftVal = compress[nums[l - 1]];
+            int rightVal = compress[nums[l + k - 1]];
             
-            int added = nums[i];
-            int addedCompressed = compress[added];
-            int greaterCount = bit.query(m) - bit.query(addedCompressed);
-            currentInversions += greaterCount;
-            bit.update(addedCompressed, 1);
+            // Remove nums[l-1] from BIT
+            update(leftVal, -1);
             
-            minInversions = min(minInversions, currentInversions);
+            // Lost inversions: elements < nums[l-1] in the remaining window
+            inv -= query(leftVal - 1);
+            
+            // Gained inversions: elements > nums[l+k-1] in the current window
+            inv += (k - 1) - query(rightVal);
+            
+            // Add nums[l+k-1] to BIT
+            update(rightVal, 1);
+            
+            result = min(result, inv);
         }
         
-        return minInversions;
+        return result;
     }
 };
-# @lc code=end
+// @lc code=end
