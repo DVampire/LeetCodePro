@@ -1,42 +1,100 @@
-#
-# @lc app=leetcode id=3785 lang=cpp
-#
-# [3785] Minimum Swaps to Avoid Forbidden Values
-#
-# @lc code=start
+//
+// @lc app=leetcode id=3785 lang=cpp
+//
+// [3785] Minimum Swaps to Avoid Forbidden Values
+//
+// @lc code=start
 class Solution {
 public:
     int minSwaps(vector<int>& nums, vector<int>& forbidden) {
         int n = nums.size();
-        unordered_map<int, int> num_count;
-        unordered_map<int, int> t_count;
-        unordered_map<int, int> conflict_count;
-        int total_bad = 0;
-        int max_conflict = 0;
-        for (int i = 0; i < n; ++i) {
-            num_count[nums[i]]++;
-            t_count[forbidden[i]]++;
+        
+        vector<int> badIndices;
+        for (int i = 0; i < n; i++) {
             if (nums[i] == forbidden[i]) {
-                total_bad++;
-                conflict_count[nums[i]]++;
+                badIndices.push_back(i);
             }
         }
-        for (auto& p : t_count) {
-            int v = p.first;
-            int tv = p.second;
-            int cv = num_count[v];
-            if (tv > n - cv) {
+        
+        int m = badIndices.size();
+        if (m == 0) return 0;
+        
+        // Build frequency map for feasibility check
+        map<int, int> valueCount;
+        for (int v : nums) {
+            valueCount[v]++;
+        }
+        
+        // Feasibility check: for each bad index, must exist some value != forbidden[i]
+        for (int idx : badIndices) {
+            int forbiddenVal = forbidden[idx];
+            if (valueCount.count(forbiddenVal) && valueCount[forbiddenVal] == n) {
                 return -1;
             }
         }
-        for (auto& p : conflict_count) {
-            max_conflict = max(max_conflict, p.second);
+        
+        // Build bipartite graph for matching among bad indices
+        // Edge from i to j means value at badIndices[j] can go to position badIndices[i]
+        vector<vector<int>> adj(m);
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                if (i != j && nums[badIndices[j]] != forbidden[badIndices[i]]) {
+                    adj[i].push_back(j);
+                }
+            }
         }
-        if (total_bad == 0) {
-            return 0;
+        
+        // Maximum bipartite matching using Hungarian algorithm
+        vector<int> matchRight(m, -1);
+        int matched = 0;
+        for (int i = 0; i < m; i++) {
+            vector<bool> visited(m, false);
+            if (augment(i, adj, matchRight, visited)) {
+                matched++;
+            }
         }
-        int mm = min(total_bad / 2, total_bad - max_conflict);
-        return total_bad - mm;
+        
+        if (matched == m) {
+            // Perfect matching exists - build permutation and count cycles
+            vector<int> perm(m);
+            for (int j = 0; j < m; j++) {
+                if (matchRight[j] != -1) {
+                    perm[matchRight[j]] = j;
+                }
+            }
+            
+            int cycles = 0;
+            vector<bool> visited(m, false);
+            for (int i = 0; i < m; i++) {
+                if (!visited[i]) {
+                    cycles++;
+                    int curr = i;
+                    while (!visited[curr]) {
+                        visited[curr] = true;
+                        curr = perm[curr];
+                    }
+                }
+            }
+            return m - cycles;
+        }
+        
+        // Not all bad indices can be matched among themselves
+        // Each bad index needs at least 1 swap
+        return m;
+    }
+    
+private:
+    bool augment(int u, vector<vector<int>>& adj, vector<int>& matchRight, vector<bool>& visited) {
+        for (int v : adj[u]) {
+            if (!visited[v]) {
+                visited[v] = true;
+                if (matchRight[v] == -1 || augment(matchRight[v], adj, matchRight, visited)) {
+                    matchRight[v] = u;
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 };
-# @lc code=end
+// @lc code=end
