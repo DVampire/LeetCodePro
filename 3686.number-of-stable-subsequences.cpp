@@ -7,35 +7,34 @@
 class Solution {
 public:
     int countStableSubsequences(vector<int>& nums) {
-        const int MOD = 1e9 + 7;
-        
-        // dp[parity][count]
-        // parity: 0 (even), 1 (odd)
-        // count: 1 or 2 (number of consecutive elements with that parity at the end)
-        vector<vector<long long>> dp(2, vector<long long>(3, 0));
+        const long long MOD = 1e9 + 7;
+        // cnt[p][s] where p = parity (0 even, 1 odd)
+        // s = 0 means streak of 1, s = 1 means streak of 2
+        long long cnt[2][2] = {};
         
         for (int num : nums) {
-            int parity = num % 2;
-            int other = 1 - parity;
+            int p = num % 2;  // parity of current number
+            int q = 1 - p;    // other parity
             
-            vector<vector<long long>> new_dp = dp;
+            // Save previous values before updating
+            long long prev_p0 = cnt[p][0];
+            long long prev_p1 = cnt[p][1];
             
-            // Start a new subsequence with this element
-            new_dp[parity][1] = (new_dp[parity][1] + 1) % MOD;
+            // Subsequences ending with parity p, streak 1:
+            // - Previous subsequences (not extended)
+            // - New single-element subsequence: +1
+            // - Extend from different parity: cnt[q][0] + cnt[q][1]
+            cnt[p][0] = (prev_p0 + 1 + cnt[q][0] + cnt[q][1]) % MOD;
             
-            // Extend subsequences with same parity (only from count=1 to count=2)
-            new_dp[parity][2] = (new_dp[parity][2] + dp[parity][1]) % MOD;
+            // Subsequences ending with parity p, streak 2:
+            // - Previous subsequences (not extended)
+            // - Extend from same parity streak 1
+            cnt[p][1] = (prev_p1 + prev_p0) % MOD;
             
-            // Extend subsequences with different parity (reset count to 1)
-            new_dp[parity][1] = (new_dp[parity][1] + dp[other][1]) % MOD;
-            new_dp[parity][1] = (new_dp[parity][1] + dp[other][2]) % MOD;
-            
-            dp = new_dp;
+            // cnt[q][0] and cnt[q][1] remain unchanged
         }
         
-        // Sum all stable subsequences
-        long long result = (dp[0][1] + dp[0][2] + dp[1][1] + dp[1][2]) % MOD;
-        return result;
+        return (cnt[0][0] + cnt[0][1] + cnt[1][0] + cnt[1][1]) % MOD;
     }
 };
 # @lc code=end
