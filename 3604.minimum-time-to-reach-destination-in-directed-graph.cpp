@@ -1,48 +1,47 @@
-#
-# @lc app=leetcode id=3604 lang=cpp
-#
-# [3604] Minimum Time to Reach Destination in Directed Graph
-#
-# @lc code=start
+//
+// @lc app=leetcode id=3604 lang=cpp
+//
+// [3604] Minimum Time to Reach Destination in Directed Graph
+//
+
+// @lc code=start
 class Solution {
 public:
     int minTime(int n, vector<vector<int>>& edges) {
-        // Build adjacency list
-        vector<vector<tuple<int, int, int>>> graph(n);
-        for (const auto& e : edges) {
-            graph[e[0]].push_back({e[1], e[2], e[3]});
+        vector<vector<array<int, 3>>> adj(n);
+        for (auto& edge : edges) {
+            adj[edge[0]].push_back({edge[1], edge[2], edge[3]});
         }
         
-        // Dijkstra's algorithm
-        vector<int> dist(n, INT_MAX);
-        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq;
+        vector<long long> dist(n, LLONG_MAX);
+        priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<pair<long long, int>>> pq;
         
         dist[0] = 0;
-        pq.push({0, 0}); // {time, node}
+        pq.push({0, 0});
         
         while (!pq.empty()) {
-            auto [time, node] = pq.top();
+            long long t = pq.top().first;
+            int u = pq.top().second;
             pq.pop();
             
-            // Early return if we reached the destination
-            if (node == n - 1) return time;
+            if (t > dist[u]) continue;
             
-            // Skip if we've already found a better path to this node
-            if (time > dist[node]) continue;
+            if (u == n - 1) return (int)t;
             
-            // Explore all outgoing edges
-            for (const auto& [next, start, end] : graph[node]) {
-                if (time <= end) { // We can potentially use this edge
-                    int arrival = max(time, start) + 1;
-                    if (arrival < dist[next]) {
-                        dist[next] = arrival;
-                        pq.push({arrival, next});
-                    }
+            for (auto& e : adj[u]) {
+                int v = e[0], start = e[1], end = e[2];
+                if (t > end) continue;
+                
+                long long arrival = (t >= start) ? t + 1 : (long long)start + 1;
+                
+                if (arrival < dist[v]) {
+                    dist[v] = arrival;
+                    pq.push({arrival, v});
                 }
             }
         }
         
-        return -1; // Cannot reach destination
+        return -1;
     }
 };
-# @lc code=end
+// @lc code=end
