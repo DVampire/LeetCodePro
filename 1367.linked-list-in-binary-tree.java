@@ -31,16 +31,15 @@
 */
 class Solution {
     public boolean isSubPath(ListNode head, TreeNode root) {
-        if (head == null) return true;
         if (root == null) return false;
-        if (dfs(head, root)) return true;
+        if (checkPath(head, root)) return true;
         return isSubPath(head, root.left) || isSubPath(head, root.right);
     }
-    private boolean dfs(ListNode head, TreeNode node) {
+    private boolean checkPath(ListNode head, TreeNode node) {
         if (head == null) return true;
         if (node == null) return false;
         if (head.val != node.val) return false;
-        return dfs(head.next, node.left) || dfs(head.next, node.right);
+        return checkPath(head.next, node.left) || checkPath(head.next, node.right);
     }
 }
 # @lc code=end
